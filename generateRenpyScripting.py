@@ -1,11 +1,12 @@
 from krita import *
 import sys
-from os.path import join
+from os.path import join, exists
+import webbrowser
 import os
 import re
 from PyQt5.QtWidgets import *
 KI = Krita.instance()
-outfile_name = "rpblock.txt"
+default_outfile_name = "rpblock.txt"
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
@@ -85,8 +86,12 @@ class GenerateRenpyScripting(DockWidget):
         button = QPushButton("Generate Ren'Py Scripting", mainWidget)
         button.clicked.connect(self.popup)
 
+        self.filename_line = QLineEdit()
+        self.filename_line.setText(default_outfile_name)
+
         mainWidget.setLayout(QVBoxLayout())
         mainWidget.layout().addWidget(button)
+        mainWidget.layout().addWidget(self.filename_line)
 
 
     def canvasChanged(self, canvas):
@@ -96,15 +101,24 @@ class GenerateRenpyScripting(DockWidget):
     def popup(self):
         file_open_test_result, data = getData()
         push_message = ""
+        path = ""
         if file_open_test_result == True:
             path = str(QFileDialog.getExistingDirectory(None, "Select a save location."))
+            outfile_name = default_outfile_name
+            if self.filename_line.text() != "":
+                outfile_name = self.filename_line.text()
             path += "/" + outfile_name
             writeData(data, path)
-            push_message = f"Success: Ren'Py Script Block Written to path: {path}"
+            outfile_exists = exists(path)
+            if outfile_exists:
+                webbrowser.open(path)
+            # Practically not necessary; krita-batch-exporter doesn't
+            # do a confirmation message either.
+            #push_message = f"Success: Ren'Py Script Block Written to path: {path}"
         else:
             push_message = "Failure: Open a Krita document."
-        QMessageBox.information(QWidget(), "Generate Renpy Scripting", push_message)
-
+            # Back-indent this if the positive message window is used too.
+            QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
 
     def main():
         newDialog = QDialog()
