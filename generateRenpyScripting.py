@@ -5,9 +5,6 @@ import os
 import re
 from PyQt5.QtWidgets import *
 KI = Krita.instance()
-#file_name = "file_name.txt"
-#complete_name = os.path.join(save_path, file_name)
-#filepath = QtWidgets.QFileDialog.getExistingDirectory(self, "Select a Folder")
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
@@ -26,20 +23,22 @@ def parseValuesIntoList(name, sub_to_check):
         list = [int(n) for n in properties.split(",")]
     return list
 
-def doThing():
-    currentDoc = KI.activeDocument()
-    root_node = currentDoc.rootNode()
+def getData():
+    data_list = []
     layer_names = []
     all_coords = []
-    for i in root_node.childNodes():
-        if i.visible() == True:
-            layer_names.append(i.name())
-            coord_x = i.bounds().topLeft().x()
-            coord_y = i.bounds().topLeft().y()
-            print(f"appending ({coord_x}, {coord_y})")
-            all_coords.append([coord_x, coord_y])
-    out_file = open(r"C:/Users/seanc/OneDrive/Desktop/file_name.txt", "w")
-    out_file.write("\n")
+    currentDoc = KI.activeDocument()
+    if currentDoc != None:
+        root_node = currentDoc.rootNode()
+
+        for i in root_node.childNodes():
+            if i.visible() == True:
+                layer_names.append(i.name())
+                coord_x = i.bounds().topLeft().x()
+                coord_y = i.bounds().topLeft().y()
+                print(f"appending ({coord_x}, {coord_y})")
+                all_coords.append([coord_x, coord_y])
+
     for name, coord_indv in zip(layer_names, all_coords):
         if name.find(" e=") != -1:
             size_list = parseValuesIntoList(name, "s=")
@@ -56,20 +55,27 @@ def doThing():
 
             name = name[0:name.find(" e=")]
 
-        out_file.write(f"show {name}:\n    pos({coord_indv[0]},{coord_indv[1]})\n")
+            data_list.append(tuple((name, coord_indv[0], coord_indv[1])))
+    return data_list
+
+def writeData(input_data, path):
+    out_file = open(path, "w")
     out_file.write("\n")
-    out_file.write('pause')
+    for d in input_data:
+        out_file.write(f"show {d[0]}:\n    pos({str(d[1])}, {str(d[2])}) \n")
+    out_file.write("\n")
+    out_file.write("pause")
     out_file.close()
 
 class GenerateRenpyScripting(DockWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Flip the script!")
+        self.setWindowTitle("Generate Ren'Py Scripting")
         mainWidget = QWidget(self)
         self.setWidget(mainWidget)
 
-        exampleButton = QPushButton("Show popup", mainWidget)
+        exampleButton = QPushButton("Generate Ren'Py Scripting", mainWidget)
         exampleButton.clicked.connect(self.popup)
 
         mainWidget.setLayout(QVBoxLayout())
@@ -79,8 +85,11 @@ class GenerateRenpyScripting(DockWidget):
         pass
 
     def popup(self):
-        doThing()
-        QMessageBox.information(QWidget(), "Generate Renpy Scripting", "Pushed!")
+        data = getData()
+        #TODO: Allow the user to choose the file path.
+        #path = "C:/Users/seanc/OneDrive/Desktop/file_name.txt"
+        writeData(data, path)
+        QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", "Ren'Py Scripting Generated!")
 
     def main():
         newDialog = QDialog()
