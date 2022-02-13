@@ -5,6 +5,7 @@ import os
 import re
 from PyQt5.QtWidgets import *
 KI = Krita.instance()
+outfile_name = "rpblock.txt"
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
@@ -23,14 +24,17 @@ def parseValuesIntoList(name, sub_to_check):
         list = [int(n) for n in properties.split(",")]
     return list
 
+
 def getData():
+    file_open = False
     data_list = []
     layer_names = []
     all_coords = []
     currentDoc = KI.activeDocument()
-    if currentDoc != None:
-        root_node = currentDoc.rootNode()
 
+    if currentDoc != None:
+        file_open = True
+        root_node = currentDoc.rootNode()
         for i in root_node.childNodes():
             if i.visible() == True:
                 layer_names.append(i.name())
@@ -56,9 +60,11 @@ def getData():
             name = name[0:name.find(" e=")]
 
             data_list.append(tuple((name, coord_indv[0], coord_indv[1])))
-    return data_list
+    return file_open, data_list
+
 
 def writeData(input_data, path):
+    print(path)
     out_file = open(path, "w")
     out_file.write("\n")
     for d in input_data:
@@ -66,6 +72,7 @@ def writeData(input_data, path):
     out_file.write("\n")
     out_file.write("pause")
     out_file.close()
+
 
 class GenerateRenpyScripting(DockWidget):
 
@@ -75,31 +82,40 @@ class GenerateRenpyScripting(DockWidget):
         mainWidget = QWidget(self)
         self.setWidget(mainWidget)
 
-        exampleButton = QPushButton("Generate Ren'Py Scripting", mainWidget)
-        exampleButton.clicked.connect(self.popup)
+        button = QPushButton("Generate Ren'Py Scripting", mainWidget)
+        button.clicked.connect(self.popup)
 
         mainWidget.setLayout(QVBoxLayout())
-        mainWidget.layout().addWidget(exampleButton)
+        mainWidget.layout().addWidget(button)
+
 
     def canvasChanged(self, canvas):
         pass
 
+
     def popup(self):
-        data = getData()
-        #TODO: Allow the user to choose the file path.
-        #path = "C:/Users/seanc/OneDrive/Desktop/file_name.txt"
-        writeData(data, path)
-        QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", "Ren'Py Scripting Generated!")
+        file_open_test_result, data = getData()
+        push_message = ""
+        if file_open_test_result == True:
+            path = str(QFileDialog.getExistingDirectory(None, "Select a save location."))
+            path += "/" + outfile_name
+            writeData(data, path)
+            push_message = f"Success: Ren'Py Script Block Written to path: {path}"
+        else:
+            push_message = "Failure: Open a Krita document."
+        QMessageBox.information(QWidget(), "Generate Renpy Scripting", push_message)
+
 
     def main():
         newDialog = QDialog()
-        newDialog.setWindowTitle("Be like Gaston!")
+        newDialog.setWindowTitle("Untitled!")
         newDialog.exec_()
 
 
 Krita.instance().addDockWidgetFactory(DockWidgetFactory\
 ("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
  , GenerateRenpyScripting))
+
 
 if __name__ == "__main__":
     main()
