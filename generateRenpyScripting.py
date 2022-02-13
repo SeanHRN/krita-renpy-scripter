@@ -3,14 +3,11 @@ import sys
 from os.path import join
 import os
 import re
-currentDoc = Krita.instance().activeDocument()
-
-file_name = "file_name.txt"
+from PyQt5.QtWidgets import *
+KI = Krita.instance()
+#file_name = "file_name.txt"
 #complete_name = os.path.join(save_path, file_name)
-
-def debugger():
-    for f in os.listdir(r"C:\Users\seanc\OneDrive\Desktop"):
-        print(f)
+#filepath = QtWidgets.QFileDialog.getExistingDirectory(self, "Select a Folder")
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
@@ -30,43 +27,70 @@ def parseValuesIntoList(name, sub_to_check):
     return list
 
 def doThing():
-    # get list of layer names
-    layer_names = []
-    coord = []
+    currentDoc = KI.activeDocument()
     root_node = currentDoc.rootNode()
+    layer_names = []
+    all_coords = []
     for i in root_node.childNodes():
         if i.visible() == True:
             layer_names.append(i.name())
             coord_x = i.bounds().topLeft().x()
             coord_y = i.bounds().topLeft().y()
             print(f"appending ({coord_x}, {coord_y})")
-            coord.append([coord_x, coord_y])
-    file1 = open(r"C:/Users/seanc/OneDrive/Desktop/file_name.txt", "w")
-    file1.write("\n")
-    for name, coordinates in zip(layer_names, coord):
+            all_coords.append([coord_x, coord_y])
+    out_file = open(r"C:/Users/seanc/OneDrive/Desktop/file_name.txt", "w")
+    out_file.write("\n")
+    for name, coord_indv in zip(layer_names, all_coords):
         if name.find(" e=") != -1:
             size_list = parseValuesIntoList(name, "s=")
             if size_list:
-                coordinates[0] = round(coordinates[0] * (min(size_list)/100))
-                coordinates[1] = round(coordinates[1] * (min(size_list)/100))
+                coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
+                coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
 
             margin_list = parseValuesIntoList(name, "m=")
             if margin_list:
-                print("margin list found")
-                coordinates[0] += max(margin_list)
-                coordinates[1] += max(margin_list)
-            else:
-                print("no margin list")
+                print("Margin list found for layer: " + name)
+                print("Nudging the coord_indv Up-Left by max value margin.")
+                coord_indv[0] -= max(margin_list)
+                coord_indv[1] -= max(margin_list)
 
             name = name[0:name.find(" e=")]
 
-        file1.write(f"show {name}:\n    pos({coordinates[0]},{coordinates[1]})\n")
-    file1.write("\n")
-    file1.write('pause')
-    file1.close()
+        out_file.write(f"show {name}:\n    pos({coord_indv[0]},{coord_indv[1]})\n")
+    out_file.write("\n")
+    out_file.write('pause')
+    out_file.close()
 
-def main():
-    doThing()
-    #debugger()
+class GenerateRenpyScripting(DockWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Flip the script!")
+        mainWidget = QWidget(self)
+        self.setWidget(mainWidget)
+
+        exampleButton = QPushButton("Show popup", mainWidget)
+        exampleButton.clicked.connect(self.popup)
+
+        mainWidget.setLayout(QVBoxLayout())
+        mainWidget.layout().addWidget(exampleButton)
+
+    def canvasChanged(self, canvas):
+        pass
+
+    def popup(self):
+        doThing()
+        QMessageBox.information(QWidget(), "Generate Renpy Scripting", "Pushed!")
+
+    def main():
+        newDialog = QDialog()
+        newDialog.setWindowTitle("Be like Gaston!")
+        newDialog.exec_()
+
+
+Krita.instance().addDockWidgetFactory(DockWidgetFactory\
+("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
+ , GenerateRenpyScripting))
+
 if __name__ == "__main__":
     main()
