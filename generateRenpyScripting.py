@@ -14,14 +14,13 @@ def parseValuesIntoList(name, sub_to_check):
         properties = name[name.find(" " + sub_to_check):]
         if properties.find("=") != -1:
             properties = properties[properties.find("=")+1:]
-        print("properties: " + properties)
-        stopper = len(properties)
+        stopper = len(properties)-1
         for element in range (0, len(properties)):
             if properties[element].isalpha():
                 stopper = element
+                break
         properties = properties[:stopper]
         properties = properties.replace(" ","")
-        print("stripped properties: " + properties)
         list = [int(n) for n in properties.split(",")]
     return list
 
@@ -41,7 +40,6 @@ def getData():
                 layer_names.append(i.name())
                 coord_x = i.bounds().topLeft().x()
                 coord_y = i.bounds().topLeft().y()
-                print(f"appending ({coord_x}, {coord_y})")
                 all_coords.append([coord_x, coord_y])
 
     for name, coord_indv in zip(layer_names, all_coords):
@@ -53,8 +51,6 @@ def getData():
 
             margin_list = parseValuesIntoList(name, "m=")
             if margin_list:
-                print("Margin list found for layer: " + name)
-                print("Nudging the coord_indv Up-Left by max value margin.")
                 coord_indv[0] -= max(margin_list)
                 coord_indv[1] -= max(margin_list)
 
@@ -65,11 +61,10 @@ def getData():
 
 
 def writeData(input_data, path):
-    print(path)
     out_file = open(path, "w")
     out_file.write("\n")
     for d in input_data:
-        out_file.write(f"show {d[0]}:\n    pos({str(d[1])}, {str(d[2])}) \n")
+        out_file.write(f"show {d[0]}:\n    pos ({str(d[1])}, {str(d[2])}) \n")
     out_file.write("\n")
     out_file.write("pause")
     out_file.close()
@@ -113,7 +108,8 @@ class GenerateRenpyScripting(DockWidget):
             if outfile_exists:
                 webbrowser.open(path)
             # Practically not necessary; krita-batch-exporter doesn't
-            # do a confirmation message either.
+            # do a confirmation message either, and the above statement
+            # makes the file open externally.
             #push_message = f"Success: Ren'Py Script Block Written to path: {path}"
         else:
             push_message = "Failure: Open a Krita document."
@@ -122,7 +118,7 @@ class GenerateRenpyScripting(DockWidget):
 
     def main():
         newDialog = QDialog()
-        newDialog.setWindowTitle("Untitled!")
+        newDialog.setWindowTitle("Generate Ren'Py Scripting")
         newDialog.exec_()
 
 
