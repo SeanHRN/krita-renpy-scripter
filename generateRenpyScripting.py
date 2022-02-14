@@ -14,7 +14,7 @@ def parseValuesIntoList(name, sub_to_check):
         properties = name[name.find(" " + sub_to_check):]
         if properties.find("=") != -1:
             properties = properties[properties.find("=")+1:]
-        stopper = len(properties)-1
+        stopper = len(properties)
         for element in range (0, len(properties)):
             if properties[element].isalpha():
                 stopper = element
@@ -24,6 +24,20 @@ def parseValuesIntoList(name, sub_to_check):
         list = [int(n) for n in properties.split(",")]
     return list
 
+def recursion(layer, layer_name_list, coordinates_list):
+    if layer.visible() == True:
+        layer_name_sublist = []
+        coordinates_sublist = []
+        if layer.name().find(" e=") != -1:
+            layer_name_list.append(layer.name())
+            coord_x = layer.bounds().topLeft().x()
+            coord_y = layer.bounds().topLeft().x()
+            coordinates_list.append([coord_x, coord_y])
+        elif layer.type() == "grouplayer":
+            for child in layer.childNodes():
+                recursion(child, layer_name_sublist, coordinates_sublist)
+        layer_name_list.extend(layer_name_sublist)
+        coordinates_list.extend(coordinates_sublist)
 
 def getData():
     file_open = False
@@ -36,16 +50,14 @@ def getData():
         file_open = True
         root_node = currentDoc.rootNode()
         for i in root_node.childNodes():
-            if i.visible() == True:
-                layer_names.append(i.name())
-                coord_x = i.bounds().topLeft().x()
-                coord_y = i.bounds().topLeft().y()
-                all_coords.append([coord_x, coord_y])
+            recursion(i, layer_names, all_coords)
 
     for name, coord_indv in zip(layer_names, all_coords):
         if name.find(" e=") != -1:
             size_list = parseValuesIntoList(name, "s=")
             if size_list:
+                for s in size_list:
+                    out_file.write(str(s) + ", ")
                 coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
                 coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
 
@@ -114,7 +126,7 @@ class GenerateRenpyScripting(DockWidget):
         else:
             push_message = "Failure: Open a Krita document."
             # Back-indent this if the positive message window is used too.
-            QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
+            #QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
 
     def main():
         newDialog = QDialog()
