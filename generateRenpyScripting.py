@@ -10,8 +10,8 @@ default_outfile_name = "rpblock.txt"
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
-    if name.find(sub_to_check) != -1:
-        properties = name[name.find(" " + sub_to_check):]
+    if name.lower().find(sub_to_check) != -1:
+        properties = name.lower()[name.lower().find(" " + sub_to_check):]
         if properties.find("=") != -1:
             properties = properties[properties.find("=")+1:]
         stopper = len(properties)
@@ -21,17 +21,20 @@ def parseValuesIntoList(name, sub_to_check):
                 break
         properties = properties[:stopper]
         properties = properties.replace(" ","")
-        list = [int(n) for n in properties.split(",")]
+        list = [float(n) for n in properties.split(",")]
     return list
 
 def recursion(layer, layer_name_list, coordinates_list):
     if layer.visible() == True:
         layer_name_sublist = []
         coordinates_sublist = []
-        if layer.name().find(" e=") != -1:
+        lower_name = layer.name().lower()
+        if lower_name.find(" e=") != -1:
             layer_name_list.append(layer.name())
-            coord_x = layer.bounds().topLeft().x()
-            coord_y = layer.bounds().topLeft().y()
+            coord_x, coord_y = 0, 0
+            if not lower_name.find(" t=false") and not lower_name.find(" t=no"):
+                coord_x = layer.bounds().topLeft().x()
+                coord_y = layer.bounds().topLeft().y()
             coordinates_list.append([coord_x, coord_y])
         elif layer.type() == "grouplayer":
             for child in layer.childNodes():
@@ -53,7 +56,7 @@ def getData():
             recursion(i, layer_names, all_coords)
 
     for name, coord_indv in zip(layer_names, all_coords):
-        if name.find(" e=") != -1:
+        if name.lower().find(" e=") != -1:
             margin_list = parseValuesIntoList(name, "m=")
             if margin_list:
                 coord_indv[0] -= max(margin_list)
@@ -62,7 +65,7 @@ def getData():
             if size_list:
                 coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
                 coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
-            name = name[0:name.find(" e=")]
+            name = name[0:name.lower().find(" e=")]
             data_list.append(tuple((name, coord_indv[0], coord_indv[1])))
     return file_open, data_list
 
