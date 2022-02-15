@@ -28,11 +28,11 @@ def recursion(layer, layer_name_list, coordinates_list):
     if layer.visible() == True:
         layer_name_sublist = []
         coordinates_sublist = []
-        lower_name = layer.name().lower()
-        if lower_name.find(" e=") != -1:
+        lower_n = layer.name().lower()
+        if lower_n.find(" e=") != -1:
             layer_name_list.append(layer.name())
             coord_x, coord_y = 0, 0
-            if not lower_name.find(" t=false") and not lower_name.find(" t=no"):
+            if lower_n.find(" t=false") == -1 and lower_n.find(" t=no") == -1:
                 coord_x = layer.bounds().topLeft().x()
                 coord_y = layer.bounds().topLeft().y()
             coordinates_list.append([coord_x, coord_y])
