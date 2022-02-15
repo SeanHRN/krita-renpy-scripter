@@ -31,7 +31,7 @@ def recursion(layer, layer_name_list, coordinates_list):
         if layer.name().find(" e=") != -1:
             layer_name_list.append(layer.name())
             coord_x = layer.bounds().topLeft().x()
-            coord_y = layer.bounds().topLeft().x()
+            coord_y = layer.bounds().topLeft().y()
             coordinates_list.append([coord_x, coord_y])
         elif layer.type() == "grouplayer":
             for child in layer.childNodes():
@@ -54,20 +54,15 @@ def getData():
 
     for name, coord_indv in zip(layer_names, all_coords):
         if name.find(" e=") != -1:
-            size_list = parseValuesIntoList(name, "s=")
-            if size_list:
-                for s in size_list:
-                    out_file.write(str(s) + ", ")
-                coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
-                coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
-
             margin_list = parseValuesIntoList(name, "m=")
             if margin_list:
                 coord_indv[0] -= max(margin_list)
                 coord_indv[1] -= max(margin_list)
-
+            size_list = parseValuesIntoList(name, "s=")
+            if size_list:
+                coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
+                coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
             name = name[0:name.find(" e=")]
-
             data_list.append(tuple((name, coord_indv[0], coord_indv[1])))
     return file_open, data_list
 
