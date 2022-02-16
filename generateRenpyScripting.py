@@ -78,7 +78,7 @@ def writeData(input_data, path):
         outfile.write(f"{' ' * indent}show {d[0]}:\n")
         outfile.write(f"{' ' * (indent * 2)}pos ({str(d[1])}, {str(d[2])})\n")
     outfile.write("\n")
-    outfile.write("pause")
+    outfile.write(f"{' ' * indent}pause")
     outfile.close()
 
 
@@ -119,9 +119,14 @@ class GenerateRenpyScripting(DockWidget):
             outfile_exists = exists(path)
             if outfile_exists:
                 webbrowser.open(path)
+            # Practically not necessary; krita-batch-exporter doesn't
+            # do a confirmation message either, and the above statement
+            # makes the file open externally.
+            #push_message = f"Success: Ren'Py Script Block Written to path: {path}"
         else:
             push_message = "Failure: Open a Krita document."
-            QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
+            # Back-indent this if the positive message window is used too.
+            #QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
 
     def main():
         newDialog = QDialog()
