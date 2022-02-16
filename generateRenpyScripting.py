@@ -2,11 +2,10 @@ from krita import *
 import sys
 from os.path import join, exists
 import webbrowser
-import os
-import re
 from PyQt5.QtWidgets import *
 KI = Krita.instance()
 default_outfile_name = "rpblock.txt"
+indent = 4
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
@@ -23,6 +22,7 @@ def parseValuesIntoList(name, sub_to_check):
         properties = properties.replace(" ","")
         list = [float(n) for n in properties.split(",")]
     return list
+
 
 def recursion(layer, layer_name_list, coordinates_list):
     if layer.visible() == True:
@@ -41,6 +41,7 @@ def recursion(layer, layer_name_list, coordinates_list):
                 recursion(child, layer_name_sublist, coordinates_sublist)
         layer_name_list.extend(layer_name_sublist)
         coordinates_list.extend(coordinates_sublist)
+
 
 def getData():
     file_open = False
@@ -71,13 +72,14 @@ def getData():
 
 
 def writeData(input_data, path):
-    out_file = open(path, "w")
-    out_file.write("\n")
+    outfile = open(path, "w")
+    outfile.write("\n")
     for d in input_data:
-        out_file.write(f"show {d[0]}:\n    pos ({str(d[1])}, {str(d[2])}) \n")
-    out_file.write("\n")
-    out_file.write("pause")
-    out_file.close()
+        outfile.write(f"{' ' * indent}show {d[0]}:\n")
+        outfile.write(f"{' ' * (indent * 2)}pos ({str(d[1])}, {str(d[2])})\n")
+    outfile.write("\n")
+    outfile.write("pause")
+    outfile.close()
 
 
 class GenerateRenpyScripting(DockWidget):
@@ -117,14 +119,9 @@ class GenerateRenpyScripting(DockWidget):
             outfile_exists = exists(path)
             if outfile_exists:
                 webbrowser.open(path)
-            # Practically not necessary; krita-batch-exporter doesn't
-            # do a confirmation message either, and the above statement
-            # makes the file open externally.
-            #push_message = f"Success: Ren'Py Script Block Written to path: {path}"
         else:
             push_message = "Failure: Open a Krita document."
-            # Back-indent this if the positive message window is used too.
-            #QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
+            QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
 
     def main():
         newDialog = QDialog()
