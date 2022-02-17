@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 KI = Krita.instance()
 default_outfile_name = "rpblock.txt"
 indent = 4
+align_values_p3 = [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0]
 
 def parseValuesIntoList(name, sub_to_check):
     list = []
@@ -24,7 +25,7 @@ def parseValuesIntoList(name, sub_to_check):
     return list
 
 
-def recursion(layer, layer_name_list, coordinates_list):
+def parseLayersCoords(layer, layer_name_list, coordinates_list):
     if layer.visible() == True:
         layer_name_sublist = []
         coordinates_sublist = []
@@ -38,23 +39,43 @@ def recursion(layer, layer_name_list, coordinates_list):
             coordinates_list.append([coord_x, coord_y])
         elif layer.type() == "grouplayer":
             for child in layer.childNodes():
-                recursion(child, layer_name_sublist, coordinates_sublist)
+                parseLayersCoords(child, layer_name_sublist, coordinates_sublist)
         layer_name_list.extend(layer_name_sublist)
         coordinates_list.extend(coordinates_sublist)
 
+def closestNum(num_list, value):
+    return num_list[min(range(len(num_list)), key = lambda i: abs(num_list[i]-value))]
 
-def getData():
+#
+def calculateAlign(data_list, precision_level):
+    """
+    calculateAlign converts the pos(x,y) coordinates in the data list into
+    align(x,y) coordinates.
+    """
+    width, height = 1, 1
+    currentDoc = KI.activeDocument()
+    if currentDoc != None:
+        width = currentDoc.width()
+        height = currentDoc.height()
+
+    new_data_list = []
+    for d in data_list:
+        xalign = closestNum(align_values_p3, (d[1] / width))
+        yalign = closestNum(align_values_p3, (d[2] / height))
+        new_data_list.append(tuple((d[0],xalign,yalign)))
+    return new_data_list
+
+def getData(button_num, precision_level):
     file_open = False
     data_list = []
     layer_names = []
     all_coords = []
     currentDoc = KI.activeDocument()
-
     if currentDoc != None:
         file_open = True
         root_node = currentDoc.rootNode()
         for i in root_node.childNodes():
-            recursion(i, layer_names, all_coords)
+            parseLayersCoords(i, layer_names, all_coords)
 
     for name, coord_indv in zip(layer_names, all_coords):
         if name.lower().find(" e=") != -1:
@@ -68,45 +89,78 @@ def getData():
                 coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
             name = name[0:name.lower().find(" e=")]
             data_list.append(tuple((name, coord_indv[0], coord_indv[1])))
+
+    if button_num == 2:
+        # fill in case for align mode
+        data_list = calculateAlign(data_list, precision_level)
     return file_open, data_list
 
 
-def writeData(input_data, path):
+def writeData(input_data, path, format_num):
     outfile = open(path, "w")
     outfile.write("\n")
+    prefix = "pos"
+    if format_num == 2:
+        prefix = "align"
     for d in input_data:
         outfile.write(f"{' ' * indent}show {d[0]}:\n")
-        outfile.write(f"{' ' * (indent * 2)}pos ({str(d[1])}, {str(d[2])})\n")
+        outfile.write(f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n")
     outfile.write("\n")
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
 
 
+
+
 class GenerateRenpyScripting(DockWidget):
+    title = "Generate Ren'Py Scripting"
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Generate Ren'Py Scripting")
-        mainWidget = QWidget(self)
-        self.setWidget(mainWidget)
+        self.setWindowTitle(self.title)
+        self.createInterface()
 
-        button = QPushButton("Generate Ren'Py Scripting", mainWidget)
-        button.clicked.connect(self.popup)
+    def createInterface(self):
+        mainWidget = QWidget(self)
+
+        pos_button = QPushButton("Generate pos(x,y) Scripting", mainWidget)
+        pos_button.clicked.connect(lambda: self.process(1))
+
+        align_button = QPushButton("Generate align(x,y) Scripting", mainWidget)
+        align_button.clicked.connect(lambda: self.process(2))
 
         self.filename_line = QLineEdit()
         self.filename_line.setText(default_outfile_name)
 
+
+        self.precision_slider = QSlider(Qt.Horizontal, self)
+        self.precision_slider.setGeometry(30, 40, 200, 30)
+        self.precision_slider.setRange(1, 4)
+        self.precision_slider.setValue(3)
+        self.precision_slider.setFocusPolicy(Qt.NoFocus)
+        self.precision_slider.setPageStep(3)
+        self.precision_slider.setTickPosition(QSlider.TicksBelow)
+        self.precision_slider.setTickInterval(4)
+        self.precision_slider.valueChanged[int].connect(self.updatePrecisionValue)
+
+        self.precision_number_label = QLabel(f"{self.precision_slider.value()}", self)
+        self.precision_number_label.setAlignment(Qt.AlignVCenter)
+
+        self.setWidget(mainWidget)
         mainWidget.setLayout(QVBoxLayout())
-        mainWidget.layout().addWidget(button)
+
+        mainWidget.layout().addWidget(pos_button)
+        mainWidget.layout().addWidget(align_button)
+        mainWidget.layout().addWidget(self.precision_slider)
+        mainWidget.layout().addWidget(self.precision_number_label)
         mainWidget.layout().addWidget(self.filename_line)
 
 
-    def canvasChanged(self, canvas):
-        pass
+    def updatePrecisionValue(self):
+        self.precision_number_label.setText(str(self.precision_slider.value()))
 
-
-    def popup(self):
-        file_open_test_result, data = getData()
+    def process(self, button_num):
+        file_open_test_result, data = getData(button_num, self.precision_slider.value())
         push_message = ""
         path = ""
         if file_open_test_result == True:
@@ -115,29 +169,18 @@ class GenerateRenpyScripting(DockWidget):
             if self.filename_line.text() != "":
                 outfile_name = self.filename_line.text()
             path += "/" + outfile_name
-            writeData(data, path)
+            writeData(data, path, button_num)
             outfile_exists = exists(path)
             if outfile_exists:
                 webbrowser.open(path)
-            # Practically not necessary; krita-batch-exporter doesn't
-            # do a confirmation message either, and the above statement
-            # makes the file open externally.
-            #push_message = f"Success: Ren'Py Script Block Written to path: {path}"
-        else:
-            push_message = "Failure: Open a Krita document."
-            # Back-indent this if the positive message window is used too.
-            #QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
+    #        else:
+    #            push_message = "Failure: Open a Krita document."
+    #            QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
 
-    def main():
-        newDialog = QDialog()
-        newDialog.setWindowTitle("Generate Ren'Py Scripting")
-        newDialog.exec_()
+    def canvasChanged(self, canvas):
+        pass
 
-
-Krita.instance().addDockWidgetFactory(DockWidgetFactory\
+def registerDocker():
+    Krita.instance().addDockWidgetFactory(DockWidgetFactory\
 ("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
  , GenerateRenpyScripting))
-
-
-if __name__ == "__main__":
-    main()

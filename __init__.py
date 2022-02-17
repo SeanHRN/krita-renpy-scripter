@@ -1,1 +1,3 @@
 from .generateRenpyScripting import *
+
+registerDocker()
