@@ -112,8 +112,6 @@ def writeData(input_data, path, format_num):
     outfile.close()
 
 
-
-
 class GenerateRenpyScripting(DockWidget):
     title = "Generate Ren'Py Scripting"
 
@@ -123,14 +121,11 @@ class GenerateRenpyScripting(DockWidget):
         self.createInterface()
 
     def createInterface(self):
-
-
         pos_button = QPushButton("Generate pos(x,y) Scripting")
         pos_button.clicked.connect(lambda: self.process(1))
 
         align_button = QPushButton("Generate align(x,y) Scripting")
         align_button.clicked.connect(lambda: self.process(2))
-
 
         self.precision_slider = QSlider(Qt.Horizontal, self)
         self.precision_slider.setGeometry(30, 40, 200, 30)
@@ -141,16 +136,23 @@ class GenerateRenpyScripting(DockWidget):
         self.precision_slider.setTickPosition(QSlider.TicksBelow)
         self.precision_slider.setTickInterval(3)
         self.precision_slider.valueChanged[int].connect(self.updatePrecisionValue)
-        self.precision_text = QLabel("align() precision: ",self)
+        self.precision_text = QLabel("align(x,y) Decimal Places: ",self)
         self.precision_number_label = QLabel(f"{self.precision_slider.value()}", self)
         self.precision_number_label.setAlignment(Qt.AlignVCenter)
+
+        self.scale_box_percent = QSpinBox(self)
+        self.scale_box_percent.setRange(0, 100)
+        self.scale_box_percent.setValue(100)
+        self.scale_box_percent.valueChanged.connect(self.updateScaleCalculation)
+        self.scale_text = QLabel("% scale has", self)
+        #self.scale_w_h_text = QLabel(f"{self.}x{} px", self)
 
         self.filename_line = QLineEdit()
         self.filename_line.setText(default_outfile_name)
 
         top_layout = QVBoxLayout()
         precision_layout = QHBoxLayout()
-        #last_layout = QVBoxLayout()
+        scale_layout = QHBoxLayout()
 
         top_layout.addWidget(pos_button)
         top_layout.addWidget(align_button)
@@ -160,12 +162,24 @@ class GenerateRenpyScripting(DockWidget):
         precision_layout.addWidget(self.precision_slider)
         top_layout.addLayout(precision_layout)
 
+        scale_layout.addWidget(self.scale_box_percent)
+        scale_layout.addWidget(self.scale_text)
+        #scale_layout.addWidget(self.scale_w_h_text)
+        top_layout.addLayout(scale_layout)
+
         top_layout.addWidget(self.filename_line)
 
         mainWidget = QWidget(self)
         mainWidget.setLayout(top_layout)
         self.setWidget(mainWidget)
 
+    def updateScaleCalculation(self):
+        currentDoc = KI.activeDocument()
+        if currentDoc != None:
+            multiplier = self.scale_box_percent.value() / 100
+            width = round(currentDoc.width() * multiplier)
+            height = round(currentDoc.height() * multiplier)
+            self.scale_w_h_text.setText(f"{width}x{height} px")
 
     def updatePrecisionValue(self):
         self.precision_number_label.setText(str(self.precision_slider.value()))
@@ -184,9 +198,9 @@ class GenerateRenpyScripting(DockWidget):
             outfile_exists = exists(path)
             if outfile_exists:
                 webbrowser.open(path)
-    #        else:
-    #            push_message = "Failure: Open a Krita document."
-    #            QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
+            else:
+                push_message = "Failure: Open a Krita document."
+                QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
 
     def canvasChanged(self, canvas):
         pass
