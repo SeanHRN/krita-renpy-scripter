@@ -138,7 +138,7 @@ class GenerateRenpyScripting(DockWidget):
 
     def createInterface(self):
 
-        export_label = QLabel("Export Ren'Py Scripting Block")
+        export_label = QLabel("Export")
         export_label.setToolTip("Export a file with a block of Ren'Py scripting\
 for a quick copy and paste.")
 
@@ -172,7 +172,7 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.scale_box_percent.setRange(0, 100)
         self.scale_box_percent.setValue(100)
         self.scale_box_percent.valueChanged[int].connect(self.updateScaleCalculation)
-        self.scale_text = QLabel("% scale has", self)
+        self.scale_text = QLabel("% scale dimensions:", self)
         self.scale_w_h_text = QLabel(f"0 x 0 px", self)
         self.scale_w_h_text.setToolTip("This is how big the composite image \
 would be at that percentage scale.")
@@ -192,6 +192,7 @@ would be at that percentage scale.")
         export_layout.addWidget(align_button)
         main_layout.addLayout(export_layout)
 
+        spacing_layout.setContentsMargins(0,0,0,0)
         spacing_layout.addWidget(self.spacing_text)
         spacing_layout.addWidget(self.spacing_number_label)
         spacing_layout.addWidget(self.spacing_slider)
