@@ -167,6 +167,7 @@ spaces to use for align(x, y).")
 statements to Rule of Thirds intersections. This is equivalent to using 4 spaces.")
         self.rule_of_thirds_check.setChecked(False)
 
+        scale_label = QLabel("Scale Percentage Size Calculator")
         self.scale_box_percent = QSpinBox(self)
         self.scale_box_percent.setRange(0, 100)
         self.scale_box_percent.setValue(100)
@@ -197,11 +198,13 @@ would be at that percentage scale.")
         spacing_layout.addWidget(self.rule_of_thirds_check)
         main_layout.addLayout(spacing_layout)
 
+        main_layout.addWidget(scale_label)
         scale_layout.addWidget(self.scale_box_percent)
         scale_layout.addWidget(self.scale_text)
         scale_layout.addWidget(self.scale_w_h_text)
         main_layout.addLayout(scale_layout)
 
+        main_layout.addWidget(filename_label)
         main_layout.addWidget(self.filename_line)
         main_layout.addStretch()
 
