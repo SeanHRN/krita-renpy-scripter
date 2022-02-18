@@ -55,7 +55,7 @@ Currently, the margin option nudges the `(x, y)` coordinates of the image up and
 ```
 The block starts one indent in because it would be pasted into a Ren'Py script under a label statement.
 
-## Example With Krita
+## pos (x, y) Example
 Here's a screenshot of a panel from *Homeless Rice Ninja: The Rocky Road*, featuring [HRN](https://krita-artists.org/t/homeless-rice-ninja/36398) and [Halo-Halo](https://krita-artists.org/t/halo-halo/36741).
 
 ![HRN vs Halo-Halo](./images/example_hrn_1.png)
@@ -88,6 +88,26 @@ It doesn't have the fog because I handle scrolling graphics separately, but all 
  -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter doesn't allow non-integer<br> values for percentage.
  - rpblock.txt does start with the empty line, but I don't know how to get that to work in Markdown yet.
 
+## align (x, y) Example
+Here's a test document with stuff to align.
+![Colors](./images/examples_test_thirds_krita.png)
+
+With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
+
+        show Background:
+            align (0.333, 0.333)
+        show Blue:
+            align (0.666, 0.333)
+        show Magenta:
+            align (0.0, 0.666)
+        show Red:
+            align (0.666, 0.666)
+        show Green:
+            align (0.333, 0.666)
+
+    pause
+ Here's how the images appear in Ren'Py:
+ ![Colors in Ren'Py](./images/examples_test_thirds_renpy.png)
 ## Notes
 
  - The manual for Krita Batch Exporter is [here](https://github.com/GDQuest/krita-batch-exporter/blob/master/batch_exporter/Manual.md).
