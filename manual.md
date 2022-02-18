@@ -90,7 +90,7 @@ It doesn't have the fog because I handle scrolling graphics separately, but all 
 
 ## align (x, y) Example
 Here's a test document with stuff to align.
-![Colors](./images/examples_test_thirds_krita.png)
+![Colors](./images/example_test_thirds_krita.png)
 
 With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
 
@@ -107,7 +107,7 @@ With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
 
     pause
  Here's how the images appear in Ren'Py:
- ![Colors in Ren'Py](./images/examples_test_thirds_renpy.png)
+ ![Colors in Ren'Py](./images/example_test_thirds_renpy.png)
 ## Notes
 
  - The manual for Krita Batch Exporter is [here](https://github.com/GDQuest/krita-batch-exporter/blob/master/batch_exporter/Manual.md).
