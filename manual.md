@@ -17,7 +17,7 @@ The coordinates refer to the top left corner of the bounding box for all non-tra
 ## align(x, y) Output
 
 The user may use the slider to choose the number of evenly-spaced spots at which to assign `align (x, y)`coordinates,
- from 2 to 9.
+ from 2 to 9. Each image is assigned to the intersection between a vertical spacing and a horizontal spacing closest to its center point.
 
 For example, if 5 is chosen, the set of available spots (per axis) would be [0.0, 0.25, 0.5, 0.75, 1.0].
 
@@ -65,7 +65,7 @@ To test this plugin, I remade the panel.
 The full-sized Krita document for this image is 5103x2873 px.
 ![GUI](./images/example_gui.png)
 
-I renamed the layers to match how I name the images in Ren'Py. For example, p8p3hrn means "Page 8 Panel 3 HRN". I chose 38% as the scale; as the calculator states, that would make the size 1939x1092 px, which is just slightly bigger than my target size of 1920x1080 px.
+I renamed the layers to match how I name the images in Ren'Py. For example, p8p3hrn means "Page 8 Panel 3 HRN". I chose 38% as the scale; as the calculator states, that would make the image size 1939x1092 px, which is just slightly bigger than my target size of 1920x1080 px.
 
 Here's the resulting rpblock.txt:
 
@@ -90,7 +90,7 @@ It doesn't have the fog because I handle scrolling graphics separately, but all 
  - rpblock.txt does start with the empty line, but I don't know how to get that to work in Markdown yet.
 
 ## align (x, y) Example
-Here's a test document with stuff to align.
+Here's a 1920x1080 px test document with stuff to align.
 ![Colors](./images/example_test_thirds_krita.png)
 
 With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
@@ -109,6 +109,9 @@ With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
     pause
  Here's how the images appear in Ren'Py:
  ![Colors in Ren'Py](./images/example_test_thirds_renpy.png)
+
+The magenta dot's center was closer to the left edge than the first horizontal third by just 14 pixels.
+
 ## Notes
 
  - The manual for Krita Batch Exporter is [here](https://github.com/GDQuest/krita-batch-exporter/blob/master/batch_exporter/Manual.md).
