@@ -64,6 +64,7 @@ Here's a screenshot of a panel from *Homeless Rice Ninja: The Rocky Road*, featu
 To test this plugin, I remade the panel.
 The full-sized Krita document for this image is 5103x2873 px.
 ![GUI](./images/example_gui.png)
+
 I renamed the layers to match how I name the images in Ren'Py. For example, p8p3hrn means "Page 8 Panel 3 HRN". I chose 38% as the scale; as the calculator states, that would make the size 1939x1092 px, which is just slightly bigger than my target size of 1920x1080 px.
 
 Here's the resulting rpblock.txt:
@@ -114,6 +115,8 @@ With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
  - This plugin allows non-integer values for size percentage via `round()`, but Krita Batch Exporter does not. <br> The included Scale Percentage Size Calculator uses integer values only.
  - Metadata tags are case-insensitive in this plugin but case-sensitive in Krita Batch Exporter.
  - If a group layer and its contained layer both have metadata, the group properties have priority.
+ - The line for the output file name is at the bottom because I think it's the widget that users\
+ would need to touch the least often; that file is meant to be temporary.
 
 ## Features To Possibly Implement
 
