@@ -123,6 +123,7 @@ The magenta dot's center was closer to the left edge than the first horizontal t
 
 ## Features To Possibly Implement
 
+ - Update the output of the calculator right when a document is opened.
  - GUI text bar to notify the user of success/failure in export to match Krita Batch Exporter's design.<br> Currently, a separate window opens if the user tries to run the plugin when a Krita file hasn't been opened,<br> and the only notification of success is the automatic file opening.
  - Provide more export templates.
 
