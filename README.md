@@ -25,7 +25,7 @@ Easy Install via Python Plugin Manager:
 Open Krita and go to `Tools -> Scripts -> Import Python Plugin from file`. <br>Select `generateRenpyScripting_1.0.zip`.
 
 Long way:
-Open `generateRenpyScripting_1.0.zip`. Place `generaterenpyscripting` (the all lower-case name folder) <br>and `generaterenpyscripting.desktop` in the pykrita directory.
+Open `generateRenpyScripting_1.0.zip`. Place `generateRenpyScripting` (the folder) <br>and `generateRenpyScripting.desktop` in the pykrita directory.
 You may find the location of the pykrita folder by opening Krita and clicking<br> `Settings -> Manage Resources -> Open Resource Folder`.
 
 Proceed to Enabling GRS in Krita.
