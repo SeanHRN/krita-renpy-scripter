@@ -20,12 +20,17 @@ Generate Ren'Py Scripting is a Python plugin for Krita. GRS outputs a block of R
 For more information with examples, see the [manual](https://github.com/SeanHRN/generate-renpy-scripting/blob/master/generateRenpyScripting/generateRenpyScripting/manual.md).
 
 # Download and Installation
+Quickest Way via Python Plugin Manager (from Web):
+Open Krita and go to `Tools -> Scripts -> Import Python Plugin from Web`.
+Enter as the download URL: https://github.com/SeanHRN/generate-renpy-scripting
+
+Alternatively:
 Download the [zip or tar.gz](https://github.com/SeanHRN/generate-renpy-scripting/releases/tag/v1.0.0).
 
-Easy Install via Python Plugin Manager:
-Open Krita and go to `Tools -> Scripts -> Import Python Plugin from file`. <br>Select `generateRenpyScripting_1.0.zip`.
+Easy Install via Python Plugin Manager (from File):
+Open Krita and go to `Tools -> Scripts -> Import Python Plugin from File`. <br>Select `generateRenpyScripting_1.0.zip`.
 
-Long way:
+Long Way:
 Unzip `generate-renpy-scripting-1.0.0.zip`. Place `generateRenpyScripting` (the folder) <br>and `generateRenpyScripting.desktop` in the pykrita directory.
 You may find the location of the pykrita folder by opening Krita and clicking<br> `Settings -> Manage Resources -> Open Resource Folder`.
 
