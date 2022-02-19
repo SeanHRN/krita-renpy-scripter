@@ -36,10 +36,12 @@ Proceed to Enabling GRS in Krita.
 3. `Generate Ren'Py Scripting` will be in the list; check its box.
 4.  Restart Krita.
 
-
 # Known Issue
 
  - The image dimensions section of the Scale Percentage Size Calculator doesn't automatically update when a Krita document is opened.
 
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
+
+# License
+Generate Ren'Py Scripting is released under the GNU General Public License (version 3 or later).
