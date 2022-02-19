@@ -28,11 +28,12 @@ Alternatively:
 Download the [zip or tar.gz](https://github.com/SeanHRN/generate-renpy-scripting/releases/tag/v1.0.0).
 
 Easy Install via Python Plugin Manager (from File):
-Open Krita and go to `Tools -> Scripts -> Import Python Plugin from File`. <br>Select `generateRenpyScripting_1.0.zip`.
+Open Krita and go to `Tools -> Scripts -> Import Python Plugin from File`. Select `generateRenpyScripting_1.0.zip`.
 
 Long Way:
-Unzip `generate-renpy-scripting-1.0.0.zip`. Place `generateRenpyScripting` (the folder) <br>and `generateRenpyScripting.desktop` in the pykrita directory.
-You may find the location of the pykrita folder by opening Krita and clicking<br> `Settings -> Manage Resources -> Open Resource Folder`.
+Unzip `generate-renpy-scripting-1.0.0.zip`. Place `generateRenpyScripting` (the folder) and `generateRenpyScripting.desktop` in the pykrita directory.
+You may find the location of the pykrita folder by opening Krita and clicking
+ `Settings -> Manage Resources -> Open Resource Folder`.
 
 Proceed to Enabling GRS in Krita.
 
@@ -44,7 +45,8 @@ Proceed to Enabling GRS in Krita.
 
 # Known Issue
 
- - The image dimensions section of the Scale Percentage Size Calculator doesn't automatically update when a Krita document is opened.
+ - The image dimensions section of the Scale Percentage Size Calculator doesn't automatically update when a Krita document is opened. This also means that if you switch to a different document,
+ the first document's dimensions are still displayed (until you change the number).
 
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
