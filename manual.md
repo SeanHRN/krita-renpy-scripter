@@ -128,5 +128,5 @@ The magenta dot's center was closer to the left edge than the first horizontal t
  - Provide more export templates.
 
 ## That's It!
-Feedback would be greatly appreciated.
-See more of *Homeless Rice Ninja: The Rocky Road* [here](https://seanhrn.itch.io/homeless-rice-ninja-the-rocky-road). I post character art on my Krita-Artists [page](https://krita-artists.org/u/hydrone/activity/portfolio).
+Feedback would be greatly appreciated. Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
+See more of *Homeless Rice Ninja: The Rocky Road* [here](https://seanhrn.itch.io/homeless-rice-ninja-the-rocky-road). I post character art on my Krita-Artists [portfolio](https://krita-artists.org/u/hydrone/activity/portfolio).
