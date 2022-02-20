@@ -1,6 +1,6 @@
 # Generate Ren'Py Scripting
 by Sean Castillo
-Version 1.0
+Version 1.1
 
 This plugin uses the contents of a Krita document and the layer name syntax for the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) by GDQuest to generate a block of text for a Ren'Py script. The block is saved into a file and then automatically opened in the default program for that file extension (e.g. Notepad for .txt on Windows) so that the user may immediately copy and paste the text into a Ren'Py script file. The goal is to coordinate the composed images as they appear in Krita to display the same way in Ren'Py as efficiently as possible by calculating the coordinates and doing the bulk of the typing automatically. Be sure to use images exported by the Batch Exporter to maintain consistency with this plugin's coordinates output.
 
@@ -115,7 +115,9 @@ The magenta dot's center was closer to the left edge than the first horizontal t
 ## Notes
 
  - The manual for Krita Batch Exporter is [here](https://github.com/GDQuest/krita-batch-exporter/blob/master/batch_exporter/Manual.md).
- - This plugin allows non-integer values for size percentage via `round()`, but Krita Batch Exporter does not. <br> The included Scale Percentage Size Calculator uses integer values only.
+ - Tip: Group Generate Ren'Py Scripting and Krita Batch Exporter together as tabs to save space (unlike how I had them \
+in the examples.)
+ - This plugin allows non-integer values for size percentage via `round()`, but Krita Batch Exporter does not. The included Scale Percentage Size Calculator uses integer values only.
  - Metadata tags are case-insensitive in this plugin but case-sensitive in Krita Batch Exporter.
  - If a group layer and its contained layer both have metadata, the group properties have priority.
  - The line for the output file name is at the bottom because I think it's the widget that users\

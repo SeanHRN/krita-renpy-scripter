@@ -4,7 +4,13 @@ import math
 from os.path import join, exists
 import webbrowser
 from PyQt5.QtWidgets import *
+
 KI = Krita.instance()
+open_notifier = KI.notifier()
+open_notifier.setActive(True)
+close_notifier = KI.notifier()
+close_notifier.setActive(True)
+
 default_outfile_name = "rpblock.txt"
 indent = 4
 decimal_place_count = 3
@@ -135,17 +141,42 @@ class GenerateRenpyScripting(DockWidget):
         super().__init__()
         self.setWindowTitle(self.title)
         self.createInterface()
+        self.mainWindow = None
+        open_notifier.imageCreated.connect(self.updateScaleCalculation)
+        open_notifier.imageCreated.connect(self.initiateScaleCalculation)
+        close_notifier.viewClosed.connect(self.wasLast)
+
+    def initiateScaleCalculation(self):
+        self.mainWindow = KI.activeWindow()
+        self.mainWindow.activeViewChanged.connect(self.updateScaleCalculation)
+
+    def wasLast(self):
+        """
+        At the moment a view is closed, the view is still part of the window's
+        view count, so when the final view is closed, Window.views() is 1.
+        Set the dimensions back to 0x0.
+        """
+        if len(KI.activeWindow().views()) == 1:
+            self.wipeScaleCalculation()
+
+    def bang(self):
+        """
+        For debugging.
+        """
+        msg = QMessageBox()
+        msg.setGeometry(100, 200, 100, 100)
+        msg.setText("Bang!")
+        msg.exec_()
 
     def createInterface(self):
-
         export_label = QLabel("Export")
         export_label.setToolTip("Export a file with a block of Ren'Py scripting\
 for a quick copy and paste.")
 
-        pos_button = QPushButton("pos(x, y)")
+        pos_button = QPushButton("pos (x, y)")
         pos_button.clicked.connect(lambda: self.process(1))
 
-        align_button = QPushButton("align(x, y)")
+        align_button = QPushButton("align (x, y)")
         align_button.clicked.connect(lambda: self.process(2))
 
         self.spacing_slider = QSlider(Qt.Horizontal, self)
@@ -157,8 +188,8 @@ for a quick copy and paste.")
         self.spacing_slider.setTickInterval(1)
         self.spacing_slider.setTickPosition(QSlider.TicksBelow)
         self.spacing_slider.valueChanged[int].connect(self.updateSpacingValue)
-        self.spacing_text = QLabel("align(x,y) Spacing Count: ")
-        self.spacing_text.setToolTip("Choose number of evenly-distributed \
+        self.spacing_label = QLabel("align (x, y) Spacing Count: ")
+        self.spacing_label.setToolTip("Choose number of evenly-distributed \
 spaces to use for align(x, y).")
         self.spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
         self.spacing_number_label.setAlignment(Qt.AlignVCenter)
@@ -172,7 +203,7 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.scale_box_percent.setRange(0, 100)
         self.scale_box_percent.setValue(100)
         self.scale_box_percent.valueChanged[int].connect(self.updateScaleCalculation)
-        self.scale_text = QLabel("% scale dimensions:", self)
+        self.scale_text = QLabel("% Scale Dimensions:", self)
         self.scale_w_h_text = QLabel(f"0 x 0 px", self)
         self.scale_w_h_text.setToolTip("This is how big the composite image \
 would be at that percentage scale.")
@@ -183,23 +214,25 @@ would be at that percentage scale.")
         self.filename_line.setText(default_outfile_name)
 
         main_layout = QVBoxLayout()
-        export_layout = QVBoxLayout()
+        export_layout = QHBoxLayout()
         spacing_layout = QHBoxLayout()
         scale_layout = QHBoxLayout()
 
-        export_layout.addWidget(export_label)
+        main_layout.addWidget(export_label)
         export_layout.addWidget(pos_button)
         export_layout.addWidget(align_button)
+        export_layout.setContentsMargins(0, 4, 0, 2) #left top right bottom
         main_layout.addLayout(export_layout)
 
+        main_layout.addWidget(self.spacing_label)
         spacing_layout.setContentsMargins(0,0,0,0)
-        spacing_layout.addWidget(self.spacing_text)
         spacing_layout.addWidget(self.spacing_number_label)
         spacing_layout.addWidget(self.spacing_slider)
         spacing_layout.addWidget(self.rule_of_thirds_check)
         main_layout.addLayout(spacing_layout)
 
         main_layout.addWidget(scale_label)
+        self.scale_box_percent.setGeometry(0, 0, 10, 10)
         scale_layout.addWidget(self.scale_box_percent)
         scale_layout.addWidget(self.scale_text)
         scale_layout.addWidget(self.scale_w_h_text)
@@ -221,6 +254,9 @@ would be at that percentage scale.")
             width = round(currentDoc.width() * multiplier)
             height = round(currentDoc.height() * multiplier)
         self.scale_w_h_text.setText(f"{width} x {height} px")
+
+    def wipeScaleCalculation(self):
+        self.scale_w_h_text.setText(f"0 x 0 px")
 
     def updateSpacingValue(self):
         self.spacing_number_label.setText(str(self.spacing_slider.value()))

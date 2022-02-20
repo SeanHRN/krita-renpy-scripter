@@ -14,7 +14,7 @@ Generate Ren'Py Scripting is a Python plugin for Krita. GRS outputs a block of R
     2. If you need align (x, y) scripting:
        1. Choose the number of evenly-distributed spacings to use. <br>The Rule of Thirds toggle has the same effect as choosing 4 spacings [0.0, 0.333, 0.666, 1.0].
        2. Press `align (x, y)`.
-  5. The exported file will be opened in the program default for its type automatically. Copy and paste its text where you need it in your Ren'Py script.
+  5. After you choose a save location, the exported file will be opened in the program default for its type automatically. Copy and paste its text where you need it in your Ren'Py script. I like to save to Desktop so that I could find and delete the file afterwards easily.
   6. Make any changes necessary to your Ren'Py script. GRS gets you started with the basic image display template, but any further ATL statements still need to be declared manually!
 
 For more information with examples, see the [manual](https://github.com/SeanHRN/generate-renpy-scripting/blob/master/manual.md).
@@ -43,14 +43,14 @@ Proceed to Enabling GRS in Krita.
 3. `Generate Ren'Py Scripting` will be in the list; check its box.
 4.  Restart Krita.
 
-# Known Issue
- - The image dimensions section of the Scale Percentage Size Calculator doesn't automatically update when a Krita document is opened. This also means that if you switch to a different document,
- the first document's dimensions are still displayed (until you change the number).
-
-# Changes to Make Next
- - Fix the aforementioned size update issue.
- - Revise the widget layout to use the space more efficiently. The export buttons could go
- on one line.
+# v1.0 -> v1.1 Change List
+ - Scale Percentage Size Calculator properly updates the dimensions when a \
+new document is loaded, when the user switches between active documents, \
+and when all documents are closed.
+ - Several GUI tweaks:
+     - The export options are on a single line.
+     - Instances of `pos(x, y)` and `align(x, y)` have been given a space between pos/align and the left parenthesis to look a bit nicer and be consistent with the output style: `pos (x, y)` and `align (x, y)`
+     - `Scale Dimensions` is now capitalized to be consistent with the rest of the text.
 
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
