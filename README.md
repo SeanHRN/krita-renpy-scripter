@@ -52,6 +52,9 @@ and when all documents are closed.
      - Instances of `pos(x, y)` and `align(x, y)` have been given a space between pos/align and the left parenthesis to look a bit nicer and be consistent with the output style: `pos (x, y)` and `align (x, y)`
      - `Scale Dimensions` is now capitalized to be consistent with the rest of the text.
 
+# v1.1 -> v1.1.1 Change
+ - It's the same; I just added the in-Krita manual html file.
+
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
 
