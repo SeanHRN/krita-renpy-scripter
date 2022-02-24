@@ -1,7 +1,8 @@
 from krita import *
 import sys
 import math
-from os.path import join, exists
+from pathlib import Path
+from os.path import join, exists, dirname
 import webbrowser
 from PyQt5.QtWidgets import *
 
@@ -15,17 +16,23 @@ default_outfile_name = "rpblock.txt"
 indent = 4
 decimal_place_count = 3
 
-def parseValuesIntoList(name, sub_to_check):
+def parseValuesIntoList(name, sub_to_check, value_type):
     list = []
     if name.lower().find(sub_to_check) != -1:
         properties = name.lower()[name.lower().find(" " + sub_to_check):]
         if properties.find("=") != -1:
             properties = properties[properties.find("=")+1:]
         stopper = len(properties)
-        for element in range (0, len(properties)):
-            if properties[element].isalpha():
-                stopper = element
-                break
+        if value_type == "num":
+            for element in range (0, len(properties)):
+                if properties[element].isalpha():
+                    stopper = element
+                    break
+        else: #"alpha"
+            for element in range (0, len(properties)):
+                if properties[element].isnumeric():
+                    stopper = element
+                    break
         properties = properties[:stopper]
         properties = properties.replace(" ","")
         list = [float(n) for n in properties.split(",")]
@@ -86,7 +93,7 @@ def calculateAlign(data_list, centers_list, spacing_count):
     for d, c in zip(data_list, centers_list):
         xalign = closestNum(spacing_list, (c[0] / width))
         yalign = closestNum(spacing_list, (c[1] / height))
-        new_data_list.append(tuple((d[0],xalign,yalign)))
+        new_data_list.append(tuple((d[0],xalign,yalign,d[3])))
     return new_data_list
 
 def getData(button_num, spacing_count):
@@ -104,21 +111,23 @@ def getData(button_num, spacing_count):
 
     for name, coord_indv in zip(layer_names, all_coords):
         if name.lower().find(" e=") != -1:
-            margin_list = parseValuesIntoList(name, "m=")
+            actual_name = name[0:name.lower().find(" e=")]
+            margin_list = parseValuesIntoList(name, "m=", "num")
             if margin_list:
                 coord_indv[0] -= max(margin_list)
                 coord_indv[1] -= max(margin_list)
-            size_list = parseValuesIntoList(name, "s=")
+            size_list = parseValuesIntoList(name, "s=", "num")
+            g = [4, 1, 6]
             if size_list:
                 coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
                 coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
-            name = name[0:name.lower().find(" e=")]
-            data_list.append(tuple((name, coord_indv[0], coord_indv[1])))
+            else:
+                g = [0, 0, 0]
+            data_list.append(tuple((actual_name, coord_indv[0], coord_indv[1], size_list)))
 
     if button_num == 2:
         data_list = calculateAlign(data_list, all_centers, spacing_count)
     return file_open, data_list
-
 
 def writeData(input_data, path, format_num):
     outfile = open(path, "w")
@@ -132,6 +141,39 @@ def writeData(input_data, path, format_num):
     outfile.write("\n")
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
+
+def renameFiles(size_list):
+    """
+    renameFiles() uses data_list to get the layer names and the scales.
+    """
+    dirName = os.path.dirname(KI.activeDocument().fileName())
+    dirName += "/bruno"
+    Path(dirName).mkdir(parents=True, exist_ok=True)
+    dirName += "/gaston.txt"
+    of = open(dirName, "w")
+    if len(size_list) == 0:
+        of.write("NANI")
+    for s in size_list:
+        #for q in s[3]:
+        #    of.write(str(q))
+        if len(s[3]) == 0:
+            of.write("empty")
+        else:
+            of.write(f"len: {str(len(s[3]))}")
+        of.write("\n")
+        #of.write(d[0])
+    of.write("what")
+    of.close()
+
+    #of.close()
+
+#    outpath_tmp = Path.cwd() / 'output_tmp'
+#    generate_data(output_tmp)
+#    if outpath_tmp.stat().st_size:
+#        outpath_tmp.rename(outpath)
+#    else: # Nothing produced
+#        Path_tmp.unlink()
+
 
 
 class GenerateRenpyScripting(DockWidget):
@@ -159,13 +201,13 @@ class GenerateRenpyScripting(DockWidget):
         if len(KI.activeWindow().views()) == 1:
             self.wipeScaleCalculation()
 
-    def bang(self):
+    def bang(self, toPrint):
         """
         For debugging.
         """
         msg = QMessageBox()
         msg.setGeometry(100, 200, 100, 100)
-        msg.setText("Bang!")
+        msg.setText(toPrint)
         msg.exec_()
 
     def createInterface(self):
@@ -208,6 +250,12 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.scale_w_h_text.setToolTip("This is how big the composite image \
 would be at that percentage scale.")
 
+        # Experimental
+        self.rename_check = QCheckBox("Rename Batch-Exported Files")
+        self.rename_check.setToolTip("Option to remove the Batch Exporter's \
+scale suffix from the exported file names")
+        self.rename_check.setChecked(True)
+
         filename_label = QLabel("Output File")
         self.filename_line = QLineEdit()
         self.filename_line.setToolTip("Output file name with .[extension]")
@@ -238,6 +286,7 @@ would be at that percentage scale.")
         scale_layout.addWidget(self.scale_w_h_text)
         main_layout.addLayout(scale_layout)
 
+        main_layout.addWidget(self.rename_check)
         main_layout.addWidget(filename_label)
         main_layout.addWidget(self.filename_line)
         main_layout.addStretch()
@@ -268,6 +317,8 @@ would be at that percentage scale.")
         else:
             spacing_count = self.spacing_slider.value()
         file_open_test_result, data = getData(button_num, spacing_count)
+        toPrint = data[0][3]
+        self.bang(str(toPrint))
         push_message = ""
         path = ""
         if file_open_test_result == True:
@@ -283,6 +334,8 @@ would be at that percentage scale.")
             else:
                 push_message = "Failure: Open a Krita document."
                 QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
+        if self.rename_check.isChecked():
+            renameFiles(data)
 
     def canvasChanged(self, canvas):
         pass
