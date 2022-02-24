@@ -55,6 +55,12 @@ and when all documents are closed.
 # v1.1 -> v1.1.1 Change
  - It's the same; I just added the in-Krita manual html file.
 
+# Known Issues to be Fixed in the Next Update
+ - (Possibly only in my WIP build) pos () coordinates are sometimes inaccurate in that if the visible non-formatted layer is in a formatted group, the coordinates of the layer are used instead of the group's coordinates.
+
+# Feature to be Added in the Next Update
+ - Option to make a folder with copies of the batch-exported files with the scale suffix removed
+
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
 
