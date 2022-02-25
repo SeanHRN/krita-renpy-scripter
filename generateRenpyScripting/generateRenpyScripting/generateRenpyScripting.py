@@ -2,11 +2,13 @@ from krita import *
 import sys
 import math
 from pathlib import Path
+import os
 from os.path import join, exists, dirname
 import webbrowser
 from PyQt5.QtWidgets import *
 from sys import platform
 import subprocess
+import shutil
 
 KI = Krita.instance()
 open_notifier = KI.notifier()
@@ -152,26 +154,28 @@ def renameFiles(data_list):
     The data_list gives the scale list in numbers out of 100, so this function
     divides those numbers by 100 to get the multiplier for the folder name.
     """
-#    dirName = os.path.dirname(KI.activeDocument().fileName())
-#    dirName += "/export/"
-#    exportDirName = dirName + "x"
-#    smallest_scale = 100
-#    for d in data_list:
-#        for s in d[3]:
-#            if s < smallest_scale:
-#                smallest_scale = s
-#    exportDirName += str(smallest_scale/100)
-#    Path(exportDirName).mkdir(parents=True, exist_ok=True)
-#    for f in os.listdir(dirName):
-#            fileName, file_ext = os.path.splittext(f)
-#            if file_ext == ".png" or file_ext == ".jpg":
-#                src = f
-#                dst = exportDirName + "/" + f
-#                if platform == "win32":
-#                    status = subprocess.call('copy {} {}'.format(src, dst))
-#            else:
-#                status =  subprocess.call('cp {} {}'.format(filename, fileB))
-
+    dir_name = os.path.dirname(KI.activeDocument().fileName())
+    dir_name = os.path.join(dir_name, "export")
+    export_dir_name = dir_name + os.sep + "x"
+    smallest_scale = 100
+    for d in data_list:
+        for s in d[3]:
+            if s < smallest_scale:
+                smallest_scale = s
+    suffix = "_@" + str(smallest_scale/100) + "x"
+    export_dir_name += str(smallest_scale/100)
+    Path(export_dir_name).mkdir(parents=True, exist_ok=True)
+#    of = open(os.path.join(export_dir_name, "diagnostic.txt"), "w")
+    for filename in os.listdir(dir_name):
+        if filename.find(suffix) != -1:
+            f = os.path.join(dir_name, filename)
+            exp_fname, exp_ext = os.path.splitext(filename)
+            exp_fname = exp_fname[:exp_fname.find(suffix)]
+            exp_fname += exp_ext
+            dst = os.path.join(export_dir_name, exp_fname)
+#            of.write(f + "\n" + dst + "\n" + exp_fname + "\n")
+            shutil.copy(f, dst)
+#    of.close()
 
 class GenerateRenpyScripting(DockWidget):
     title = "Generate Ren'Py Scripting"
@@ -283,7 +287,7 @@ files of the smallest scale without the size suffix, placed in a folder.")
         scale_layout.addWidget(self.scale_w_h_text)
         main_layout.addLayout(scale_layout)
 
-#        main_layout.addWidget(self.rename_check)
+        main_layout.addWidget(self.rename_check)
         main_layout.addWidget(filename_label)
         main_layout.addWidget(self.filename_line)
         main_layout.addStretch()
@@ -331,8 +335,8 @@ files of the smallest scale without the size suffix, placed in a folder.")
             else:
                 push_message = "Failure: Open a Krita document."
                 QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
-#        if self.rename_check.isChecked():
-#            renameFiles(data)
+        if self.rename_check.isChecked():
+            renameFiles(data)
 
     def canvasChanged(self, canvas):
         pass

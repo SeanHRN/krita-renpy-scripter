@@ -55,8 +55,11 @@ and when all documents are closed.
 # v1.1 -> v1.1.1 Change
  - It's the same; I just added the in-Krita manual html file.
 
-# v1.1.1 -> v1.2 Change
- - Fixed size parsing issue in preparation for a folder-making feature.
+# v1.1.1 -> v1.2 -> v1.3 Changes
+ - Fixed size parsing issue.
+ - New feature: `Rename Batch-Exported Files` (until I have a more accurate name): \
+Copies the smallest scale batch-exported images to a folder where they don't have \
+the Batch Exporter's `_x[scale]` suffix in their names.
 
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
