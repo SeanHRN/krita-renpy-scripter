@@ -5,6 +5,8 @@ from pathlib import Path
 from os.path import join, exists, dirname
 import webbrowser
 from PyQt5.QtWidgets import *
+from sys import platform
+import subprocess
 
 KI = Krita.instance()
 open_notifier = KI.notifier()
@@ -110,6 +112,7 @@ def getData(button_num, spacing_count):
             parseLayers(i, layer_names, all_coords, all_centers)
 
     for name, coord_indv in zip(layer_names, all_coords):
+        g = []
         if name.lower().find(" e=") != -1:
             actual_name = name[0:name.lower().find(" e=")]
             margin_list = parseValuesIntoList(name, "m=", "num")
@@ -117,14 +120,12 @@ def getData(button_num, spacing_count):
                 coord_indv[0] -= max(margin_list)
                 coord_indv[1] -= max(margin_list)
             size_list = parseValuesIntoList(name, "s=", "num")
-            g = [4, 1, 6]
+            a = coord_indv[0]
+            b = coord_indv[1]
             if size_list:
                 coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
                 coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
-            else:
-                g = [0, 0, 0]
             data_list.append(tuple((actual_name, coord_indv[0], coord_indv[1], size_list)))
-
     if button_num == 2:
         data_list = calculateAlign(data_list, all_centers, spacing_count)
     return file_open, data_list
@@ -142,38 +143,34 @@ def writeData(input_data, path, format_num):
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
 
-def renameFiles(size_list):
+def renameFiles(data_list):
     """
     renameFiles() uses data_list to get the layer names and the scales.
+    A folder named after the smallest scale is created.
+    The images of that scale are copied over with the scale tag removed from
+    their names.
+    The data_list gives the scale list in numbers out of 100, so this function
+    divides those numbers by 100 to get the multiplier for the folder name.
     """
-    dirName = os.path.dirname(KI.activeDocument().fileName())
-    dirName += "/bruno"
-    Path(dirName).mkdir(parents=True, exist_ok=True)
-    dirName += "/gaston.txt"
-    of = open(dirName, "w")
-    if len(size_list) == 0:
-        of.write("NANI")
-    for s in size_list:
-        #for q in s[3]:
-        #    of.write(str(q))
-        if len(s[3]) == 0:
-            of.write("empty")
-        else:
-            of.write(f"len: {str(len(s[3]))}")
-        of.write("\n")
-        #of.write(d[0])
-    of.write("what")
-    of.close()
-
-    #of.close()
-
-#    outpath_tmp = Path.cwd() / 'output_tmp'
-#    generate_data(output_tmp)
-#    if outpath_tmp.stat().st_size:
-#        outpath_tmp.rename(outpath)
-#    else: # Nothing produced
-#        Path_tmp.unlink()
-
+#    dirName = os.path.dirname(KI.activeDocument().fileName())
+#    dirName += "/export/"
+#    exportDirName = dirName + "x"
+#    smallest_scale = 100
+#    for d in data_list:
+#        for s in d[3]:
+#            if s < smallest_scale:
+#                smallest_scale = s
+#    exportDirName += str(smallest_scale/100)
+#    Path(exportDirName).mkdir(parents=True, exist_ok=True)
+#    for f in os.listdir(dirName):
+#            fileName, file_ext = os.path.splittext(f)
+#            if file_ext == ".png" or file_ext == ".jpg":
+#                src = f
+#                dst = exportDirName + "/" + f
+#                if platform == "win32":
+#                    status = subprocess.call('copy {} {}'.format(src, dst))
+#            else:
+#                status =  subprocess.call('cp {} {}'.format(filename, fileB))
 
 
 class GenerateRenpyScripting(DockWidget):
@@ -252,9 +249,9 @@ would be at that percentage scale.")
 
         # Experimental
         self.rename_check = QCheckBox("Rename Batch-Exported Files")
-        self.rename_check.setToolTip("Option to remove the Batch Exporter's \
-scale suffix from the exported file names")
-        self.rename_check.setChecked(True)
+        self.rename_check.setToolTip("Option to save copies of the Batch-Exported \
+files of the smallest scale without the size suffix, placed in a folder.")
+        self.rename_check.setChecked(False)
 
         filename_label = QLabel("Output File")
         self.filename_line = QLineEdit()
@@ -286,7 +283,7 @@ scale suffix from the exported file names")
         scale_layout.addWidget(self.scale_w_h_text)
         main_layout.addLayout(scale_layout)
 
-        main_layout.addWidget(self.rename_check)
+#        main_layout.addWidget(self.rename_check)
         main_layout.addWidget(filename_label)
         main_layout.addWidget(self.filename_line)
         main_layout.addStretch()
@@ -317,8 +314,8 @@ scale suffix from the exported file names")
         else:
             spacing_count = self.spacing_slider.value()
         file_open_test_result, data = getData(button_num, spacing_count)
-        toPrint = data[0][3]
-        self.bang(str(toPrint))
+#        for d in data:
+#            self.bang(str(d[0]) + " " + str(d[3]))
         push_message = ""
         path = ""
         if file_open_test_result == True:
@@ -334,8 +331,8 @@ scale suffix from the exported file names")
             else:
                 push_message = "Failure: Open a Krita document."
                 QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
-        if self.rename_check.isChecked():
-            renameFiles(data)
+#        if self.rename_check.isChecked():
+#            renameFiles(data)
 
     def canvasChanged(self, canvas):
         pass
