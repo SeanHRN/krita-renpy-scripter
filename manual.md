@@ -118,8 +118,11 @@ The magenta dot's center was closer to the left edge than the first horizontal t
 
 ## Rename Batch-Exported Files Example
 ![export folder](./images/batch_dir.png)
+
 The images to the right of the folder are in the state that the Batch Exporter makes them; the size is 27%, so the suffix is `_@0.27x`. The folder has been made through GRS (upon pressing export) with the name `x0.27`.
+
 ![scale folder](./images/x0.27_dir.png)
+
 In the `x0.27` folder, the images have been copied over with the suffix removed, so these files are ready to be cut and pasted into a Ren'Py folder. I could cut all the images directly, or, if I need the folder structure, I could cut the folder and rename it at the destination.
 ## Notes
 
