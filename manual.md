@@ -10,11 +10,11 @@ i.e. contain "e=png" or "e=jpg" directly following the actual name of the layer.
 The user may choose between `pos (x, y)` statements and `align (x, y)` statements for output.
 To change the output for your project's needs, edit the lines in `writeData()`.
 
-## pos(x, y) Output
+## pos (x, y) Output
 By default, the `pos (x, y)` coordinates in the block are how the content of each layer appears on Krita's canvas.
 The coordinates refer to the top left corner of the bounding box for all non-transparent pixels in that layer.
 
-## align(x, y) Output
+## align (x, y) Output
 
 The user may use the slider to choose the number of evenly-spaced spots at which to assign `align (x, y)`coordinates,
  from 2 to 9. Each image is assigned to the intersection between a vertical spacing and a horizontal spacing closest to its center point.
@@ -33,6 +33,9 @@ This is because it's typically best to draw an image extra big and then scale it
 For this, the Scale Percentage Size Calculator helps. Enter a percentage, and the text label will say the dimensions of the image at that scale.
 
 Currently, the margin option nudges the `(x, y)` coordinates of the image up and left that many pixels.
+
+## Rename Batch-Exported Files (Name Pending)
+This feature is accessed with a checkbox. When it's active, pressing export will also copy over the batch-exported images of the smallest scale to a new folder in which they don't have the Batch Exporter's `_@[scale]x` suffix, so that those images are ready to cut and paste into the Ren'Py project; you wouldn't need to rename the files manually.
 
 ## Ren'Py Formats
 ```
@@ -88,6 +91,7 @@ It doesn't have the fog because I handle scrolling graphics separately, but all 
  - For the first version of the image, each component's PNG was manually cropped to reduce empty space and then<br> given approximated `pos (x, y)` locations. For the remade version, I first ran Krita Batch Exporter to get the PNGs<br> with automatic and precise trimming so that the PNGs would work with the coordinates printed by<br> Generate Ren'Py Scripting. That's why there may be slight differences.
  -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter doesn't allow non-integer<br> values for percentage.
  - rpblock.txt does start with the empty line, but I don't know how to get that to work in Markdown yet.
+ - This example was made using version 1.0 of the program, which is why the menu is different in the picture.
 
 ## align (x, y) Example
 Here's a 1920x1080 px test document with stuff to align.
@@ -112,6 +116,11 @@ With `Rule of Thirds` toggled on, here is the `align (x, y)` output:
 
 The magenta dot's center was closer to the left edge than the first horizontal third by just 14 pixels.
 
+## Rename Batch-Exported Files Example
+![export folder](./images/batch_dir.png)
+The images to the right of the folder are in the state that the Batch Exporter makes them; the size is 27%, so the suffix is `_@0.27x`. The folder has been made through GRS (upon pressing export) with the name `x0.27`.
+![scale folder](./images/x0.27_dir.png)
+In the `x0.27` folder, the images have been copied over with the suffix removed, so these files are ready to be cut and pasted into a Ren'Py folder. I could cut all the images directly, or, if I need the folder structure, I could cut the folder and rename it at the destination.
 ## Notes
 
  - The manual for Krita Batch Exporter is [here](https://github.com/GDQuest/krita-batch-exporter/blob/master/batch_exporter/Manual.md).
@@ -125,7 +134,6 @@ in the examples.)
 
 ## Features To Possibly Implement
 
- - Update the output of the calculator right when a document is opened.
  - GUI text bar to notify the user of success/failure in export to match Krita Batch Exporter's design.<br> Currently, a separate window opens if the user tries to run the plugin when a Krita file hasn't been opened,<br> and the only notification of success is the automatic file opening.
  - Provide more export templates.
 
