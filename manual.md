@@ -135,10 +135,6 @@ in the examples.)
  - The line for the output file name is at the bottom because I think it's the widget that users\
  would need to touch the least often; that file is meant to be temporary.
 
-## Features To Possibly Implement
-
- - GUI text bar to notify the user of success/failure in export to match Krita Batch Exporter's design.<br> Currently, a separate window opens if the user tries to run the plugin when a Krita file hasn't been opened,<br> and the only notification of success is the automatic file opening.
- - Provide more export templates.
 
 ## That's It!
 Feedback would be greatly appreciated. Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
