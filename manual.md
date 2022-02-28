@@ -119,7 +119,7 @@ The magenta dot's center was closer to the left edge than the first horizontal t
 ## Rename Batch-Exported Files Example
 ![export folder](./images/batch_dir.png)
 
-The images to the right of the folder are in the state that the Batch Exporter makes them; the size is 27%, so the suffix is `_@0.27x`. The folder has been made through GRS (upon pressing export) with the name `x0.27`.
+The images to the right of the folder are in the state that the Batch Exporter makes them; the size is 27%, so the suffix is `_@0.27x`. The folder has been made through GRS with the name `x0.27`.
 
 ![scale folder](./images/x0.27_dir.png)
 
