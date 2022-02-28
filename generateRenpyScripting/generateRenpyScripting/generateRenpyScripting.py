@@ -145,9 +145,33 @@ def writeData(input_data, path, format_num):
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
 
-def renameFiles(data_list):
+def renameRecursion(dir_name, export_dir_name, suffix, folder_name):
     """
-    renameFiles() uses data_list to get the layer names and the scales.
+    Helper function for recursiveRenameStart()
+    dir_name:        the directory to be copied.
+    export_dir_name: the directory into which the files are copied.
+    suffix:          the part of the file name string that is to be removed.
+    folder_name:     name of the top folder of the copy directory;
+                     it's needed to prevent infinite looping.
+    """
+    for filename in os.listdir(dir_name):
+        f = os.path.join(dir_name, filename)
+        if filename == folder_name:
+            continue
+        elif filename.find(suffix) != -1 and os.path.isfile(f):
+            exp_fname, exp_ext = os.path.splitext(filename)
+            exp_fname = exp_fname[:exp_fname.find(suffix)]
+            exp_fname += exp_ext
+            dst = os.path.join(export_dir_name, exp_fname)
+            shutil.copy(f, dst)
+        elif os.path.isdir(f):
+            sub_export_dir_name = os.path.join(export_dir_name, filename)
+            Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
+            renameRecursion(f, sub_export_dir_name, suffix, folder_name)
+
+def recursiveRenameStart(data_list):
+    """
+    Uses data_list to get the layer names and the scales.
     A folder named after the smallest scale is created.
     The images of that scale are copied over with the scale tag removed from
     their names.
@@ -156,26 +180,18 @@ def renameFiles(data_list):
     """
     dir_name = os.path.dirname(KI.activeDocument().fileName())
     dir_name = os.path.join(dir_name, "export")
-    export_dir_name = dir_name + os.sep + "x"
     smallest_scale = 100
     for d in data_list:
-        for s in d[3]:
-            if s < smallest_scale:
-                smallest_scale = s
+        if min(d[3]) < smallest_scale:
+            smallest_scale = min(d[3])
     suffix = "_@" + str(smallest_scale/100) + "x"
-    export_dir_name += str(smallest_scale/100)
+    new_folder_name = "x" + str(smallest_scale/100)
+    export_dir_name = dir_name + os.sep + new_folder_name
     Path(export_dir_name).mkdir(parents=True, exist_ok=True)
 #    of = open(os.path.join(export_dir_name, "diagnostic.txt"), "w")
-    for filename in os.listdir(dir_name):
-        if filename.find(suffix) != -1:
-            f = os.path.join(dir_name, filename)
-            exp_fname, exp_ext = os.path.splitext(filename)
-            exp_fname = exp_fname[:exp_fname.find(suffix)]
-            exp_fname += exp_ext
-            dst = os.path.join(export_dir_name, exp_fname)
-#            of.write(f + "\n" + dst + "\n" + exp_fname + "\n")
-            shutil.copy(f, dst)
+#    of.write(dir_name + "\n" + export_dir_name + "\n" + suffix + "\n")
 #    of.close()
+    renameRecursion(dir_name, export_dir_name, suffix, new_folder_name)
 
 class GenerateRenpyScripting(DockWidget):
     title = "Generate Ren'Py Scripting"
@@ -251,11 +267,12 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.scale_w_h_text.setToolTip("This is how big the composite image \
 would be at that percentage scale.")
 
-        # Experimental
-        self.rename_check = QCheckBox("Rename Batch-Exported Files")
-        self.rename_check.setToolTip("Option to save copies of the Batch-Exported \
+        rename_button = QPushButton("Rename Batch-Exported Files")
+        rename_button.clicked.connect(lambda: self.renameClicked())
+        #self.rename_check = QCheckBox("Rename Batch-Exported Files")
+        rename_button.setToolTip("Option to save copies of the Batch-Exported \
 files of the smallest scale without the size suffix, placed in a folder.")
-        self.rename_check.setChecked(False)
+        #self.rename_check.setChecked(False)
 
         filename_label = QLabel("Output File")
         self.filename_line = QLineEdit()
@@ -287,7 +304,7 @@ files of the smallest scale without the size suffix, placed in a folder.")
         scale_layout.addWidget(self.scale_w_h_text)
         main_layout.addLayout(scale_layout)
 
-        main_layout.addWidget(self.rename_check)
+        main_layout.addWidget(rename_button)
         main_layout.addWidget(filename_label)
         main_layout.addWidget(self.filename_line)
         main_layout.addStretch()
@@ -327,7 +344,7 @@ files of the smallest scale without the size suffix, placed in a folder.")
             outfile_name = default_outfile_name
             if self.filename_line.text() != "":
                 outfile_name = self.filename_line.text()
-            path += "/" + outfile_name
+            path += os.sep + outfile_name
             writeData(data, path, button_num)
             outfile_exists = exists(path)
             if outfile_exists:
@@ -335,8 +352,14 @@ files of the smallest scale without the size suffix, placed in a folder.")
             else:
                 push_message = "Failure: Open a Krita document."
                 QMessageBox.information(QWidget(), "Generate Ren'Py Scripting", push_message)
-        if self.rename_check.isChecked():
-            renameFiles(data)
+
+    def renameClicked(self):
+        """
+        The getData() call here ignores the first value
+        and gets the second value. The inputs [1, 9] don't really matter here.
+        """
+        data = getData(1, 9)[1]
+        recursiveRenameStart(data)
 
     def canvasChanged(self, canvas):
         pass

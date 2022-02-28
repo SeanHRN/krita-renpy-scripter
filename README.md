@@ -61,6 +61,11 @@ and when all documents are closed.
 Copies the smallest scale batch-exported images to a folder where they don't have \
 the Batch Exporter's `_x[scale]` suffix in their names.
 
+# v1.3 -> v1.4 Changes
+ - `Rename Batch-Exported Files` is now a button instead of a checkbox.
+ - `Rename Batch-Exported Files` now works with layers that were exported as groups into folders.
+ - Minor code improvements: `"/"` -> `os.sep` and `min()` instead of a loop.
+
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
 
