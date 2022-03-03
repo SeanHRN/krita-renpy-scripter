@@ -280,14 +280,14 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.scale_box_percent.setValue(100)
         self.scale_box_percent.valueChanged[float].connect(self.calculatorScaleChanged)
         scale_text = QLabel("% Scale Dimensions:")
-        self.onlyInt = QIntValidator()
+        self.onlyDouble = QDoubleValidator()
         width_label = QLabel("Width:")
         self.calculator_width = QLineEdit(self)
-        self.calculator_width.setValidator(self.onlyInt)
+        self.calculator_width.setValidator(self.onlyDouble)
         self.calculator_width.textChanged[str].connect(self.calculatorWidthChanged)
         height_label = QLabel("Height:")
         self.calculator_height = QLineEdit(self)
-        self.calculator_height.setValidator(self.onlyInt)
+        self.calculator_height.setValidator(self.onlyDouble)
         self.calculator_height.textChanged[str].connect(self.calculatorHeightChanged)
 #        self.scale_w_h_text = QLabel(f"0 x 0 px", self)
 #        self.scale_w_h_text.setToolTip("This is how big the composite image \
@@ -358,13 +358,14 @@ files of the smallest scale without the size suffix, placed in a folder.")
         self.calculator_height.setText("0")
 
     def calculatorScaleChanged(self):
-        print("test")
         currentDoc = KI.activeDocument()
         multiplier = round(float(self.scale_box_percent.value() / 100), decimal_place_count)
         width = round((float(currentDoc.width()) * multiplier), decimal_place_count)
         height = round((float(currentDoc.height()) * multiplier), decimal_place_count)
-        self.calculator_width.setText(str(width))
-        self.calculator_height.setText(str(height))
+        if self.calculator_width.hasFocus() == False:
+            self.calculator_width.setText(str(width))
+        if self.calculator_height.hasFocus() == False:
+            self.calculator_height.setText(str(height))
 
     def calculatorWidthChanged(self):
         currentDoc = KI.activeDocument()
@@ -372,18 +373,21 @@ files of the smallest scale without the size suffix, placed in a folder.")
             multiplier = round((float(self.calculator_width.text()) / currentDoc.width()), 2)
         except:
             multiplier = 0.0
-        self.scale_box_percent.setValue(100 * multiplier)
-        self.calculator_height.setText(f"{currentDoc.height() * multiplier}")
+        if self.scale_box_percent.hasFocus() == False:
+            self.scale_box_percent.setValue(100 * multiplier)
+        if self.calculator_height.hasFocus() == False:
+            self.calculator_height.setText(f"{currentDoc.height() * multiplier}")
 
     def calculatorHeightChanged(self):
         currentDoc = KI.activeDocument()
-#        width, height = 0, 0
-#        if currentDoc != None:
-#            height = currentDoc.height()
-#        multiplier = \
-#round((int(self.calculator_height.text()) / height), 2)
-#        self.scale_box_percent.setValue(f"{100 * muliplier}")
-#        self.calculator_width.setText(f"{int(self.calculator_width.text()) * multiplier}")
+        try:
+            multiplier = round((float(self.calculator_height.text()) / currentDoc.height()), 2)
+        except:
+            multiplier = 0.0
+        if self.scale_box_percent.hasFocus() == False:
+            self.scale_box_percent.setValue(100 * multiplier)
+        if self.calculator_width.hasFocus() == False:
+            self.calculator_width.setText(f"{currentDoc.width() * multiplier}")
 
     def updateSpacingValue(self):
         self.spacing_number_label.setText(str(self.spacing_slider.value()))
