@@ -9,6 +9,9 @@ from PyQt5.QtWidgets import *
 from sys import platform
 import subprocess
 import shutil
+import re
+import json
+from collections import defaultdict
 
 KI = Krita.instance()
 open_notifier = KI.notifier()
@@ -42,26 +45,29 @@ def parseValuesIntoList(name, sub_to_check, value_type):
         list = [float(n) for n in properties.split(",")]
     return list
 
-def parseLayers(layer, layer_name_list, coordinates_list, centers_list):
+def parseLayers(layer, layer_list, coordinates_list, centers_list):
+    """
+    almost the same; just makes a list of layers instead of a list of layer names
+    """
     if layer.visible() == True:
-        layer_name_sublist = []
+        layer_sublist = []
         coordinates_sublist = []
         centers_sublist = []
         lower_n = layer.name().lower()
         if lower_n.find(" e=") != -1:
-            layer_name_list.append(layer.name())
             coord_x, coord_y, center_point = 0, 0, [0,0]
             if lower_n.find(" t=false") == -1 and lower_n.find(" t=no") == -1:
                 coord_x = layer.bounds().topLeft().x()
                 coord_y = layer.bounds().topLeft().y()
                 center_point = layer.bounds().center()
+                layer_list.append(layer)
             coordinates_list.append([coord_x, coord_y])
             centers_list.append([center_point.x(), center_point.y()])
         elif layer.type() == "grouplayer":
-            for child in layer.childNodes():
-                parseLayers(child, layer_name_sublist, coordinates_sublist, \
+                for child in layer.childNodes():
+                    parseLayers(child, layer_sublist, coordinates_sublist, \
 centers_sublist)
-        layer_name_list.extend(layer_name_sublist)
+        layer_list.extend(layer_sublist)
         coordinates_list.extend(coordinates_sublist)
         centers_list.extend(centers_sublist)
 
@@ -101,33 +107,44 @@ def calculateAlign(data_list, centers_list, spacing_count):
     return new_data_list
 
 def getData(button_num, spacing_count):
+    """
+    Uses a dictionary system to parse the layer data
+    and apply changes to coordinates.
+    """
     file_open = False
     data_list = []
-    layer_names = []
+    layer_list = []
+    contents = []
     all_coords = []
     all_centers = []
+    layer_dict = defaultdict(dict)
+    test_list = []
     currentDoc = KI.activeDocument()
     if currentDoc != None:
         file_open = True
         root_node = currentDoc.rootNode()
         for i in root_node.childNodes():
-            parseLayers(i, layer_names, all_coords, all_centers)
-
-    for name, coord_indv in zip(layer_names, all_coords):
-        g = []
-        if name.lower().find(" e=") != -1:
-            actual_name = name[0:name.lower().find(" e=")]
-            margin_list = parseValuesIntoList(name, "m=", "num")
-            if margin_list:
+            parseLayers(i, layer_list, all_coords, all_centers)
+    for l in layer_list:
+        contents = l.name().split(" ")
+        layer_dict[l.name()]["actual name"] = contents[0]
+        for c in contents[1:]:
+            if "=" in c:
+                category_data = c.split("=") # 0: Category string, 1: Data string
+                category_data_list = category_data[1].split(",")
+                layer_dict[l.name()][category_data[0]] = category_data_list
+    for layer, coord_indv in zip(layer_list, all_coords):
+        if "m" in layer_dict[layer.name()]:
+            for i in layer_dict[layer.name()]["m"]:
+                margin_list = [int(i) for i in layer_dict[layer.name()]["m"]]
                 coord_indv[0] -= max(margin_list)
                 coord_indv[1] -= max(margin_list)
-            size_list = parseValuesIntoList(name, "s=", "num")
-            a = coord_indv[0]
-            b = coord_indv[1]
-            if size_list:
-                coord_indv[0] = round(coord_indv[0] * (min(size_list)/100))
-                coord_indv[1] = round(coord_indv[1] * (min(size_list)/100))
-            data_list.append(tuple((actual_name, coord_indv[0], coord_indv[1], size_list)))
+        if "s" in layer_dict[layer.name()]:
+            size_list = [int(i) for i in layer_dict[layer.name()]["s"]]
+            x = round(coord_indv[0] * (min(size_list)/100))
+            y = round(coord_indv[1] * (min(size_list)/100))
+            data_list.append(tuple((layer_dict[layer.name()]["actual name"], \
+x, y, size_list)))
     if button_num == 2:
         data_list = calculateAlign(data_list, all_centers, spacing_count)
     return file_open, data_list
@@ -258,14 +275,23 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.rule_of_thirds_check.setChecked(False)
 
         scale_label = QLabel("Scale Percentage Size Calculator")
-        self.scale_box_percent = QSpinBox(self)
+        self.scale_box_percent = QDoubleSpinBox(self)
         self.scale_box_percent.setRange(0, 100)
         self.scale_box_percent.setValue(100)
-        self.scale_box_percent.valueChanged[int].connect(self.updateScaleCalculation)
-        self.scale_text = QLabel("% Scale Dimensions:", self)
-        self.scale_w_h_text = QLabel(f"0 x 0 px", self)
-        self.scale_w_h_text.setToolTip("This is how big the composite image \
-would be at that percentage scale.")
+        self.scale_box_percent.valueChanged[float].connect(self.calculatorScaleChanged)
+        scale_text = QLabel("% Scale Dimensions:")
+        self.onlyInt = QIntValidator()
+        width_label = QLabel("Width:")
+        self.calculator_width = QLineEdit(self)
+        self.calculator_width.setValidator(self.onlyInt)
+        self.calculator_width.textChanged[str].connect(self.calculatorWidthChanged)
+        height_label = QLabel("Height:")
+        self.calculator_height = QLineEdit(self)
+        self.calculator_height.setValidator(self.onlyInt)
+        self.calculator_height.textChanged[str].connect(self.calculatorHeightChanged)
+#        self.scale_w_h_text = QLabel(f"0 x 0 px", self)
+#        self.scale_w_h_text.setToolTip("This is how big the composite image \
+#would be at that percentage scale.")
 
         rename_button = QPushButton("Rename Batch-Exported Files")
         rename_button.clicked.connect(lambda: self.renameClicked())
@@ -300,8 +326,11 @@ files of the smallest scale without the size suffix, placed in a folder.")
         main_layout.addWidget(scale_label)
         self.scale_box_percent.setGeometry(0, 0, 10, 10)
         scale_layout.addWidget(self.scale_box_percent)
-        scale_layout.addWidget(self.scale_text)
-        scale_layout.addWidget(self.scale_w_h_text)
+        scale_layout.addWidget(scale_text)
+        scale_layout.addWidget(width_label)
+        scale_layout.addWidget(self.calculator_width)
+        scale_layout.addWidget(height_label)
+        scale_layout.addWidget(self.calculator_height)
         main_layout.addLayout(scale_layout)
 
         main_layout.addWidget(rename_button)
@@ -320,10 +349,41 @@ files of the smallest scale without the size suffix, placed in a folder.")
         if currentDoc != None:
             width = round(currentDoc.width() * multiplier)
             height = round(currentDoc.height() * multiplier)
-        self.scale_w_h_text.setText(f"{width} x {height} px")
+        self.calculator_width.setText(f"{width}")
+        self.calculator_height.setText(f"{height}")
 
     def wipeScaleCalculation(self):
-        self.scale_w_h_text.setText(f"0 x 0 px")
+#        self.scale_w_h_text.setText(f"0 x 0 px")
+        self.calculator_width.setText("0")
+        self.calculator_height.setText("0")
+
+    def calculatorScaleChanged(self):
+        print("test")
+        currentDoc = KI.activeDocument()
+        multiplier = round(float(self.scale_box_percent.value() / 100), decimal_place_count)
+        width = round((float(currentDoc.width()) * multiplier), decimal_place_count)
+        height = round((float(currentDoc.height()) * multiplier), decimal_place_count)
+        self.calculator_width.setText(str(width))
+        self.calculator_height.setText(str(height))
+
+    def calculatorWidthChanged(self):
+        currentDoc = KI.activeDocument()
+        try:
+            multiplier = round((float(self.calculator_width.text()) / currentDoc.width()), 2)
+        except:
+            multiplier = 0.0
+        self.scale_box_percent.setValue(100 * multiplier)
+        self.calculator_height.setText(f"{currentDoc.height() * multiplier}")
+
+    def calculatorHeightChanged(self):
+        currentDoc = KI.activeDocument()
+#        width, height = 0, 0
+#        if currentDoc != None:
+#            height = currentDoc.height()
+#        multiplier = \
+#round((int(self.calculator_height.text()) / height), 2)
+#        self.scale_box_percent.setValue(f"{100 * muliplier}")
+#        self.calculator_width.setText(f"{int(self.calculator_width.text()) * multiplier}")
 
     def updateSpacingValue(self):
         self.spacing_number_label.setText(str(self.spacing_slider.value()))
@@ -335,10 +395,6 @@ files of the smallest scale without the size suffix, placed in a folder.")
         else:
             spacing_count = self.spacing_slider.value()
         file_open_test_result, data = getData(button_num, spacing_count)
-#        for d in data:
-#            self.bang(str(d[0]) + " " + str(d[3]))
-        push_message = ""
-        path = ""
         if file_open_test_result == True:
             path = str(QFileDialog.getExistingDirectory(None, "Select a save location."))
             outfile_name = default_outfile_name
