@@ -1,6 +1,6 @@
 # Generate Ren'Py Scripting
 by Sean Castillo
-Version 1.4
+Version 1.5
 
 This plugin uses the contents of a Krita document and the layer name syntax for the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) by GDQuest to generate a block of text for a Ren'Py script. The block is saved into a file and then automatically opened in the default program for that file extension (e.g. Notepad for .txt on Windows) so that the user may immediately copy and paste the text into a Ren'Py script file. The goal is to coordinate the composed images as they appear in Krita to display the same way in Ren'Py as efficiently as possible by calculating the coordinates and doing the bulk of the typing automatically. Be sure to use images exported by the Batch Exporter to maintain consistency with this plugin's coordinates output.
 
@@ -10,11 +10,11 @@ i.e. contain "e=png" or "e=jpg" directly following the actual name of the layer.
 The user may choose between `pos (x, y)` statements and `align (x, y)` statements for output.
 To change the output for your project's needs, edit the lines in `writeData()`.
 
-## pos (x, y) Output
+## [pos (x, y)] Output
 By default, the `pos (x, y)` coordinates in the block are how the content of each layer appears on Krita's canvas.
 The coordinates refer to the top left corner of the bounding box for all non-transparent pixels in that layer.
 
-## align (x, y) Output
+## [align (x, y)] and [xalign x yalign y] Output
 
 The user may use the slider to choose the number of evenly-spaced spots at which to assign `align (x, y)`coordinates,
  from 2 to 9. Each image is assigned to the intersection between a vertical spacing and a horizontal spacing closest to its center point.
@@ -68,7 +68,7 @@ To test this plugin, I remade the panel.
 The full-sized Krita document for this image is 5103x2873 px.
 ![GUI](./images/example_gui.png)
 
-I renamed the layers to match how I name the images in Ren'Py. For example, p8p3hrn means "Page 8 Panel 3 HRN". I chose 38% as the scale; as the calculator states, that would make the image size 1939x1092 px, which is just slightly bigger than my target size of 1920x1080 px.
+I renamed the layers to match how I name the images in Ren'Py. For example, p8p3hrn means "Page 8 Panel 3 HRN". I chose 38% as the scale; as the calculator states, that would make the image size 1939x1092 px, which is just slightly bigger than my target size of 1920x1080 px. (Note: This example was made prior to v1.5; reaching 1920x1080 is now feasible.)
 
 Here's the resulting rpblock.txt:
 
@@ -89,7 +89,7 @@ Here's the resulting rpblock.txt:
 It doesn't have the fog because I handle scrolling graphics separately, but all the other components are properly displayed!
 
  - For the first version of the image, each component's PNG was manually cropped to reduce empty space and then<br> given approximated `pos (x, y)` locations. For the remade version, I first ran Krita Batch Exporter to get the PNGs<br> with automatic and precise trimming so that the PNGs would work with the coordinates printed by<br> Generate Ren'Py Scripting. That's why there may be slight differences.
- -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter doesn't allow non-integer<br> values for percentage.
+ -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter doesn't allow non-integer<br> values for percentage. Note: This issue with the Batch Exporter should be fixed soon.
  - rpblock.txt does start with the empty line, but I don't know how to get that to work in Markdown yet.
  - This example was made using version 1.0 of the program, which is why the menu is different in the picture.
 

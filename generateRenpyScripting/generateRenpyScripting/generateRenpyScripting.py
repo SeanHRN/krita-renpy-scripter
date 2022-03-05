@@ -23,27 +23,19 @@ default_outfile_name = "rpblock.txt"
 indent = 4
 decimal_place_count = 3
 
-def parseValuesIntoList(name, sub_to_check, value_type):
-    list = []
-    if name.lower().find(sub_to_check) != -1:
-        properties = name.lower()[name.lower().find(" " + sub_to_check):]
-        if properties.find("=") != -1:
-            properties = properties[properties.find("=")+1:]
-        stopper = len(properties)
-        if value_type == "num":
-            for element in range (0, len(properties)):
-                if properties[element].isalpha():
-                    stopper = element
-                    break
-        else: #"alpha"
-            for element in range (0, len(properties)):
-                if properties[element].isnumeric():
-                    stopper = element
-                    break
-        properties = properties[:stopper]
-        properties = properties.replace(" ","")
-        list = [float(n) for n in properties.split(",")]
-    return list
+def closestNum(num_list, value):
+    return num_list[min(range(len(num_list)), key = lambda i: abs(num_list[i]-value))]
+
+def truncate(number, digit_count):
+    step = 10.0 ** digit_count
+    return math.trunc(step * number) / step
+
+def generateSpaces(spacing_count):
+    step = 1.0 / (spacing_count - 1)
+    spacing_list = []
+    for i in range(spacing_count):
+        spacing_list.append(truncate(i*step, decimal_place_count))
+    return spacing_list
 
 def parseLayers(layer, layer_list, coordinates_list, centers_list):
     """
@@ -70,20 +62,6 @@ centers_sublist)
         layer_list.extend(layer_sublist)
         coordinates_list.extend(coordinates_sublist)
         centers_list.extend(centers_sublist)
-
-def closestNum(num_list, value):
-    return num_list[min(range(len(num_list)), key = lambda i: abs(num_list[i]-value))]
-
-def truncate(number, digit_count):
-    step = 10.0 ** digit_count
-    return math.trunc(step * number) / step
-
-def generateSpaces(spacing_count):
-    step = 1.0 / (spacing_count - 1)
-    spacing_list = []
-    for i in range(spacing_count):
-        spacing_list.append(truncate(i*step, decimal_place_count))
-    return spacing_list
 
 def calculateAlign(data_list, centers_list, spacing_count):
     """
@@ -145,7 +123,7 @@ def getData(button_num, spacing_count):
             y = round(coord_indv[1] * (min(size_list)/100))
             data_list.append(tuple((layer_dict[layer.name()]["actual name"], \
 x, y, size_list)))
-    if button_num == 2:
+    if button_num == 2 or button_num == 3:
         data_list = calculateAlign(data_list, all_centers, spacing_count)
     return file_open, data_list
 
@@ -157,7 +135,10 @@ def writeData(input_data, path, format_num):
         prefix = "align"
     for d in input_data:
         outfile.write(f"{' ' * indent}show {d[0]}:\n")
-        outfile.write(f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n")
+        if format_num != 3: # Modes 1 and 2
+            outfile.write(f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n")
+        else:               # Mode 3
+            outfile.write(f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n")
     outfile.write("\n")
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
@@ -210,6 +191,27 @@ def recursiveRenameStart(data_list):
 #    of.close()
     renameRecursion(dir_name, export_dir_name, suffix, new_folder_name)
 
+class CustomDoubleSpinBox(QDoubleSpinBox):
+    """
+    Customized double spin box with these modifier increments for arrow click:
+    Alt: 0.01
+    Shift: 0.1
+    No Modifier: 1
+    Ctrl: 10 (It appears to be default in Qt.)
+    """
+    def __init__(self, parent=None):
+        super(CustomDoubleSpinBox, self).__init__(parent)
+
+    def stepBy(self, steps):
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.AltModifier:
+            QDoubleSpinBox.setSingleStep(self, 0.01)
+        elif modifiers == QtCore.Qt.ShiftModifier:
+            QDoubleSpinBox.setSingleStep(self, 0.1)
+        else:
+            QDoubleSpinBox.setSingleStep(self, 1.0)
+        QDoubleSpinBox.stepBy(self, steps)
+
 class GenerateRenpyScripting(DockWidget):
     title = "Generate Ren'Py Scripting"
 
@@ -255,6 +257,9 @@ for a quick copy and paste.")
         align_button = QPushButton("align (x, y)")
         align_button.clicked.connect(lambda: self.process(2))
 
+        xalignyalign_button = QPushButton("xalign x yalign y")
+        xalignyalign_button.clicked.connect(lambda: self.process(3))
+
         self.spacing_slider = QSlider(Qt.Horizontal, self)
         self.spacing_slider.setGeometry(30, 40, 200, 30)
         self.spacing_slider.setRange(2, 9)
@@ -275,30 +280,30 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         self.rule_of_thirds_check.setChecked(False)
 
         scale_label = QLabel("Scale Percentage Size Calculator")
-        self.scale_box_percent = QDoubleSpinBox(self)
-        self.scale_box_percent.setRange(0, 100)
-        self.scale_box_percent.setValue(100)
+        scale_label.setToolTip("Check the image's dimensions \
+at the given scale.\nHold Alt to increment by 0.01%.\nHold Shift to increment \
+by 0.1%.\nHold Ctrl to edit by 10%.")
+        self.scale_box_percent = CustomDoubleSpinBox(self)
+        self.scale_box_percent.setRange(0.0, 200.0)
+        self.scale_box_percent.setValue(100.0)
         self.scale_box_percent.valueChanged[float].connect(self.calculatorScaleChanged)
         scale_text = QLabel("% Scale Dimensions:")
         self.onlyDouble = QDoubleValidator()
         width_label = QLabel("Width:")
         self.calculator_width = QLineEdit(self)
         self.calculator_width.setValidator(self.onlyDouble)
-        self.calculator_width.textChanged[str].connect(self.calculatorWidthChanged)
+        self.calculator_width.setText("0.0")
+        self.calculator_width.textEdited[str].connect(self.calculatorWidthEdited)
         height_label = QLabel("Height:")
         self.calculator_height = QLineEdit(self)
         self.calculator_height.setValidator(self.onlyDouble)
-        self.calculator_height.textChanged[str].connect(self.calculatorHeightChanged)
-#        self.scale_w_h_text = QLabel(f"0 x 0 px", self)
-#        self.scale_w_h_text.setToolTip("This is how big the composite image \
-#would be at that percentage scale.")
+        self.calculator_height.setText("0.0")
+        self.calculator_height.textEdited[str].connect(self.calculatorHeightEdited)
 
         rename_button = QPushButton("Rename Batch-Exported Files")
         rename_button.clicked.connect(lambda: self.renameClicked())
-        #self.rename_check = QCheckBox("Rename Batch-Exported Files")
         rename_button.setToolTip("Option to save copies of the Batch-Exported \
 files of the smallest scale without the size suffix, placed in a folder.")
-        #self.rename_check.setChecked(False)
 
         filename_label = QLabel("Output File")
         self.filename_line = QLineEdit()
@@ -313,6 +318,7 @@ files of the smallest scale without the size suffix, placed in a folder.")
         main_layout.addWidget(export_label)
         export_layout.addWidget(pos_button)
         export_layout.addWidget(align_button)
+        export_layout.addWidget(xalignyalign_button)
         export_layout.setContentsMargins(0, 4, 0, 2) #left top right bottom
         main_layout.addLayout(export_layout)
 
@@ -343,51 +349,65 @@ files of the smallest scale without the size suffix, placed in a folder.")
         self.setWidget(mainWidget)
 
     def updateScaleCalculation(self):
-        multiplier = self.scale_box_percent.value() / 100
+        multiplier = float(self.scale_box_percent.value() / 100.0)
         currentDoc = KI.activeDocument()
-        width, height = 0, 0
+        width, height = 0.0, 0.0
         if currentDoc != None:
-            width = round(currentDoc.width() * multiplier)
-            height = round(currentDoc.height() * multiplier)
+            width = round((currentDoc.width() * multiplier), decimal_place_count)
+            height = round((currentDoc.height() * multiplier), decimal_place_count)
         self.calculator_width.setText(f"{width}")
         self.calculator_height.setText(f"{height}")
 
     def wipeScaleCalculation(self):
-#        self.scale_w_h_text.setText(f"0 x 0 px")
         self.calculator_width.setText("0")
         self.calculator_height.setText("0")
 
     def calculatorScaleChanged(self):
         currentDoc = KI.activeDocument()
-        multiplier = round(float(self.scale_box_percent.value() / 100), decimal_place_count)
-        width = round((float(currentDoc.width()) * multiplier), decimal_place_count)
-        height = round((float(currentDoc.height()) * multiplier), decimal_place_count)
-        if self.calculator_width.hasFocus() == False:
-            self.calculator_width.setText(str(width))
-        if self.calculator_height.hasFocus() == False:
-            self.calculator_height.setText(str(height))
+        multiplier = float(self.scale_box_percent.value() / 100.0)
+        if currentDoc != None:
+            width = round((float(currentDoc.width()) * multiplier), decimal_place_count)
+            height = round((float(currentDoc.height()) * multiplier), decimal_place_count)
+            if self.calculator_width.hasFocus() == False:
+                self.calculator_width.setText(str(width))
+            if self.calculator_height.hasFocus() == False:
+                self.calculator_height.setText(str(height))
 
-    def calculatorWidthChanged(self):
+    def calculatorWidthEdited(self):
+        """
+        Difference between QLineEdit::textChanged() and QLineEdit::textEdited:
+        textEdited() is emitted whenever the text is directly edited.
+        textChanged() is emitted whenever the text is edited by any means.
+        Use textEdited() to not have calculation loops.
+        """
         currentDoc = KI.activeDocument()
-        try:
-            multiplier = round((float(self.calculator_width.text()) / currentDoc.width()), 2)
-        except:
-            multiplier = 0.0
-        if self.scale_box_percent.hasFocus() == False:
-            self.scale_box_percent.setValue(100 * multiplier)
-        if self.calculator_height.hasFocus() == False:
-            self.calculator_height.setText(f"{currentDoc.height() * multiplier}")
+        multiplier = 1.0
+        if currentDoc != None:
+            try:
+                multiplier = float(self.calculator_width.text()) / currentDoc.width()
+            except:
+                multiplier = 1.0
+            if self.scale_box_percent.hasFocus() == False:
+                self.scale_box_percent.setValue(100 * multiplier)
+            self.calculator_height.setText(f"{round(float(currentDoc.height() * multiplier), 2)}")
 
-    def calculatorHeightChanged(self):
+    def calculatorHeightEdited(self):
+        """
+        Difference between QLineEdit::textChanged() and QLineEdit::textEdited:
+        textEdited() is emitted whenever the text is directly edited.
+        textChanged() is emitted whenever the text is edited by any means.
+        Use textEdited() to not have calculation loops.
+        """
         currentDoc = KI.activeDocument()
-        try:
-            multiplier = round((float(self.calculator_height.text()) / currentDoc.height()), 2)
-        except:
-            multiplier = 0.0
-        if self.scale_box_percent.hasFocus() == False:
-            self.scale_box_percent.setValue(100 * multiplier)
-        if self.calculator_width.hasFocus() == False:
-            self.calculator_width.setText(f"{currentDoc.width() * multiplier}")
+        multiplier = 1.0
+        if currentDoc != None:
+            try:
+                multiplier = float(self.calculator_height.text()) / currentDoc.height()
+            except:
+                multiplier = 1.0
+            if self.scale_box_percent.hasFocus() == False:
+                self.scale_box_percent.setValue(100 * multiplier)
+            self.calculator_width.setText(f"{round(float(currentDoc.width() * multiplier), 2)}")
 
     def updateSpacingValue(self):
         self.spacing_number_label.setText(str(self.spacing_slider.value()))
