@@ -175,22 +175,22 @@ def recursiveRenameStart(data_list):
     their names.
     The data_list gives the scale list in numbers out of 100, so this function
     divides those numbers by 100 to get the multiplier for the folder name.
+    Pre-requisite: KI.activeDocument() != None
     """
-    if KI.activeDocument() != None:
-        dir_name = os.path.dirname(KI.activeDocument().fileName())
-        dir_name = os.path.join(dir_name, "export")
-        smallest_scale = 200.0
-        for d in data_list:
-            if min(d[3]) < smallest_scale:
-                smallest_scale = min(d[3])
-        suffix = "_@" + str(smallest_scale/100) + "x"
-        new_folder_name = "x" + str(smallest_scale/100.0)
-        export_dir_name = dir_name + os.sep + new_folder_name
-        Path(export_dir_name).mkdir(parents=True, exist_ok=True)
-        #    of = open(os.path.join(export_dir_name, "diagnostic.txt"), "w")
-        #    of.write(dir_name + "\n" + export_dir_name + "\n" + suffix + "\n")
-        #    of.close()
-        renameRecursion(dir_name, export_dir_name, suffix, new_folder_name)
+    dir_name = os.path.dirname(KI.activeDocument().fileName())
+    dir_name = os.path.join(dir_name, "export")
+    smallest_scale = 200.0
+    for d in data_list:
+        if min(d[3]) < smallest_scale:
+            smallest_scale = min(d[3])
+    suffix = "_@" + str(smallest_scale/100) + "x"
+    new_folder_name = "x" + str(smallest_scale/100.0)
+    export_dir_name = dir_name + os.sep + new_folder_name
+    Path(export_dir_name).mkdir(parents=True, exist_ok=True)
+    #    of = open(os.path.join(export_dir_name, "diagnostic.txt"), "w")
+    #    of.write(dir_name + "\n" + export_dir_name + "\n" + suffix + "\n")
+    #    of.close()
+    renameRecursion(dir_name, export_dir_name, suffix, new_folder_name)
 
 class CustomDoubleSpinBox(QDoubleSpinBox):
     """
@@ -238,12 +238,8 @@ class GenerateRenpyScripting(DockWidget):
         if len(KI.activeWindow().views()) == 1:
             self.wipeScaleCalculation()
 
-    def bang(self, toPrint):
-        """
-        For debugging.
-        """
+    def showErrorMessage(self, toPrint):
         msg = QMessageBox()
-        msg.setGeometry(100, 200, 100, 100)
         msg.setText(toPrint)
         msg.exec_()
 
@@ -440,7 +436,14 @@ files of the smallest scale without the size suffix, placed in a folder.")
         and gets the second value. The inputs [1, 9] don't really matter here.
         """
         data = getData(1, 9)[1]
-        recursiveRenameStart(data)
+        if KI.activeDocument() != None:
+            if data:
+                recursiveRenameStart(data)
+            else:
+                self.showErrorMessage("Error: No valid layer names detected. \
+The renamer cannot run. Check your layer names!")
+        else:
+            self.showErrorMessage("Error: No active document!")
 
     def canvasChanged(self, canvas):
         pass

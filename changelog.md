@@ -1,5 +1,9 @@
 # Change Log
 
+# v1.5.1 -> v1.5.2
+ - Added handling for when user tries to use the image renamer when none of the layer names is valid
+ - Added handling for when user tries to use the image renamer when a document isn't active
+
 # v1.5 -> v1.5.1
  - Changed an instance of int() to float() for scale to correct an exporting issue.
  - Altered the smallest scale calculation to accommodate 200% (from 100%).
