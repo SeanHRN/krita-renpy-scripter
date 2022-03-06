@@ -7,7 +7,7 @@ Generate Ren'Py Scripting is a Python plugin for Krita. GRS outputs a block of R
 # How to Use
 
  1. Determine the image export scale you are going to use. The included Scale Percentage Size Calculator will tell you the dimensions of the image at the given scale; for Ren'Py, you'll likely want to get it close to 1920x1080 pixels.
- 2. Batch export the image's elements using KBE (krita-batch-exporter). This means that the layers you wish to export must follow the syntax defined in the [KBE manual](https://github.com/GDquest/krita-batch-exporter/blob/master/batch_exporter/Manual.md). The layer name (the actual name substring) will be used as the image name in the Ren'Py script.
+ 2. Batch export the image's elements using KBE (krita-batch-exporter). This means that the layers you wish to export must follow the syntax defined in the [KBE manual](https://github.com/GDquest/krita-batch-exporter/blob/master/batch_exporter/Manual.md); this program's features will not work with incorrectly formatted layer names! The layer name (the actual name substring) will be used as the image name in the Ren'Py script.
  3. (Optional) Customize the name of the output file (rpblock.txt by default). Do so if you wish to make and save multiple output files, though the practical use is to have rpblock.txt as a temporary file akin to scratch paper.
  4. Choose your output type.
 	1. If you need `pos (x, y)` scripting, press `pos (x, y)`.
