@@ -52,9 +52,14 @@ def parseLayers(layer, layer_list, coordinates_list, centers_list):
                 coord_x = layer.bounds().topLeft().x()
                 coord_y = layer.bounds().topLeft().y()
                 center_point = layer.bounds().center()
-                layer_list.append(layer)
+                centers_list.append([center_point.x(), center_point.y()])
+            else:
+                currentDoc = KI.activeDocument()
+                width = currentDoc.width()
+                height = currentDoc.height()
+                centers_list.append([round(width/2), round(height/2)])
+            layer_list.append(layer)
             coordinates_list.append([coord_x, coord_y])
-            centers_list.append([center_point.x(), center_point.y()])
         elif layer.type() == "grouplayer":
                 for child in layer.childNodes():
                     parseLayers(child, layer_sublist, coordinates_sublist, \

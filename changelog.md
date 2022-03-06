@@ -1,5 +1,9 @@
 # Change Log
 
+# v1.5.3
+ - Fixed error from using `t=false` (though as of this writing, trimming in the batch \
+exporter is itself buggy)
+
 # v1.5.1 -> v1.5.2
  - Added handling for when user tries to use the image renamer when none of the layer names is valid
  - Added handling for when user tries to use the image renamer when a document isn't active
