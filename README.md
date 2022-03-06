@@ -46,6 +46,11 @@ Proceed to Enabling GRS in Krita.
 # Features To Possibly Implement
   - Compatibility with the Batch Exporter's custom output path feature.
   - GUI text bar to notify the user of success/failure in export to match Krita Batch Exporter's design.<br> Currently, a separate window opens if the user tries to run the plugin when a Krita file hasn't been opened, and the only notification of success is the automatic file opening.
+  - The notification system could also be used to warn the user of incorrectly formatted file names.
+
+# Known Issues
+ - The calculator's dimensions don't automatically update when the canvas's size changes,
+ for example, upon cropping. I don't know of a signal to handle that.
 
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
