@@ -2,6 +2,7 @@
 
 # v1.5 -> v1.5.1
  - Changed an instance of int() to float() for scale to correct an exporting issue.
+ - Altered the smallest scale calculation to accommodate 200% (from 100%).
 
 # v1.4 -> v1.5 Changes
  - Calculator Rework

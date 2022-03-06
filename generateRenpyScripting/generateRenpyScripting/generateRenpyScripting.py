@@ -178,12 +178,12 @@ def recursiveRenameStart(data_list):
     """
     dir_name = os.path.dirname(KI.activeDocument().fileName())
     dir_name = os.path.join(dir_name, "export")
-    smallest_scale = 100
+    smallest_scale = 200.0
     for d in data_list:
         if min(d[3]) < smallest_scale:
             smallest_scale = min(d[3])
     suffix = "_@" + str(smallest_scale/100) + "x"
-    new_folder_name = "x" + str(smallest_scale/100)
+    new_folder_name = "x" + str(smallest_scale/100.0)
     export_dir_name = dir_name + os.sep + new_folder_name
     Path(export_dir_name).mkdir(parents=True, exist_ok=True)
 #    of = open(os.path.join(export_dir_name, "diagnostic.txt"), "w")
