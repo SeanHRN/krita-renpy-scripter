@@ -1,5 +1,8 @@
 # Change Log
 
+# v1.5 -> v1.5.1
+ - Changed an instance of int() to float() for scale to correct an exporting issue.
+
 # v1.4 -> v1.5 Changes
  - Calculator Rework
      - Now uses floats because the Batch Exporter will soon allow non-whole number scale percentages.
