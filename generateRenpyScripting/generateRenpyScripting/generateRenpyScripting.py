@@ -118,7 +118,7 @@ def getData(button_num, spacing_count):
                 coord_indv[0] -= max(margin_list)
                 coord_indv[1] -= max(margin_list)
         if "s" in layer_dict[layer.name()]:
-            size_list = [int(i) for i in layer_dict[layer.name()]["s"]]
+            size_list = [float(i) for i in layer_dict[layer.name()]["s"]]
             x = round(coord_indv[0] * (min(size_list)/100))
             y = round(coord_indv[1] * (min(size_list)/100))
             data_list.append(tuple((layer_dict[layer.name()]["actual name"], \
