@@ -14,8 +14,13 @@ Generate Ren'Py Scripting is a Python plugin for Krita. GRS outputs a block of R
     2. If you need `align (x, y)` or `xalign x yalign y` scripting:
        1. Choose the number of evenly-distributed spacings to use. <br>The Rule of Thirds toggle has the same effect as choosing 4 spacings [0.0, 0.333, 0.666, 1.0].
        2. Press `align (x, y)` or `xalign x yalign y`.
-  5. After you choose a save location, the exported file will be opened in the program default for its type automatically. Copy and paste its text where you need it in your Ren'Py script. I like to save to Desktop so that I could find and delete the file afterwards easily.
-  6. Make any changes necessary to your Ren'Py script. GRS gets you started with the basic image display template, but any further ATL statements still need to be declared manually!
+ 5. (Optional) Use the Additional ATL system to add an `at function()` statement.
+	 1. ATL functions may be written with a layer with the name `ATL <name of layer to target>`.
+	 2. The function must be given in the format `f=<function(parameter 1, parameter 2, etc.)>`. `func` and `function` also work as tags.
+	 3. If `currX` and `currY` are used in the string, the output will use the bounding box top left corner coordinates of the layer's contents, scaled to the lowest given resolution. For example, if the target layer has the metadata `s=100,50`, `currX` and `currY` will be calculated for 50% the image's size, and then written into the exported text. Any other variable that you type in will simply be carried over as-is.
+	 4. `alpha` is also a supported tag.
+ 6. After you choose a save location, the exported file will be opened in the program default for its type automatically. Copy and paste its text where you need it in your Ren'Py script. I like to save to Desktop so that I could find and delete the file afterwards easily.
+ 7. Make changes to your Ren'Py script as necessary. GRS gets you started with the basic image display template and can be used to add an `at function()` statement, but any further ATL statements still need to be declared manually!
 
 For more information with examples, see the [manual](https://github.com/SeanHRN/generate-renpy-scripting/blob/master/manual.md).
 
@@ -52,7 +57,7 @@ Proceed to Enabling GRS in Krita.
  for example, upon cropping. I don't know of a signal to handle that.
 
 # Feedback
-Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
+Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Let me know here.
 
 # License
 Generate Ren'Py Scripting is released under the GNU General Public License (version 3 or later).

@@ -1,6 +1,6 @@
 # Generate Ren'Py Scripting
 by Sean Castillo
-Version 1.5.3
+Version 1.6
 
 This plugin uses the contents of a Krita document and the layer name syntax for the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) by GDQuest to generate a block of text for a Ren'Py script. The block is saved into a file and then automatically opened in the default program for that file extension (e.g. Notepad for .txt on Windows) so that the user may immediately copy and paste the text into a Ren'Py script file. The goal is to coordinate the composed images as they appear in Krita to display the same way in Ren'Py as efficiently as possible by calculating the coordinates and doing the bulk of the typing automatically. Be sure to use images exported by the Batch Exporter to maintain consistency with this plugin's coordinates output.
 
@@ -35,7 +35,7 @@ For this, the Scale Percentage Size Calculator helps. Enter a percentage, and th
 Currently, the margin option nudges the `(x, y)` coordinates of the image up and left that many pixels.
 
 ## Rename Batch-Exported Files (Name Pending)
-This feature is accessed with a checkbox. When it's active, pressing export will also copy over the batch-exported images of the smallest scale to a new folder in which they don't have the Batch Exporter's `_@[scale]x` suffix, so that those images are ready to cut and paste into the Ren'Py project; you wouldn't need to rename the files manually.
+When the button is pressed, the program will copy over the batch-exported images of the smallest scale to a new folder in which they don't have the Batch Exporter's `_@[scale]x` suffix, so that those images are ready to cut and paste into the Ren'Py project; you wouldn't need to rename the files manually.
 
 ## Ren'Py Formats
 ```
@@ -57,6 +57,13 @@ This feature is accessed with a checkbox. When it's active, pressing export will
     pause
 ```
 The block starts one indent in because it would be pasted into a Ren'Py script under a label statement.
+
+## Additional ATL System
+ Use the Additional ATL system to add an `at function()` statement. ATL functions may be written with a layer with the name `ATL <name of layer to target>`.
+ The function must be given in the format `f=<function(parameter 1, parameter 2, etc.)>`.
+ `func` and `function` also work as tags.
+ If `currX` and `currY` are used in the string, the output will use the bounding box top left corner coordinates of the layer's contents, scaled to the lowest given resolution. For example, if the target layer has the metadata `s=100,50`, `currX` and `currY` will be calculated for 50% the image's size, and then written into the exported text. Any other variable that you type in will simply be carried over as-is.
+ `alpha` is also a supported tag.
 
 ## pos (x, y) Example
 Here's a screenshot of a panel from *Homeless Rice Ninja: The Rocky Road*, featuring [HRN](https://krita-artists.org/t/homeless-rice-ninja/36398) and [Halo-Halo](https://krita-artists.org/t/halo-halo/36741).
@@ -130,12 +137,12 @@ In the `x0.27` folder, the images have been copied over with the suffix removed,
  - Tip: Group Generate Ren'Py Scripting and Krita Batch Exporter together as tabs to save space (unlike how I had them \
 in the examples.)
  - This plugin allows non-integer values for size percentage via `round()`, but Krita Batch Exporter does not. The included Scale Percentage Size Calculator uses integer values only.
- - Metadata tags are case-insensitive in this plugin but case-sensitive in Krita Batch Exporter.
  - If a group layer and its contained layer both have metadata, the group properties have priority.
  - The line for the output file name is at the bottom because I think it's the widget that users\
  would need to touch the least often; that file is meant to be temporary.
 
 
 ## That's It!
-Feedback would be greatly appreciated. Send a message to my [krita-artists.org page](https://krita-artists.org/u/HyDrone/summary).
+Feedback would be greatly appreciated.
+
 See more of *Homeless Rice Ninja: The Rocky Road* [here](https://seanhrn.itch.io/homeless-rice-ninja-the-rocky-road). I post character art on my Krita-Artists [portfolio](https://krita-artists.org/u/hydrone/activity/portfolio).

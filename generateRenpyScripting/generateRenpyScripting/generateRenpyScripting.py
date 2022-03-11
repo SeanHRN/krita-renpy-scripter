@@ -37,9 +37,17 @@ def generateSpaces(spacing_count):
         spacing_list.append(truncate(i*step, decimal_place_count))
     return spacing_list
 
+def convertKeyValue(input_dict_value):
+    """
+    convertKeyValue removes characters from a dictionary string that
+    should not be printed. The input is a key, and the output is a string.
+    """
+    output = str(input_dict_value)
+    return output.translate(str.maketrans('','','[]\''))
+
 def parseLayers(layer, layer_list, coordinates_list, centers_list):
     """
-    almost the same; just makes a list of layers instead of a list of layer names
+    parseLayers() gets the data from the layers.
     """
     if layer.visible() == True:
         layer_sublist = []
@@ -132,18 +140,72 @@ x, y, size_list)))
         data_list = calculateAlign(data_list, all_centers, spacing_count)
     return file_open, data_list
 
+def getATL(curr_node):
+    """
+    getATL() checks for ATL information in invisible layers.
+    Since spaces are used to split the contents, I don't think
+    the function statement could allow any spaces.
+    """
+    ATL_dict = defaultdict(dict)
+    for i in curr_node.childNodes():
+        if i.visible() == False and i.name().upper().startswith("ATL"):
+            if i.type() == "grouplayer":
+                ATL_dict.update(getATL(i))
+            elif i.type() == "paintlayer":
+                contents = i.name().split(" ")
+                for c in contents[2:]:
+                    if "=" in c:
+                        ATL_data = c.split("=") #0: Tag string, 1: Data String
+                        ATL_data_list = ATL_data[1]
+                        ATL_dict[contents[1]][ATL_data[0]] = ATL_data_list
+    return ATL_dict
+
+def getATLFunction(input_string, input_layer_tuple, input_data):
+    """
+    The regex is a thing from stack overflow to find
+    'comma that is followed by a char that is not a space'.
+    """
+    modified_string = input_string
+    modified_string = re.sub('(,(?=\S)|:)', ", ", modified_string)
+    for i in input_data:
+        if i[0] == input_layer_tuple[0]:
+            if "currX" in modified_string:
+                modified_string = modified_string.replace("currX", str(input_layer_tuple[1]))
+            if "currY" in modified_string:
+                modified_string = modified_string.replace("currY", str(input_layer_tuple[2]))
+    return modified_string
+
 def writeData(input_data, path, format_num):
+    ATL_dict = {}
+    currentDoc = KI.activeDocument()
+    if currentDoc != None:
+        ATL_dict = getATL(currentDoc.rootNode())
     outfile = open(path, "w")
     outfile.write("\n")
     prefix = "pos"
     if format_num == 2:
         prefix = "align"
+#    outfile.write(str(ATL_dict))
+#    outfile.write("\n")
     for d in input_data:
-        outfile.write(f"{' ' * indent}show {d[0]}:\n")
+        ATL = ""
+        alpha = ""
+        if d[0] in ATL_dict:
+            if "alpha" in ATL_dict[d[0]]:
+                alpha = ATL_dict[d[0]]["alpha"]
+            for f in ["f", "func", "function"]:
+                if f in ATL_dict[d[0]]:
+                    ATL = getATLFunction(ATL_dict[d[0]][f], d, input_data)
+                    break
+        if ATL:
+            ATL = " at " + ATL
+        outfile.write(f"{' ' * indent}show {d[0]}{ATL}:\n")
         if format_num != 3: # Modes 1 and 2
             outfile.write(f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n")
         else:               # Mode 3
             outfile.write(f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n")
+        if alpha:
+            outfile.write(f"{' ' * (indent * 2)}alpha {convertKeyValue(alpha)}\n")
     outfile.write("\n")
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
