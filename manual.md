@@ -1,6 +1,6 @@
 # Generate Ren'Py Scripting
 by Sean Castillo
-Version 1.6
+Version 1.6.1
 
 This plugin uses the contents of a Krita document and the layer name syntax for the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) by GDQuest to generate a block of text for a Ren'Py script. The block is saved into a file and then automatically opened in the default program for that file extension (e.g. Notepad for .txt on Windows) so that the user may immediately copy and paste the text into a Ren'Py script file. The goal is to coordinate the composed images as they appear in Krita to display the same way in Ren'Py as efficiently as possible by calculating the coordinates and doing the bulk of the typing automatically. Be sure to use images exported by the Batch Exporter to maintain consistency with this plugin's coordinates output.
 
@@ -95,8 +95,9 @@ Here's the resulting rpblock.txt:
 ![HRN vs Halo-Halo](./images/example_hrn_2.png)
 It doesn't have the fog because I handle scrolling graphics separately, but all the other components are properly displayed!
 
- - For the first version of the image, each component's PNG was manually cropped to reduce empty space and then<br> given approximated `pos (x, y)` locations. For the remade version, I first ran Krita Batch Exporter to get the PNGs<br> with automatic and precise trimming so that the PNGs would work with the coordinates printed by<br> Generate Ren'Py Scripting. That's why there may be slight differences.
- -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter doesn't allow non-integer<br> values for percentage. Note: This issue with the Batch Exporter should be fixed soon.
+ - For the first version of the image, each component's PNG was manually cropped to reduce empty space and then given \ approximated `pos (x, y)` locations. For the remade version, I first ran Krita Batch Exporter to get the PNGs with \ automatic and precise trimming so that the PNGs would work with the coordinates printed by Generate Ren'Py Scripting. \ That's why there may be slight differences.
+ -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter didn't allow \
+non-integer scale values at the time I made this example.
  - rpblock.txt does start with the empty line, but I don't know how to get that to work in Markdown yet.
  - This example was made using version 1.0 of the program, which is why the menu is different in the picture.
 
@@ -136,7 +137,6 @@ In the `x0.27` folder, the images have been copied over with the suffix removed,
  - The manual for Krita Batch Exporter is [here](https://github.com/GDQuest/krita-batch-exporter/blob/master/batch_exporter/Manual.md).
  - Tip: Group Generate Ren'Py Scripting and Krita Batch Exporter together as tabs to save space (unlike how I had them \
 in the examples.)
- - This plugin allows non-integer values for size percentage via `round()`, but Krita Batch Exporter does not. The included Scale Percentage Size Calculator uses integer values only.
  - If a group layer and its contained layer both have metadata, the group properties have priority.
  - The line for the output file name is at the bottom because I think it's the widget that users\
  would need to touch the least often; that file is meant to be temporary.

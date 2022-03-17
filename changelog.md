@@ -1,5 +1,14 @@
 # Change Log
 
+# v1.6.1
+ - Fixed issue in which the image renamer would copy over an empty directory \
+during this case (using smallest scale = 25% as an example):
+     1. Run the image renamer. The export subdirectory is `x0.25`.
+     2. Remove all the contents of `x0.25` (for example, if you were to \
+cut and paste those images elsewhere).
+     3. Run the image renamer again. `x0.25` is repopulated with the images, \
+but also the empty folder `x0.25\x0.25`.
+
 # v1.6
  - Added Additional ATL System.
 

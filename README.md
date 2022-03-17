@@ -55,6 +55,8 @@ Proceed to Enabling GRS in Krita.
 # Known Issues
  - The calculator's dimensions don't automatically update when the canvas's size changes,
  for example, upon cropping. I don't know of a signal to handle that.
+ - The main example in the manual is outdated because it was made before the Batch Exporter allowed non-whole numbers \
+for scale percentage. I will make a new example.
 
 # Feedback
 Do you have suggestions on how to make the plugin better? Are there any commonly-used templates that you want to see as export options? Let me know here.

@@ -229,7 +229,7 @@ def renameRecursion(dir_name, export_dir_name, suffix, folder_name):
             exp_fname += exp_ext
             dst = os.path.join(export_dir_name, exp_fname)
             shutil.copy(f, dst)
-        elif os.path.isdir(f):
+        elif os.path.isdir(f) and len(os.listdir(f)) != 0:
             sub_export_dir_name = os.path.join(export_dir_name, filename)
             Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
             renameRecursion(f, sub_export_dir_name, suffix, folder_name)
