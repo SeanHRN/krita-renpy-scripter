@@ -1,5 +1,10 @@
 # Change Log
 
+# v1.7
+ - New export option: `at setPos(x, y)`. Since there are 4 export buttons,
+the export buttons are now on a grid layout.
+ - Removed newline between `pause` and the rest of the block.
+
 # v1.6.1
  - Fixed issue in which the image renamer would copy over an empty directory \
 during this case (using smallest scale = 25% as an example):

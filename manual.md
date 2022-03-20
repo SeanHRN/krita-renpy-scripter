@@ -1,6 +1,6 @@
 # Generate Ren'Py Scripting
 by Sean Castillo
-Version 1.6.1
+Version 1.7
 
 This plugin uses the contents of a Krita document and the layer name syntax for the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) by GDQuest to generate a block of text for a Ren'Py script. The block is saved into a file and then automatically opened in the default program for that file extension (e.g. Notepad for .txt on Windows) so that the user may immediately copy and paste the text into a Ren'Py script file. The goal is to coordinate the composed images as they appear in Krita to display the same way in Ren'Py as efficiently as possible by calculating the coordinates and doing the bulk of the typing automatically. Be sure to use images exported by the Batch Exporter to maintain consistency with this plugin's coordinates output.
 
@@ -14,6 +14,19 @@ To change the output for your project's needs, edit the lines in `writeData()`.
 By default, the `pos (x, y)` coordinates in the block are how the content of each layer appears on Krita's canvas.
 The coordinates refer to the top left corner of the bounding box for all non-transparent pixels in that layer.
 
+## [at setPos(x, y)] Output
+This feature assumes that the user has this ATL transform function defined in the Ren'Py project:
+```
+    transform setPos(x, y):
+        pos (x, y)
+```
+It is an alternate way of assigning `pos (x, y)` by using the `at` statement slot.
+If this format is used, functions declared via the Additional ATL system are instead placed in the block.
+```
+    show background at setPos(0, 0):
+        alpha 0.9
+        someFunction(10.0, 0, 200)
+```
 ## [align (x, y)] and [xalign x yalign y] Output
 
 The user may use the slider to choose the number of evenly-spaced spots at which to assign `align (x, y)`coordinates,

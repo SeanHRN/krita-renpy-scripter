@@ -188,8 +188,10 @@ def writeData(input_data, path, format_num):
 #    outfile.write(str(ATL_dict))
 #    outfile.write("\n")
     for d in input_data:
+        at_statement = ""
         ATL = ""
         alpha = ""
+        optional_colon = ":"
         if d[0] in ATL_dict:
             if "alpha" in ATL_dict[d[0]]:
                 alpha = ATL_dict[d[0]]["alpha"]
@@ -197,16 +199,23 @@ def writeData(input_data, path, format_num):
                 if f in ATL_dict[d[0]]:
                     ATL = getATLFunction(ATL_dict[d[0]][f], d, input_data)
                     break
-        if ATL:
-            ATL = " at " + ATL
-        outfile.write(f"{' ' * indent}show {d[0]}{ATL}:\n")
-        if format_num != 3: # Modes 1 and 2
+        if format_num == 4:
+            at_statement = " at setPos(" + str(d[1]) + ", " + str(d[2]) + ")"
+            if not alpha:
+                optional_colon = ""
+        elif ATL:
+            at_statement = " at " + ATL
+
+        outfile.write(f"{' ' * indent}show {d[0]}{at_statement}{optional_colon}\n")
+        if format_num == 1 or format_num == 2:
             outfile.write(f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n")
-        else:               # Mode 3
+        elif format_num == 3:
             outfile.write(f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n")
         if alpha:
             outfile.write(f"{' ' * (indent * 2)}alpha {convertKeyValue(alpha)}\n")
-    outfile.write("\n")
+        if ATL and format_num == 4:
+            outfile.write(f"{' ' * (indent * 2)}{ATL}\n")
+
     outfile.write(f"{' ' * indent}pause")
     outfile.close()
 
@@ -324,6 +333,9 @@ for a quick copy and paste.")
         xalignyalign_button = QPushButton("xalign x yalign y")
         xalignyalign_button.clicked.connect(lambda: self.process(3))
 
+        atSetPos_button = QPushButton("at setPos(x, y)")
+        atSetPos_button.clicked.connect(lambda: self.process(4))
+
         self.spacing_slider = QSlider(Qt.Horizontal, self)
         self.spacing_slider.setGeometry(30, 40, 200, 30)
         self.spacing_slider.setRange(2, 9)
@@ -375,14 +387,15 @@ files of the smallest scale without the size suffix, placed in a folder.")
         self.filename_line.setText(default_outfile_name)
 
         main_layout = QVBoxLayout()
-        export_layout = QHBoxLayout()
+        export_layout = QGridLayout()
         spacing_layout = QHBoxLayout()
         scale_layout = QHBoxLayout()
 
         main_layout.addWidget(export_label)
-        export_layout.addWidget(pos_button)
-        export_layout.addWidget(align_button)
-        export_layout.addWidget(xalignyalign_button)
+        export_layout.addWidget(pos_button, 0, 0)
+        export_layout.addWidget(align_button, 1, 0)
+        export_layout.addWidget(xalignyalign_button, 1, 1)
+        export_layout.addWidget(atSetPos_button, 0, 1)
         export_layout.setContentsMargins(0, 4, 0, 2) #left top right bottom
         main_layout.addLayout(export_layout)
 
