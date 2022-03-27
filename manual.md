@@ -9,10 +9,20 @@ i.e. contain "e=png" or "e=jpg" directly following the actual name of the layer.
 
 The user may choose between `pos (x, y)` statements and `align (x, y)` statements for output.
 To change the output for your project's needs, edit the lines in `writeData()`.
+The block starts one indent in because it would be pasted into a Ren'Py script under a label statement.
 
 ## [pos (x, y)] Output
 By default, the `pos (x, y)` coordinates in the block are how the content of each layer appears on Krita's canvas.
 The coordinates refer to the top left corner of the bounding box for all non-transparent pixels in that layer.
+
+```
+# Empty Line
+    show background:
+        pos (0, 0)
+    show character:
+        pos (0, 0)
+    pause
+```
 
 ## [at setPos(x, y)] Output
 This feature assumes that the user has this ATL transform function defined in the Ren'Py project:
@@ -21,6 +31,13 @@ This feature assumes that the user has this ATL transform function defined in th
         pos (x, y)
 ```
 It is an alternate way of assigning `pos (x, y)` by using the `at` statement slot.
+
+```
+# Empty Line
+    show background at setPos(0, 0)
+    show character at setPos(0, 0)
+```
+
 If this format is used, functions declared via the Additional ATL system are instead placed in the block.
 ```
     show background at setPos(0, 0):
@@ -37,6 +54,23 @@ For example, if 5 is chosen, the set of available spots (per axis) would be [0.0
 The Rule of Thirds mode uses the set [0.0, 0.333, 0.666, 1.0]; it's the same as using 4 on the slider.
 When the checkbox is toggled, the align(x, y) output always uses 4.
 
+```
+# Empty Line
+    show background:
+        align (0.0, 0.0)
+    show character:
+        align (0.0, 0.0)
+    pause
+```
+```
+# Empty Line
+    show background:
+        xalign 0.0 yalign 0.0
+    show character:
+        xalign 0.0 yalign 0.0
+    pause
+```
+
 ## Properties and Scale Percentage Size Calculator
  - s  - 'size' in scale percentage
  - m - 'margin' width in pixels
@@ -49,27 +83,6 @@ Currently, the margin option nudges the `(x, y)` coordinates of the image up and
 
 ## Rename Batch-Exported Files (Name Pending)
 When the button is pressed, the program will copy over the batch-exported images of the smallest scale to a new folder in which they don't have the Batch Exporter's `_@[scale]x` suffix, so that those images are ready to cut and paste into the Ren'Py project; you wouldn't need to rename the files manually.
-
-## Ren'Py Formats
-```
-# Empty Line
-    show background:
-        pos (0, 0)
-    show character:
-        pos (0, 0)
-# Empty Line
-    pause
-```
-```
-# Empty Line
-    show background:
-        align (0.0, 0.0)
-    show character:
-        align (0.0, 0.0)
-# Empty Line
-    pause
-```
-The block starts one indent in because it would be pasted into a Ren'Py script under a label statement.
 
 ## Additional ATL System
  Use the Additional ATL system to add an `at function()` statement. ATL functions may be written with a layer with the name `ATL <name of layer to target>`.
