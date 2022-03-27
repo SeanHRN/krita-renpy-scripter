@@ -22,6 +22,13 @@ close_notifier.setActive(True)
 default_outfile_name = "rpblock.txt"
 indent = 4
 decimal_place_count = 3
+transform_properties = {
+                        "rotate", "rotate_pad", "transform_anchor",
+                        "zoom", "xzoom", "yzoom", "nearest", "alpha",
+                        "additive", "around", "alignaround", "crop",
+                        "subpixel", "delay", "events", "xpan", "ypan",
+                        "xtile", "ytile", "matrixcolor", "blur"
+                        }
 
 def closestNum(num_list, value):
     return num_list[min(range(len(num_list)), key = lambda i: abs(num_list[i]-value))]
@@ -145,20 +152,30 @@ def getATL(curr_node):
     getATL() checks for ATL information in invisible layers.
     Since spaces are used to split the contents, I don't think
     the function statement could allow any spaces.
+
+    Tags that are not recognized from the list transform_properties
+    are recorded and put in the dictionary invalid_dict.
     """
     ATL_dict = defaultdict(dict)
+    invalid_dict = defaultdict(dict)
     for i in curr_node.childNodes():
         if i.visible() == False and i.name().upper().startswith("ATL"):
             if i.type() == "grouplayer":
                 ATL_dict.update(getATL(i))
             elif i.type() == "paintlayer":
                 contents = i.name().split(" ")
+                invalid_list = []
                 for c in contents[2:]:
                     if "=" in c:
                         ATL_data = c.split("=") #0: Tag string, 1: Data String
                         ATL_data_list = ATL_data[1]
                         ATL_dict[contents[1]][ATL_data[0]] = ATL_data_list
-    return ATL_dict
+                        if ATL_data[0] not in transform_properties:
+                            invalid_list.append(ATL_data[0])
+                if len(invalid_list) != 0:
+                    invalid_dict[contents[1]] = invalid_list
+
+    return ATL_dict, invalid_dict
 
 def getATLFunction(input_string, input_layer_tuple, input_data):
     """
@@ -179,29 +196,37 @@ def writeData(input_data, path, format_num):
     ATL_dict = {}
     currentDoc = KI.activeDocument()
     if currentDoc != None:
-        ATL_dict = getATL(currentDoc.rootNode())
+        ATL_dict, invalid_dict = getATL(currentDoc.rootNode())
     outfile = open(path, "w")
     outfile.write("\n")
     prefix = "pos"
     if format_num == 2:
         prefix = "align"
-#    outfile.write(str(ATL_dict))
-#    outfile.write("\n")
+
+    # for debugging
+#    outfile.write(str(ATL_dict) + "\n")
+#    outfile.write(str(invalid_dict) + "\n")
+
     for d in input_data:
         at_statement = ""
         ATL = ""
-        alpha = ""
+        property_dict = {}
+        for t in transform_properties:
+            property_dict[t] = None
         optional_colon = ":"
+        no_property_block = True
         if d[0] in ATL_dict:
-            if "alpha" in ATL_dict[d[0]]:
-                alpha = ATL_dict[d[0]]["alpha"]
+            for key in property_dict:
+                if key in ATL_dict[d[0]]:
+                    no_property_block = False
+                    property_dict[key] = ATL_dict[d[0]][key]
             for f in ["f", "func", "function"]:
                 if f in ATL_dict[d[0]]:
                     ATL = getATLFunction(ATL_dict[d[0]][f], d, input_data)
                     break
         if format_num == 4:
             at_statement = " at setPos(" + str(d[1]) + ", " + str(d[2]) + ")"
-            if not alpha:
+            if no_property_block:
                 optional_colon = ""
         elif ATL:
             at_statement = " at " + ATL
@@ -211,12 +236,19 @@ def writeData(input_data, path, format_num):
             outfile.write(f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n")
         elif format_num == 3:
             outfile.write(f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n")
-        if alpha:
-            outfile.write(f"{' ' * (indent * 2)}alpha {convertKeyValue(alpha)}\n")
+        for key in property_dict:
+            if property_dict[key] is not None:
+                outfile.write(f"{' ' * (indent * 2)}{key} {property_dict[key]}\n")
         if ATL and format_num == 4:
             outfile.write(f"{' ' * (indent * 2)}{ATL}\n")
 
     outfile.write(f"{' ' * indent}pause")
+
+    if invalid_dict:
+        chars_to_remove = ['[', ']', '\'']
+        outfile.write(f"\n# Suppressed unrecognized transform property/properties:")
+        for layer in invalid_dict:
+            outfile.write(f"\n#{' ' * indent}{invalid_dict[layer]} in layer \"{layer}\"")
     outfile.close()
 
 def renameRecursion(dir_name, export_dir_name, suffix, folder_name):
@@ -230,18 +262,20 @@ def renameRecursion(dir_name, export_dir_name, suffix, folder_name):
     """
     for filename in os.listdir(dir_name):
         f = os.path.join(dir_name, filename)
-        if filename == folder_name:
-            continue
-        elif filename.find(suffix) != -1 and os.path.isfile(f):
-            exp_fname, exp_ext = os.path.splitext(filename)
-            exp_fname = exp_fname[:exp_fname.find(suffix)]
-            exp_fname += exp_ext
-            dst = os.path.join(export_dir_name, exp_fname)
-            shutil.copy(f, dst)
-        elif os.path.isdir(f) and len(os.listdir(f)) != 0:
-            sub_export_dir_name = os.path.join(export_dir_name, filename)
-            Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
-            renameRecursion(f, sub_export_dir_name, suffix, folder_name)
+        if filename.find(suffix) != -1:
+            if os.path.isfile(f):
+                exp_fname, exp_ext = os.path.splitext(filename)
+                exp_fname = exp_fname[:exp_fname.find(suffix)]
+                exp_fname += exp_ext
+                dst = os.path.join(export_dir_name, exp_fname)
+                shutil.copy(f, dst)
+        elif os.path.isdir(f):
+            if filename == folder_name:
+                continue
+            else:
+                sub_export_dir_name = os.path.join(export_dir_name, filename)
+                Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
+                renameRecursion(f, sub_export_dir_name, suffix, folder_name)
 
 def recursiveRenameStart(data_list):
     """

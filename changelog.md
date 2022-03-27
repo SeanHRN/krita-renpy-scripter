@@ -1,5 +1,11 @@
 # Change Log
 
+# v1.8
+ - Fixed the issue described in v1.6.1 for real.
+ - Expanded the alpha system to a full property list system.
+ - Updated the html manual (renamed from grs_manual.html to Manual.html).
+ - Updated the md manual.
+
 # v1.7
  - New export option: `at setPos(x, y)`. Since there are 4 export buttons,
 the export buttons are now on a grid layout.

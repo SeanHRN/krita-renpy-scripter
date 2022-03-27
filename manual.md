@@ -1,6 +1,6 @@
 # Generate Ren'Py Scripting
 by Sean Castillo
-Version 1.7
+Version 1.8
 
 This plugin uses the contents of a Krita document and the layer name syntax for the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) by GDQuest to generate a block of text for a Ren'Py script. The block is saved into a file and then automatically opened in the default program for that file extension (e.g. Notepad for .txt on Windows) so that the user may immediately copy and paste the text into a Ren'Py script file. The goal is to coordinate the composed images as they appear in Krita to display the same way in Ren'Py as efficiently as possible by calculating the coordinates and doing the bulk of the typing automatically. Be sure to use images exported by the Batch Exporter to maintain consistency with this plugin's coordinates output.
 
@@ -75,10 +75,34 @@ The block starts one indent in because it would be pasted into a Ren'Py script u
  Use the Additional ATL system to add an `at function()` statement. ATL functions may be written with a layer with the name `ATL <name of layer to target>`.
  The function must be given in the format `f=<function(parameter 1, parameter 2, etc.)>`.
  `func` and `function` also work as tags.
- If `currX` and `currY` are used in the string, the output will use the bounding box top left corner coordinates of the layer's contents, scaled to the lowest given resolution. For example, if the target layer has the metadata `s=100,50`, `currX` and `currY` will be calculated for 50% the image's size, and then written into the exported text. Any other variable that you type in will simply be carried over as-is.
- `alpha` is also a supported tag.
+ If `currX` and/or `currY` are used in the string, the output will use the bounding box top left corner coordinate(s) of the layer's contents, scaled to the lowest given resolution. For example, if the target layer has the metadata `s=100,50`, `currX` and `currY` will be calculated for 50% the image's size, and then written into the exported text. Any other variable that you type in will simply be carried over as-is.
+ There are also many transform properties as supported tags:
+ - `alpha`
+ -  `rotate`
+ - `rotate_pad`
+ - `transform_anchor`
+ - `zoom`
+ - `xzoom`
+ - `yzoom`
+ - `nearest`
+ - `alpha`
+ - `additive`
+ - `around`
+ - `alignaround`
+ - `crop`
+ - `subpixel`
+ - `delay`
+ - `events`
+ - `xpan`
+ - `ypan`
+ - `xtile`
+ - `ytile`
+ - `matrixcolor`
+ - `blur`
 
 ## pos (x, y) Example
+This example was made with a much earlier version of this plugin (v1.0), but the idea is the same.
+
 Here's a screenshot of a panel from *Homeless Rice Ninja: The Rocky Road*, featuring [HRN](https://krita-artists.org/t/homeless-rice-ninja/36398) and [Halo-Halo](https://krita-artists.org/t/halo-halo/36741).
 
 ![HRN vs Halo-Halo](./images/example_hrn_1.png)
@@ -108,11 +132,12 @@ Here's the resulting rpblock.txt:
 ![HRN vs Halo-Halo](./images/example_hrn_2.png)
 It doesn't have the fog because I handle scrolling graphics separately, but all the other components are properly displayed!
 
- - For the first version of the image, each component's PNG was manually cropped to reduce empty space and then given \ approximated `pos (x, y)` locations. For the remade version, I first ran Krita Batch Exporter to get the PNGs with \ automatic and precise trimming so that the PNGs would work with the coordinates printed by Generate Ren'Py Scripting. \ That's why there may be slight differences.
- -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter didn't allow \
-non-integer scale values at the time I made this example.
+ - For the first version of the image, each component's PNG was manually cropped to reduce empty space and then given approximated `pos (x, y)` locations. For the remade version, I first ran Krita Batch Exporter to get the PNGs with automatic and precise trimming so that the PNGs would work with the coordinates printed by Generate Ren'Py Scripting. That's why there may be slight differences.
  - rpblock.txt does start with the empty line, but I don't know how to get that to work in Markdown yet.
- - This example was made using version 1.0 of the program, which is why the menu is different in the picture.
+ - Ways that this example is outdated:
+     -  The menu looks different here primarily because it has fewer features.
+	 -  37.6249% would be significantly more accurate than 38%, but Krita Batch Exporter didn't allow non-integer scale values at the time. In the current version of GRS, I could enter 1080 as the height and get 1920 as the width and 37.6249% as the scale.
+	 - The empty line between the last pos (x, y) and the pause has been removed from the template.
 
 ## align (x, y) Example
 Here's a 1920x1080 px test document with stuff to align.

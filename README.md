@@ -18,7 +18,7 @@ Generate Ren'Py Scripting is a Python plugin for Krita. GRS outputs a block of R
 	 1. ATL functions may be written with a layer with the name `ATL <name of layer to target>`.
 	 2. The function must be given in the format `f=<function(parameter 1, parameter 2, etc.)>`. `func` and `function` also work as tags.
 	 3. If `currX` and `currY` are used in the string, the output will use the bounding box top left corner coordinates of the layer's contents, scaled to the lowest given resolution. For example, if the target layer has the metadata `s=100,50`, `currX` and `currY` will be calculated for 50% the image's size, and then written into the exported text. Any other variable that you type in will simply be carried over as-is.
-	 4. `alpha` is also a supported tag.
+	 4. Property tags such as `alpha` and `subpixel` are supported; see the manual for details, including the full list.
  6. After you choose a save location, the exported file will be opened in the program default for its type automatically. Copy and paste its text where you need it in your Ren'Py script. I like to save to Desktop so that I could find and delete the file afterwards easily.
  7. Make changes to your Ren'Py script as necessary. GRS gets you started with the basic image display template and can be used to add an `at function()` statement, but any further ATL statements still need to be declared manually!
 
