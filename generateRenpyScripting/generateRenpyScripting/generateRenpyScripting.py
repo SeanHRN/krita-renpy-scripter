@@ -10,12 +10,21 @@ from PyQt5.QtWidgets import (
     QWidget,
     QDoubleSpinBox,
     QApplication,
-    QMessageBox
+    QMessageBox,
+    QSlider,
+    QCheckBox,
+    QTextEdit,
+    QApplication,
+
 )
 
-#from PyQt5 import QtCore
+from PyQt5.QtGui import *
+
+from PyQt5.QtCore import Qt, QEvent
+
 
 import os
+import sys
 from os.path import join, exists, dirname
 import math
 from pathlib import Path
@@ -86,6 +95,36 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
             QDoubleSpinBox.setSingleStep(self, 1.0)
         QDoubleSpinBox.stepBy(self, steps)
 
+
+class TextOutput(QWidget):
+    """
+    Text window to open up with the Ren'Py Script output
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Ren'Py Script Output")
+        self.resize(500,500)
+
+        self.textEdit = QTextEdit()
+        self.textEdit.setPlainText("Oh hi HRN!")
+        self.copyButton = QPushButton("Copy To Clipboard")
+        self.copyButton.clicked.connect(self.copyText)
+        self.closeButton = QPushButton("Close")
+
+        textOutputLayout = QVBoxLayout()
+        textOutputLayout.addWidget(self.textEdit)
+        textOutputLayout.addWidget(self.copyButton)
+        textOutputLayout.addWidget(self.closeButton)
+        self.setLayout(textOutputLayout)
+
+
+
+    def copyText(self):
+        clipboard = QApplication.clipboard()
+        clipboard.clear(mode=clipboard.Clipboard)
+        clipboard.setText(self.textEdit.toPlainText(), mode=clipboard.Clipboard)
+
 class FormatMenu(QWidget):
     """
     Window that should open when called from the docker.
@@ -95,17 +134,36 @@ class FormatMenu(QWidget):
         main_layout = QVBoxLayout()
         pos_layout = QHBoxLayout()
         align_layout = QHBoxLayout()
+        spacing_layout = QHBoxLayout()
 
         format_label = QLabel("Export Format")
         pos_label = QLabel("pos")
         pos_button = QPushButton("pos (x, y)")
-        #pos_button.clicked.connect(lambda: TOFILLIN)
+        pos_button.clicked.connect(lambda: self.process(1))
         atSetPos_button = QPushButton("at setPos(x, y)")
         #atSetPos_button.clicked.connect(lambda: TOFILLIN)
         align_label = QLabel("align")
+        self.spacing_slider = QSlider(Qt.Horizontal, self)
+        self.spacing_slider.setGeometry(30, 40, 200, 30)
+        self.spacing_slider.setRange(1, 9)
+        self.spacing_slider.setValue(9)
+        self.spacing_slider.setFocusPolicy(Qt.NoFocus)
+        self.spacing_slider.setPageStep(1)
+        self.spacing_slider.setTickInterval(1)
+        self.spacing_slider.setTickPosition(QSlider.TicksBelow)
+        self.spacing_slider.valueChanged[int].connect(self.updateSpacingValue)
+        self.spacing_label = QLabel("align (x, y) Spacing Count: ")
+        self.spacing_label.setToolTip("Choose number of evenly-distributed \
+spaces to use for align(x, y).")
+        self.spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
+        self.spacing_number_label.setAlignment(Qt.AlignVCenter)
+        self.rule_of_thirds_check = QCheckBox("Rule of Thirds")
+        self.rule_of_thirds_check.setToolTip("Set align(x, y) \
+statements to Rule of Thirds intersections. This is equivalent to using 4 spaces.")
+        self.rule_of_thirds_check.setChecked(False)
+        self.rule_of_thirds_check.toggled.connect(lambda:self.ruleOfThirdsFlag(self.rule_of_thirds_check))
         align_button = QPushButton("align (x, y)")
         #align_button.clicked.connect(lambda: self.process(2))
-
         xalignyalign_button = QPushButton("xalign x yalign y")
         #xalignyalign_button.clicked.connect(lambda: self.process(3))
         
@@ -115,12 +173,33 @@ class FormatMenu(QWidget):
         pos_layout.addWidget(atSetPos_button)
         main_layout.addLayout(pos_layout)
         main_layout.addWidget(align_label)
+        spacing_layout.setContentsMargins(0,0,0,0)
+        spacing_layout.addWidget(self.spacing_number_label)
+        spacing_layout.addWidget(self.spacing_label)
+        spacing_layout.addWidget(self.spacing_slider)
+        spacing_layout.addWidget(self.rule_of_thirds_check)
+        main_layout.addLayout(spacing_layout)
         align_layout.addWidget(align_button)
         align_layout.addWidget(xalignyalign_button)
         main_layout.addLayout(align_layout)
         self.setLayout(main_layout)
         self.mainWindow = None
 
+    def process(self, button_num):
+        if button_num == 1:
+            self.outputWindow = TextOutput()
+            self.outputWindow.show()
+
+    def ruleOfThirdsFlag(self, c):
+        if c.isChecked() == True:
+            self.spacing_slider.setSliderPosition(4)
+
+    def updateSpacingValue(self):
+        self.spacing_number_label.setText(str(self.spacing_slider.value()))
+        if self.spacing_slider.value() == 4:
+            self.rule_of_thirds_check.setChecked(True)
+        else:
+            self.rule_of_thirds_check.setChecked(False)
 
 class GenerateRenpyScripting(DockWidget):
     title = "Generate Ren'Py Scripting V2"
