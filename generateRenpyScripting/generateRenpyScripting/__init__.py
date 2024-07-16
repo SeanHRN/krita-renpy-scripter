@@ -1,3 +1,3 @@
-from .generateRenpyScripting import *
+from .generateRenpyScripting import registerDocker
 
 registerDocker()
