@@ -42,6 +42,12 @@ open_notifier.setActive(True)
 close_notifier = KI.notifier()
 close_notifier.setActive(True)
 
+# Load configs from JSON file
+z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+c = json.load(z)
+config_data = c["configs"][0]
+#curr_string_xposypos = config_data.format("string_xposypos")
+
 default_outfile_name = "renpyblock.txt"
 indent = 4
 decimal_place_count = 3
@@ -263,16 +269,16 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
-        prefix = "pos"
+        curr_prefix = "pos"
         if button_num == 3:
-            prefix = "align"
+            curr_prefix = "align"
         for d in data_list:
             at_statement = ""
             ATL = ""
             property_dict = {}
             for t in transform_properties:
                 property_dict[t] = None
-            optional_colon = ":"
+            #optional_colon = ":"
             no_property_block = True
             if d[0] in ATL_dict:
                 for key in property_dict:
@@ -283,9 +289,14 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
                     if f in ATL_dict[d[0]]:
                         ATL = self.getATLFunction(ATL_dict[d[0]][f], d, data_list)
                         break
-            script += f"{' ' * indent}show {d[0]}{at_statement}{optional_colon}\n"
+            #script += f"{' ' * indent}show {d[0]}{at_statement}{optional_colon}\n"
+            #script += f"{' ' * indent}show {d[0]}{at_statement}:\n"
             if button_num == 1 or button_num == 3:
-                script += f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n"
+
+                script += config_data["string_xposypos"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+prefix=curr_prefix,xcoord=str(d[1]),ycoord=str(d[2]))
+                #script += f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n"
             elif button_num == 2:
                 if no_property_block:
                     optional_colon = ""
@@ -296,8 +307,8 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
             for key in property_dict:
                 if property_dict[key] is not None:
                     script += f"{' ' * (indent * 2)}{key} {property_dict[key]}\n"
-            #if ATL and button_num == 4:
-            #    script += f"{' ' * (indent * 2)}{ATL}\n"
+            if ATL and button_num == 4:
+                script += f"{' ' * (indent * 2)}{ATL}\n"
         return script
 
     def getData(self, button_num, spacing_num):
@@ -398,7 +409,7 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
             self.rule_of_thirds_check.setChecked(False)
 
 class GenerateRenpyScripting(DockWidget):
-    title = "Generate Ren'Py Scripting V2"
+    title = "Generate Ren'Py Scripting V2 WIP"
 
     def __init__(self):
         super().__init__()
@@ -435,7 +446,7 @@ class GenerateRenpyScripting(DockWidget):
         self.setWidget(mainWidget)
 
     def decideStep(self):
-        #TODO: Add a system to check if there are solid color layers and/or scrolling.
+        #Consideration: Add a system to check if there are solid color layers and/or scrolling.
         #The program should proceed to the export menu afterwards.
         #For now, it will go straight to the export menu.
         self.show_format_menu()

@@ -1,0 +1,9 @@
+{
+    "configs" :
+    [
+        {
+        "string_xposypos" : "{four_space_indent}show {image}:\n{eight_space_indent}{prefix} ({xcoord}, {ycoord})\n"
+        }
+    ]
+    
+}
