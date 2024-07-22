@@ -46,7 +46,6 @@ close_notifier.setActive(True)
 z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
 c = json.load(z)
 config_data = c["configs"][0]
-#curr_string_xposypos = config_data.format("string_xposypos")
 
 default_outfile_name = "renpyblock.txt"
 indent = 4
@@ -202,6 +201,7 @@ class FormatMenu(QWidget):
         pos_layout = QHBoxLayout()
         align_layout = QHBoxLayout()
         spacing_layout = QHBoxLayout()
+        layered_image_layout = QHBoxLayout()
 
         format_label = QLabel("Export Format")
         pos_label = QLabel("pos")
@@ -219,11 +219,11 @@ class FormatMenu(QWidget):
         self.spacing_slider.setTickInterval(1)
         self.spacing_slider.setTickPosition(QSlider.TicksBelow)
         self.spacing_slider.valueChanged[int].connect(self.updateSpacingValue)
-        self.spacing_label = QLabel("align (x, y) Spacing Count: ")
-        self.spacing_label.setToolTip("Choose number of evenly-distributed \
+        spacing_label = QLabel("align (x, y) Spacing Count: ")
+        spacing_label.setToolTip("Choose number of evenly-distributed \
 spaces to use for align(x, y).")
-        self.spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
-        self.spacing_number_label.setAlignment(Qt.AlignVCenter)
+        spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
+        spacing_number_label.setAlignment(Qt.AlignVCenter)
         self.rule_of_thirds_check = QCheckBox("Rule of Thirds")
         self.rule_of_thirds_check.setToolTip("Set align(x, y) \
 statements to Rule of Thirds intersections. This is equivalent to using 4 spaces.")
@@ -233,6 +233,11 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         align_button.clicked.connect(lambda: self.process(3))
         xalignyalign_button = QPushButton("xalign x yalign y")
         xalignyalign_button.clicked.connect(lambda: self.process(4))
+        layered_image_label = QLabel("Layered Images")
+        layered_image_def_button = QPushButton("Definition")
+        layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage using \
+the Krita layer structure for the directory.")
+        #TODO: Connect the layered image def button
         
         main_layout.addWidget(format_label)
         main_layout.addWidget(pos_label)
@@ -241,14 +246,17 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         main_layout.addLayout(pos_layout)
         main_layout.addWidget(align_label)
         spacing_layout.setContentsMargins(0,0,0,0)
-        spacing_layout.addWidget(self.spacing_number_label)
-        spacing_layout.addWidget(self.spacing_label)
+        spacing_layout.addWidget(spacing_number_label)
+        spacing_layout.addWidget(spacing_label)
         spacing_layout.addWidget(self.spacing_slider)
         spacing_layout.addWidget(self.rule_of_thirds_check)
         main_layout.addLayout(spacing_layout)
         align_layout.addWidget(align_button)
         align_layout.addWidget(xalignyalign_button)
         main_layout.addLayout(align_layout)
+        main_layout.addWidget(layered_image_label)
+        layered_image_layout.addWidget(layered_image_def_button)
+        main_layout.addLayout(layered_image_layout)
         self.setLayout(main_layout)
         self.mainWindow = None
 
@@ -275,7 +283,6 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
             property_dict = {}
             for t in transform_properties:
                 property_dict[t] = None
-            #optional_colon = ":"
             no_property_block = True
             if d[0] in ATL_dict:
                 for key in property_dict:
@@ -301,7 +308,6 @@ xcoord=str(d[1]),ycoord=str(d[2]))
 (four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(d[1]),ycoord=str(d[2]))
             elif button_num == 4:
-                #script += f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n"
                 script += config_data["string_xalignyalign"].format\
 (four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(d[1]),ycoord=str(d[2]))
