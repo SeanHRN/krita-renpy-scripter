@@ -269,9 +269,6 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
-        curr_prefix = "pos"
-        if button_num == 3:
-            curr_prefix = "align"
         for d in data_list:
             at_statement = ""
             ATL = ""
@@ -289,21 +286,25 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
                     if f in ATL_dict[d[0]]:
                         ATL = self.getATLFunction(ATL_dict[d[0]][f], d, data_list)
                         break
-            #script += f"{' ' * indent}show {d[0]}{at_statement}{optional_colon}\n"
-            #script += f"{' ' * indent}show {d[0]}{at_statement}:\n"
-            if button_num == 1 or button_num == 3:
-
+            if button_num == 1:
                 script += config_data["string_xposypos"].format\
 (four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-prefix=curr_prefix,xcoord=str(d[1]),ycoord=str(d[2]))
-                #script += f"{' ' * (indent * 2)}{prefix} ({str(d[1])}, {str(d[2])})\n"
+xcoord=str(d[1]),ycoord=str(d[2]))
             elif button_num == 2:
                 if no_property_block:
                     optional_colon = ""
-                at_statement = " at setPos(" + str(d[1]) + ", " + str(d[2]) + ")"
-                script += f"{' ' * (indent * 2)}{at_statement}{optional_colon}\n"
+                script += config_data["string_atsetposxy"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
+            elif button_num == 3:
+                script += config_data["string_alignxy"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
             elif button_num == 4:
-                script += f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n"
+                #script += f"{' ' * (indent * 2)}xalign {str(d[1])} yalign {str(d[2])}\n"
+                script += config_data["string_xalignyalign"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
             for key in property_dict:
                 if property_dict[key] is not None:
                     script += f"{' ' * (indent * 2)}{key} {property_dict[key]}\n"

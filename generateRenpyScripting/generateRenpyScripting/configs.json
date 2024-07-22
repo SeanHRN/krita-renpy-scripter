@@ -2,7 +2,10 @@
     "configs" :
     [
         {
-        "string_xposypos" : "{four_space_indent}show {image}:\n{eight_space_indent}{prefix} ({xcoord}, {ycoord})\n"
+        "string_xposypos" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
+        "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
+        "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
+        "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n"
         }
     ]
     
