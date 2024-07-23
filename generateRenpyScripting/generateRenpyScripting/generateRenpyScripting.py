@@ -202,6 +202,7 @@ class FormatMenu(QWidget):
         align_layout = QHBoxLayout()
         spacing_layout = QHBoxLayout()
         layered_image_layout = QHBoxLayout()
+        settings_layout = QHBoxLayout()
 
         format_label = QLabel("Export Format")
         pos_label = QLabel("pos")
@@ -222,8 +223,8 @@ class FormatMenu(QWidget):
         spacing_label = QLabel("align (x, y) Spacing Count: ")
         spacing_label.setToolTip("Choose number of evenly-distributed \
 spaces to use for align(x, y).")
-        spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
-        spacing_number_label.setAlignment(Qt.AlignVCenter)
+        self.spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
+        self.spacing_number_label.setAlignment(Qt.AlignVCenter)
         self.rule_of_thirds_check = QCheckBox("Rule of Thirds")
         self.rule_of_thirds_check.setToolTip("Set align(x, y) \
 statements to Rule of Thirds intersections. This is equivalent to using 4 spaces.")
@@ -237,8 +238,12 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         layered_image_def_button = QPushButton("Definition")
         layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage using \
 the Krita layer structure for the directory.")
-        #TODO: Connect the layered image def button
-        
+        layered_image_def_button.clicked.connect(lambda: self.process(5))
+        settings_label = QLabel("Settings")
+        default_button = QPushButton("Default")
+        default_button.setToolTip("Revert output text format to the default configurations.")
+        customize_button = QPushButton("Customize")
+        customize_button.setToolTip("Open configs.json in your default text editor to make changes to the output formats.")
         main_layout.addWidget(format_label)
         main_layout.addWidget(pos_label)
         pos_layout.addWidget(pos_button)
@@ -246,8 +251,8 @@ the Krita layer structure for the directory.")
         main_layout.addLayout(pos_layout)
         main_layout.addWidget(align_label)
         spacing_layout.setContentsMargins(0,0,0,0)
-        spacing_layout.addWidget(spacing_number_label)
         spacing_layout.addWidget(spacing_label)
+        spacing_layout.addWidget(self.spacing_number_label)
         spacing_layout.addWidget(self.spacing_slider)
         spacing_layout.addWidget(self.rule_of_thirds_check)
         main_layout.addLayout(spacing_layout)
@@ -257,6 +262,10 @@ the Krita layer structure for the directory.")
         main_layout.addWidget(layered_image_label)
         layered_image_layout.addWidget(layered_image_def_button)
         main_layout.addLayout(layered_image_layout)
+        main_layout.addWidget(settings_label)
+        settings_layout.addWidget(customize_button)
+        settings_layout.addWidget(default_button)
+        main_layout.addLayout(settings_layout)
         self.setLayout(main_layout)
         self.mainWindow = None
 
@@ -277,45 +286,56 @@ the Krita layer structure for the directory.")
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
-        for d in data_list:
-            at_statement = ""
-            ATL = ""
-            property_dict = {}
-            for t in transform_properties:
-                property_dict[t] = None
-            no_property_block = True
-            if d[0] in ATL_dict:
+        # For layeredimage scripting
+        #TODO: Make system to properly parse through layer structure to get the directories stored
+        if button_num == 5:
+            overall_image_name = ""
+            script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
+            for d in data_list:
+                script += (' '*indent)
+                script += "attribute " + d[0] + ":\n"
+
+        # For image position scripting
+        else:
+            for d in data_list:
+                at_statement = ""
+                ATL = ""
+                property_dict = {}
+                for t in transform_properties:
+                    property_dict[t] = None
+                no_property_block = True
+                if d[0] in ATL_dict:
+                    for key in property_dict:
+                        if key in ATL_dict[d[0]]:
+                            no_property_block = False
+                            property_dict[key] = ATL_dict[d[0]][key]
+                    for f in ["f", "func", "function"]:
+                        if f in ATL_dict[d[0]]:
+                            ATL = self.getATLFunction(ATL_dict[d[0]][f], d, data_list)
+                            break
+                if button_num == 1:
+                    script += config_data["string_xposypos"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
+                elif button_num == 2:
+                    if no_property_block:
+                        optional_colon = ""
+                    script += config_data["string_atsetposxy"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
+                elif button_num == 3:
+                    script += config_data["string_alignxy"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
+                elif button_num == 4:
+                    script += config_data["string_xalignyalign"].format\
+(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(d[1]),ycoord=str(d[2]))
                 for key in property_dict:
-                    if key in ATL_dict[d[0]]:
-                        no_property_block = False
-                        property_dict[key] = ATL_dict[d[0]][key]
-                for f in ["f", "func", "function"]:
-                    if f in ATL_dict[d[0]]:
-                        ATL = self.getATLFunction(ATL_dict[d[0]][f], d, data_list)
-                        break
-            if button_num == 1:
-                script += config_data["string_xposypos"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-            elif button_num == 2:
-                if no_property_block:
-                    optional_colon = ""
-                script += config_data["string_atsetposxy"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-            elif button_num == 3:
-                script += config_data["string_alignxy"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-            elif button_num == 4:
-                script += config_data["string_xalignyalign"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-            for key in property_dict:
-                if property_dict[key] is not None:
-                    script += f"{' ' * (indent * 2)}{key} {property_dict[key]}\n"
-            if ATL and button_num == 4:
-                script += f"{' ' * (indent * 2)}{ATL}\n"
+                    if property_dict[key] is not None:
+                        script += f"{' ' * (indent * 2)}{key} {property_dict[key]}\n"
+                if ATL and button_num == 4:
+                    script += f"{' ' * (indent * 2)}{ATL}\n"
         return script
 
     def getData(self, button_num, spacing_num):
