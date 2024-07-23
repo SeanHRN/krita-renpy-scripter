@@ -1,4 +1,0 @@
-{
-    "default_string_xposypos" : "\"{' ' * indent}show {d[0]}{at_statement}{optional_colon}\n\""
-    
-}

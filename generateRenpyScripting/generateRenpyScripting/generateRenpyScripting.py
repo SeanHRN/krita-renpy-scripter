@@ -46,8 +46,21 @@ close_notifier.setActive(True)
 z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
 c = json.load(z)
 config_data = c["configs"][0]
+default_configs_dict = {
+    "string_xposypos" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
+    "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
+    "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
+    "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
+    "string_layeredimagedefstart" : "layeredimage {overall_image}:\n"
+}
+pos_button_text = "pos (x, y)"
 
-default_outfile_name = "renpyblock.txt"
+# For parameterizing the menu text to allow customization
+replacer_dict = {
+    "{xcoord}" : "x",
+    "{ycoord}" : "y"
+}
+
 indent = 4
 decimal_place_count = 3
 transform_properties = {
@@ -204,9 +217,10 @@ class FormatMenu(QWidget):
         layered_image_layout = QHBoxLayout()
         settings_layout = QHBoxLayout()
 
-        format_label = QLabel("Export Format")
+        format_label = QLabel("Output Format")
         pos_label = QLabel("pos")
-        pos_button = QPushButton("pos (x, y)")
+        #pos_button = QPushButton("pos (x, y)")
+        pos_button = QPushButton(pos_button_text, self)
         pos_button.clicked.connect(lambda: self.process(1))
         atSetPos_button = QPushButton("at setPos(x, y)")
         atSetPos_button.clicked.connect(lambda: self.process(2))
@@ -220,7 +234,7 @@ class FormatMenu(QWidget):
         self.spacing_slider.setTickInterval(1)
         self.spacing_slider.setTickPosition(QSlider.TicksBelow)
         self.spacing_slider.valueChanged[int].connect(self.updateSpacingValue)
-        spacing_label = QLabel("align (x, y) Spacing Count: ")
+        spacing_label = QLabel("Spacing Count: ")
         spacing_label.setToolTip("Choose number of evenly-distributed \
 spaces to use for align(x, y).")
         self.spacing_number_label = QLabel(f"{self.spacing_slider.value()}")
@@ -239,11 +253,12 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage using \
 the Krita layer structure for the directory.")
         layered_image_def_button.clicked.connect(lambda: self.process(5))
-        settings_label = QLabel("Settings")
+        settings_label = QLabel("Output Settings")
         default_button = QPushButton("Default")
         default_button.setToolTip("Revert output text format to the default configurations.")
         customize_button = QPushButton("Customize")
         customize_button.setToolTip("Open configs.json in your default text editor to make changes to the output formats.")
+        customize_button.clicked.connect(lambda: self.settingCustomize())
         main_layout.addWidget(format_label)
         main_layout.addWidget(pos_label)
         pos_layout.addWidget(pos_button)
@@ -435,6 +450,10 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         else:
             self.rule_of_thirds_check.setChecked(False)
 
+    def settingCustomize(self):
+        self.pos_button.setText("Senku") #TEST PROBLEM: text isn't updating
+        self.pos_button.update()
+
 class GenerateRenpyScripting(DockWidget):
     title = "Generate Ren'Py Scripting V2 WIP"
 
@@ -462,11 +481,11 @@ class GenerateRenpyScripting(DockWidget):
         msg.exec_()
 
     def createInterface(self):
-        export_button = QPushButton("Export Ren'Py Scripting")
-        export_button.clicked.connect(self.decideStep)
+        generate_button = QPushButton("Generate")
+        generate_button.clicked.connect(self.decideStep)
 
         main_layout = QVBoxLayout()
-        main_layout.addWidget(export_button)
+        main_layout.addWidget(generate_button)
 
         mainWidget = QWidget(self)
         mainWidget.setLayout(main_layout)
@@ -474,8 +493,8 @@ class GenerateRenpyScripting(DockWidget):
 
     def decideStep(self):
         #Consideration: Add a system to check if there are solid color layers and/or scrolling.
-        #The program should proceed to the export menu afterwards.
-        #For now, it will go straight to the export menu.
+        #The program should proceed to the generate menu afterwards.
+        #For now, it will go straight to the generate menu.
         self.show_format_menu()
 
     def show_format_menu(self):
