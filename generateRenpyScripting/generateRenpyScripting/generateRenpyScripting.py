@@ -37,10 +37,9 @@ import json
 from collections import defaultdict
 
 KI = Krita.instance()
-open_notifier = KI.notifier()
-open_notifier.setActive(True)
-close_notifier = KI.notifier()
-close_notifier.setActive(True)
+app_notifier = KI.notifier()
+app_notifier.setActive(True)
+
 
 # Load configs from JSON file
 z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
@@ -133,7 +132,7 @@ def calculateAlign(data_list, centers_list, spacing_num):
     for d, c in zip(data_list, centers_list):
         xalign = closestNum(spacing_list, (c[0] / width))
         yalign = closestNum(spacing_list, (c[1] / height))
-        new_data_list.append(tuple((d[0],xalign,yalign,d[3])))
+        new_data_list.append(tuple((d[0],xalign,yalign,d[3],d[4]))) # TODO: seeing if d[4] (should be format) parses
     return new_data_list
 
 def convertKeyValue(input_dict_value):
@@ -210,18 +209,24 @@ class FormatMenu(QWidget):
     """
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Choose Your Format")
+        self.createFormatMenuInterface()
+
+
+    def createFormatMenuInterface(self):
         main_layout = QVBoxLayout()
         pos_layout = QHBoxLayout()
         align_layout = QHBoxLayout()
         spacing_layout = QHBoxLayout()
-        layered_image_layout = QHBoxLayout()
+        image_definition_layout = QHBoxLayout()
         settings_layout = QHBoxLayout()
 
         format_label = QLabel("Output Format")
         pos_label = QLabel("pos")
         #pos_button = QPushButton("pos (x, y)")
-        pos_button = QPushButton(pos_button_text, self)
-        pos_button.clicked.connect(lambda: self.process(1))
+        self.pos_button_text = pos_button_text
+        self.pos_button = QPushButton(self.pos_button_text, self)
+        self.pos_button.clicked.connect(lambda: self.process(1))
         atSetPos_button = QPushButton("at setPos(x, y)")
         atSetPos_button.clicked.connect(lambda: self.process(2))
         align_label = QLabel("align")
@@ -248,20 +253,24 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         align_button.clicked.connect(lambda: self.process(3))
         xalignyalign_button = QPushButton("xalign x yalign y")
         xalignyalign_button.clicked.connect(lambda: self.process(4))
-        layered_image_label = QLabel("Layered Images")
-        layered_image_def_button = QPushButton("Definition")
+        image_definition_label = QLabel("Image Definition")
+        normal_image_def_button = QPushButton("Normal Images")
+        normal_image_def_button.setToolTip("Generate the definitions of individual images in Ren'Py using \
+the Krita layer structure for the directory.")
+        normal_image_def_button.clicked.connect(lambda: self.process(5))
+        layered_image_def_button = QPushButton("Layered Image")
         layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage using \
 the Krita layer structure for the directory.")
-        layered_image_def_button.clicked.connect(lambda: self.process(5))
+        layered_image_def_button.clicked.connect(lambda: self.process(6))
         settings_label = QLabel("Output Settings")
         default_button = QPushButton("Default")
         default_button.setToolTip("Revert output text format to the default configurations.")
-        customize_button = QPushButton("Customize")
-        customize_button.setToolTip("Open configs.json in your default text editor to make changes to the output formats.")
-        customize_button.clicked.connect(lambda: self.settingCustomize())
+        self.customize_button = QPushButton("Customize", self)
+        self.customize_button.setToolTip("Open configs.json in your default text editor to make changes to the output formats.")
+        self.customize_button.clicked.connect(lambda: self.settingCustomize)
         main_layout.addWidget(format_label)
         main_layout.addWidget(pos_label)
-        pos_layout.addWidget(pos_button)
+        pos_layout.addWidget(self.pos_button)
         pos_layout.addWidget(atSetPos_button)
         main_layout.addLayout(pos_layout)
         main_layout.addWidget(align_label)
@@ -274,11 +283,12 @@ the Krita layer structure for the directory.")
         align_layout.addWidget(align_button)
         align_layout.addWidget(xalignyalign_button)
         main_layout.addLayout(align_layout)
-        main_layout.addWidget(layered_image_label)
-        layered_image_layout.addWidget(layered_image_def_button)
-        main_layout.addLayout(layered_image_layout)
+        main_layout.addWidget(image_definition_label)
+        image_definition_layout.addWidget(normal_image_def_button)
+        image_definition_layout.addWidget(layered_image_def_button)
+        main_layout.addLayout(image_definition_layout)
         main_layout.addWidget(settings_label)
-        settings_layout.addWidget(customize_button)
+        settings_layout.addWidget(self.customize_button)
         settings_layout.addWidget(default_button)
         main_layout.addLayout(settings_layout)
         self.setLayout(main_layout)
@@ -301,14 +311,20 @@ the Krita layer structure for the directory.")
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
-        # For layeredimage scripting
-        #TODO: Make system to properly parse through layer structure to get the directories stored
-        if button_num == 5:
-            overall_image_name = ""
-            script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
-            for d in data_list:
-                script += (' '*indent)
-                script += "attribute " + d[0] + ":\n"
+
+        # For image definition scripting
+        # TODO: Make system to properly parse through layer structure to get the directories stored
+        if button_num == 5 or button_num == 6:
+            if button_num == 5: # Normal Images
+                for d in data_list:
+                    script += "image " + d[0] + " = \"" + d[0] + "." + d[4][0] + "\"\n"
+
+            else: # Layered Image
+                overall_image_name = ""
+                script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
+                for d in data_list:
+                    script += (' '*indent)
+                    script += "attribute " + d[0] + ":\n"
 
         # For image position scripting
         else:
@@ -380,6 +396,12 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                         category_data_list = category_data[1].split(",")
                         layer_dict[l.name()][category_data[0]] = category_data_list
             for layer, coord_indv in zip(layer_list, all_coords):
+                x = 0
+                y = 0
+                size_list = []
+                image_format_list = []
+                if "e" in layer_dict[layer.name()]: #EXPERIMENTAL
+                    image_format_list = [str(j) for j in layer_dict[layer.name()]["e"]]
                 if "m" in layer_dict[layer.name()]:
                     for i in layer_dict[layer.name()]["m"]:
                         margin_list = [int(i) for i in layer_dict[layer.name()]["m"]]
@@ -389,7 +411,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     size_list = [float(i) for i in layer_dict[layer.name()]["s"]]
                     x = round(coord_indv[0] * (min(size_list)/100))
                     y = round(coord_indv[1] * (min(size_list)/100))
-                    data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list)))
+                data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list)))
                 if button_num == 3 or button_num == 4:
                     data_list = calculateAlign(data_list, all_centers, spacing_num)
         return data_list
@@ -451,20 +473,19 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             self.rule_of_thirds_check.setChecked(False)
 
     def settingCustomize(self):
-        self.pos_button.setText("Senku") #TEST PROBLEM: text isn't updating
-        self.pos_button.update()
+        self.pos_button_text = "Senku"
+        self.customize_button.setText("CHECK") #TEST PROBLEM: text isn't updating
 
 class GenerateRenpyScripting(DockWidget):
-    title = "Generate Ren'Py Scripting V2 WIP"
-
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(self.title)
+        self.setWindowTitle("Generate Ren'Py Scripting V2 WIP")
         self.createInterface()
         self.mainWindow = None
         #open_notifier.imageCreated.connect(self.updateScaleCalculation)
         #open_notifier.imageCreated.connect(self.initiateScaleCalculation)
         #close_notifier.viewClosed.connect(self.wasLast)
+
 
     def wasLast(self):
         """
@@ -474,6 +495,8 @@ class GenerateRenpyScripting(DockWidget):
         """
         if len(KI.activeWindow().views()) == 1:
             self.wipeScaleCalculation()
+
+
 
     def showErrorMessage(self, toPrint):
         msg = QMessageBox()
@@ -506,7 +529,15 @@ class GenerateRenpyScripting(DockWidget):
     def canvasChanged(self, canvas):
         pass
 
+def kritaClosingEvent():
+        clipboard = QApplication.clipboard()
+        clipboard.clear(mode=clipboard.Clipboard)
+        clipboard.setText("application closed!!!", mode=clipboard.Clipboard)
+    #QApplication.closeAllWindows() # not successful yet
+
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
 ("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
  , GenerateRenpyScripting))
+
+app_notifier.applicationClosing.connect(kritaClosingEvent) #EXPERIMENTAL
