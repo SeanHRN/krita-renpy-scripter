@@ -107,12 +107,13 @@ def parseLayers(layer, layer_list, coordinates_list, centers_list):
             layer_list.append(layer)
             coordinates_list.append([coord_x, coord_y])
         elif layer.type() == "grouplayer":
-                for child in layer.childNodes():
-                    parseLayers(child, layer_sublist, coordinates_sublist, \
+            for child in layer.childNodes():
+                parseLayers(child, layer_sublist, coordinates_sublist, \
 centers_sublist)
-        layer_list.extend(layer_sublist)
-        coordinates_list.extend(coordinates_sublist)
-        centers_list.extend(centers_sublist)
+            layer_list.extend(layer_sublist) # TODO: Experiment: putting these indented into the elif instead of by the elif
+            coordinates_list.extend(coordinates_sublist)
+            centers_list.extend(centers_sublist)
+
 
 def calculateAlign(data_list, centers_list, spacing_num):
     """
@@ -132,7 +133,7 @@ def calculateAlign(data_list, centers_list, spacing_num):
     for d, c in zip(data_list, centers_list):
         xalign = closestNum(spacing_list, (c[0] / width))
         yalign = closestNum(spacing_list, (c[1] / height))
-        new_data_list.append(tuple((d[0],xalign,yalign,d[3],d[4]))) # TODO: seeing if d[4] (should be format) parses
+        new_data_list.append(tuple((d[0],xalign,yalign,d[3],d[4])))
     return new_data_list
 
 def convertKeyValue(input_dict_value):
@@ -317,7 +318,12 @@ the Krita layer structure for the directory.")
         if button_num == 5 or button_num == 6:
             if button_num == 5: # Normal Images
                 for d in data_list:
-                    script += "image " + d[0] + " = \"" + d[0] + "." + d[4][0] + "\"\n"
+                    #script += "image " + d[0] + " = \"" + d[0] + "." + d[4][0] + "\"\n"
+                    for s in d[5]:
+                        script += "BISON: " + s + "\n"
+                        #for y in d[5][s]:
+                        #    script += "EXPERIMENT: " + s + "\n"
+                    script += "THE END\n"
 
             else: # Layered Image
                 overall_image_name = ""
@@ -369,10 +375,23 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     script += f"{' ' * (indent * 2)}{ATL}\n"
         return script
 
+
+    #TODO: figure out the recursive aspect
+    # try starting it with the root
+    def recordLayerStructure(self, path_list, node):
+        for i in node.childNodes():
+            name_to_push = i.name()
+            if i.type() == "grouplayer":
+                name_to_push = "$$group$$" + name_to_push
+            path_list.append(name_to_push)
+            if i.type() == "grouplayer":
+                self.recordLayerStructure(path_list, i)
+
     def getData(self, button_num, spacing_num):
         """
         Uses a dictionary system to parse the
         layer data and apply changes to coordinates.
+
         """
         outScript = ""
         data_list =  []
@@ -381,10 +400,12 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         all_coords = []
         all_centers = []
         layer_dict = defaultdict(dict)
-        test_list = [] #TODO: find out what this does
+        test_list = []
+        path_list = []
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             root_node = currentDoc.rootNode()
+            self.recordLayerStructure(path_list, root_node)
             for i in root_node.childNodes():
                 parseLayers(i, layer_list, all_coords, all_centers)
             for l in layer_list:
@@ -400,7 +421,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                 y = 0
                 size_list = []
                 image_format_list = []
-                if "e" in layer_dict[layer.name()]: #EXPERIMENTAL
+                if "e" in layer_dict[layer.name()]:
                     image_format_list = [str(j) for j in layer_dict[layer.name()]["e"]]
                 if "m" in layer_dict[layer.name()]:
                     for i in layer_dict[layer.name()]["m"]:
@@ -411,8 +432,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     size_list = [float(i) for i in layer_dict[layer.name()]["s"]]
                     x = round(coord_indv[0] * (min(size_list)/100))
                     y = round(coord_indv[1] * (min(size_list)/100))
-                data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list)))
-                if button_num == 3 or button_num == 4:
+                data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
+                if button_num == 3 or button_num == 4:   #TODO: temporarily exporting the whole structure dict
                     data_list = calculateAlign(data_list, all_centers, spacing_num)
         return data_list
 
