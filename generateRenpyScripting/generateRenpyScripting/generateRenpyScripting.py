@@ -317,13 +317,12 @@ the Krita layer structure for the directory.")
         # TODO: Make system to properly parse through layer structure to get the directories stored
         if button_num == 5 or button_num == 6:
             if button_num == 5: # Normal Images
-                for d in data_list:
-                    #script += "image " + d[0] + " = \"" + d[0] + "." + d[4][0] + "\"\n"
-                    for s in d[5]:
-                        script += "BISON: " + s + "\n"
-                        #for y in d[5][s]:
-                        #    script += "EXPERIMENT: " + s + "\n"
-                    script += "THE END\n"
+                something = ""
+                for index, d in enumerate(data_list):
+                    script += "image " + d[0] + " = " + "\"" + d[5][index] + "\"" + "\n"
+                #    for s in d[5]:
+                #        script += "BISON: " + s + "\n"
+                #    script += "THE END\n"
 
             else: # Layered Image
                 overall_image_name = ""
@@ -375,17 +374,61 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     script += f"{' ' * (indent * 2)}{ATL}\n"
         return script
 
+    def storeArray(self, dir, path_list, len):
+        """
+        Concept: Store each max-length path into the final path_list with the
+        image file name for each layer.
+
+        Template: "images/your-directory/your-image-name.file-format"
+
+        The Batch Exporter supports png and jpg format, so path_list would get
+        a path for each individual format request.
+        Layers with no file format tag would be simply skipped over in case
+        the user has files in the Krita document that aren't meant to get scripting.
+
+        Why dir[1 : len-1]:
+            At this stage, the path (or dir in this function) consists of the directory,
+            ending with the layer name as it appears in Krita, with the batch exporter tags.
+            The directory strings must be modified to use the corresponding names
+            instead of the layer names.
+            It starts at 1 instead of 0 because 0 is just the root node in Krita.     
+        """
+        toInsert = "images/"
+        imageFileName = dir[len-1].split(' ')[0]
+        for i in dir[1 : len-1]:
+            toInsert = toInsert + (i + "/")
+        if "e=png,jpg" in dir[len-1].lower() or "e=jpg,png" in dir[len-1].lower():
+            toInsertA = toInsert + (imageFileName + ".png")
+            toInsertB = toInsert + (imageFileName + ".jpg")
+            path_list.append(toInsertA)
+            path_list.append(toInsertB)
+        elif "e=png" in dir[len-1].lower():
+            toInsert = toInsert + (imageFileName + ".png")
+            path_list.append(toInsert)
+        elif "e=jpg" in dir[len-1].lower():
+            toInsert = toInsert + (imageFileName + ".jpg")
+            path_list.append(toInsert)
+
+
+    def pathRec(self, node, path, path_list, pathLen):
+        if (len(path) > pathLen):
+            path[pathLen] = node.name()
+        else:
+            path.append(node.name())
+        pathLen = pathLen + 1
+        if len(node.childNodes()) == 0:
+            self.storeArray(path, path_list, pathLen)
+        else:
+            for i in node.childNodes():    
+                self.pathRec(i, path, path_list, pathLen)
+
 
     #TODO: figure out the recursive aspect
     # try starting it with the root
-    def recordLayerStructure(self, path_list, node):
-        for i in node.childNodes():
-            name_to_push = i.name()
-            if i.type() == "grouplayer":
-                name_to_push = "$$group$$" + name_to_push
-            path_list.append(name_to_push)
-            if i.type() == "grouplayer":
-                self.recordLayerStructure(path_list, i)
+    def recordLayerStructure(self, node, path_list):
+        path = []
+        self.pathRec(node, path, path_list, 0)
+        return path_list
 
     def getData(self, button_num, spacing_num):
         """
@@ -405,7 +448,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             root_node = currentDoc.rootNode()
-            self.recordLayerStructure(path_list, root_node)
+            path_list = self.recordLayerStructure(root_node, path_list)
             for i in root_node.childNodes():
                 parseLayers(i, layer_list, all_coords, all_centers)
             for l in layer_list:
@@ -433,7 +476,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     x = round(coord_indv[0] * (min(size_list)/100))
                     y = round(coord_indv[1] * (min(size_list)/100))
                 data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
-                if button_num == 3 or button_num == 4:   #TODO: temporarily exporting the whole structure dict
+                if button_num == 3 or button_num == 4:
                     data_list = calculateAlign(data_list, all_centers, spacing_num)
         return data_list
 
