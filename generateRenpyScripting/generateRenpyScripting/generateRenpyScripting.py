@@ -412,22 +412,10 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         for i in dir[1 : pathLen-1]:
             toInsert = toInsert + (i + "/")
 
-        #BUG: output does not work when a png,jpg / jpg,png tag is used
 
-       # EXPERIMENTAL MINIMAL VERSION: Don't add the format here at all. Instead, use the formats from data_list.
-        #self.DEBUG_MESSAGE += ("dir:" + ' '.join(dir) + "\n")# DEBUGGING
-        #self.DEBUG_MESSAGE += ("IMAGE FILE NAME: " + imageFileName + "\n") # DEBUGGING
-        #self.DEBUG_MESSAGE += ("TO INSERT: " + toInsert + "\n")
-        #if "e" in tag_dict:
-        #self.DEBUG_MESSAGE += "DIR YO: " + ' '.join(dir) + "\n"
-        if "e=" in ' '.join(dir):
+        # MINIMAL VERSION: Don't add the format here at all. Instead, use the formats from data_list later.
+        if "e=" in ''.join(dir).lower():
             path_list.append(toInsert + imageFileName)
-        else:
-        #    self.DEBUG_MESSAGE += "e tag not found in: " + ' '.join(dir) + "\n"
-            path_list.append("") # Experiment: Fill the slot when a leaf node that isn't to be exported is sent here.
-                                 # Maybe a dictionary can be used instead.
-
-
         # OLD VERSION
 #        if "e=png,jpg" in dir[len-1].lower() or "e=jpg,png" in dir[len-1].lower():
 #            toInsertA = toInsert + (imageFileName + ".png")
@@ -442,39 +430,34 @@ xcoord=str(d[1]),ycoord=str(d[2]))
 #            path_list.append(toInsert)
 
 
-    # BUG: Can give incorrect paths
+    # TODO: Get the path inheritance system working.
     def pathRec(self, node, path, tag_dict, path_list, pathLen):
 
         layerData = node.name().split(' ')
         layerName = layerData[0] # parse out actual layer name from metadata
-        self.DEBUG_MESSAGE += "A) pathRec() on " + layerName + " with pathLen of: " + str(pathLen) + "\n"
-        self.DEBUG_MESSAGE += "B) path is: " + ' '.join(path) + "\n"
+        #self.DEBUG_MESSAGE += "A) pathRec() on " + layerName + " with pathLen of: " + str(pathLen) + "\n"
+        #self.DEBUG_MESSAGE += "B) path is: " + ' '.join(path) + "\n"
         #for tag in layerData[1:]:
         #    tagPieces = tag.split('=')
         #    tag_dict[tagPieces[0].lower()] = tagPieces[1].lower()
         if (len(path) > pathLen):
             path[pathLen] = node.name()
-            self.DEBUG_MESSAGE += (str(len(path)) + " is greater than " + str(pathLen) + ".\n")
-            #self.DEBUG_MESSAGE += ("setting path[pathlen] " + path[pathLen] + " to " + node.name() + " \n")
+            #self.DEBUG_MESSAGE += (str(len(path)) + " is greater than " + str(pathLen) + ".\n")
         else:
+            #self.DEBUG_MESSAGE += (str(len(path)) + " is less than or equal to " + str(pathLen) + ".\n")
             path.append(node.name())
         pathLen = pathLen + 1
         if len(node.childNodes()) == 0:
-            #if " e=" in node.name():
-            self.DEBUG_MESSAGE += ("Calling storeArray() on a pathLen of " + str(pathLen) + " with path: " + "\n")
-            #if tag_dict["e"]:
-            #    self.DEBUG_MESSAGE += "e tag found" + "\n"
-            #else:
-            #    self.DEBUG_MESSAGE += "e tag NOT found for " + node.name() + "\n"
-            #self.DEBUG_MESSAGE += "zzz   " + ' '.join(path) + "   zzz" + "\n"
+            #self.DEBUG_MESSAGE += ("Calling storeArray() on a pathLen of " + str(pathLen) + " with path: " + ' '.join(path) + "\n")
             self.storeArray(path, tag_dict, path_list, pathLen)
         else:
-            self.DEBUG_MESSAGE += "Checking the child nodes of parent: " + node.name() + ":\n"
+            #self.DEBUG_MESSAGE += "Checking the child nodes of parent: " + node.name() + ":\n"
             for i in node.childNodes():
                 # EXPERIMENTAL: Looks silly and work-aroundy but seems to work.
-                removeAmount = len(path) - pathLen      # EXPERIMENTAL
-                path = path[: len(path) - removeAmount] # EXPERIMENTAL
-                self.DEBUG_MESSAGE += "Child node: " + i.name() + " of parent: " + node.name() + " -> " + "will start with path: " + ' '.join(path) + "\n"
+                # The pathbuilding gets messed up without this subtraction on path.
+                removeAmount = len(path) - pathLen
+                path = path[: len(path) - removeAmount]
+                #self.DEBUG_MESSAGE += "Child node: " + i.name() + " of parent: " + node.name() + " -> " + "will start with path: " + ' '.join(path) + "\n"
                 self.pathRec(i, path, tag_dict, path_list, pathLen)
 
 
