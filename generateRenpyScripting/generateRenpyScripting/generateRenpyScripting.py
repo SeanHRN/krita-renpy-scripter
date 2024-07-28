@@ -212,6 +212,7 @@ class FormatMenu(QWidget):
         super().__init__()
         self.setWindowTitle("Choose Your Format")
         self.createFormatMenuInterface()
+        self.DEBUG_MESSAGE = ""
 
 
     def createFormatMenuInterface(self):
@@ -306,8 +307,13 @@ the Krita layer structure for the directory.")
         self.outputWindow.show()
     
     def writeScript(self, button_num, spacing_num):
+        """
+        Do nothing if the data_list isn't populated.
+        """
         script = ""
         data_list = self.getData(button_num, spacing_num)
+        if len(data_list) == 0:
+            return script
         ATL_dict = {}
         currentDoc = KI.activeDocument()
         if currentDoc != None:
@@ -315,15 +321,23 @@ the Krita layer structure for the directory.")
 
         # For image definition scripting
         # TODO: Make system to properly parse through layer structure to get the directories stored
+        # d[1] is the xcoord
+        # d[2] is the ycoord
+        #d[3] is a list
+        #d[3][0] is the scale (in this test), so it can't be printed without casting to str.
+        #d[4][0] is the file format
+        #d[4][1] is out of range on this test
+        #d[5] is the list of paths
+        #
         if button_num == 5 or button_num == 6:
+
+            script += self.DEBUG_MESSAGE
             if button_num == 5: # Normal Images
                 something = ""
                 for index, d in enumerate(data_list):
-                    script += "image " + d[0] + " = " + "\"" + d[5][index] + "\"" + "\n"
-                #    for s in d[5]:
+                    for format in d[4]:
+                        script += "image " + d[0] + " = " + "\"" + d[5][index] + "." + format + "\"" + "\n"
                 #        script += "BISON: " + s + "\n"
-                #    script += "THE END\n"
-
             else: # Layered Image
                 overall_image_name = ""
                 script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
@@ -374,7 +388,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     script += f"{' ' * (indent * 2)}{ATL}\n"
         return script
 
-    def storeArray(self, dir, path_list, len):
+    def storeArray(self, dir, tag_dict, path_list, pathLen):
         """
         Concept: Store each max-length path into the final path_list with the
         image file name for each layer.
@@ -386,7 +400,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         Layers with no file format tag would be simply skipped over in case
         the user has files in the Krita document that aren't meant to get scripting.
 
-        Why dir[1 : len-1]:
+        Why dir[1 : pathLen-1]:
             At this stage, the path (or dir in this function) consists of the directory,
             ending with the layer name as it appears in Krita, with the batch exporter tags.
             The directory strings must be modified to use the corresponding names
@@ -394,40 +408,81 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             It starts at 1 instead of 0 because 0 is just the root node in Krita.     
         """
         toInsert = "images/"
-        imageFileName = dir[len-1].split(' ')[0]
-        for i in dir[1 : len-1]:
+        imageFileName = dir[pathLen-1].split(' ')[0]
+        for i in dir[1 : pathLen-1]:
             toInsert = toInsert + (i + "/")
-        if "e=png,jpg" in dir[len-1].lower() or "e=jpg,png" in dir[len-1].lower():
-            toInsertA = toInsert + (imageFileName + ".png")
-            toInsertB = toInsert + (imageFileName + ".jpg")
-            path_list.append(toInsertA)
-            path_list.append(toInsertB)
-        elif "e=png" in dir[len-1].lower():
-            toInsert = toInsert + (imageFileName + ".png")
-            path_list.append(toInsert)
-        elif "e=jpg" in dir[len-1].lower():
-            toInsert = toInsert + (imageFileName + ".jpg")
-            path_list.append(toInsert)
+
+        #BUG: output does not work when a png,jpg / jpg,png tag is used
+
+       # EXPERIMENTAL MINIMAL VERSION: Don't add the format here at all. Instead, use the formats from data_list.
+        #self.DEBUG_MESSAGE += ("dir:" + ' '.join(dir) + "\n")# DEBUGGING
+        #self.DEBUG_MESSAGE += ("IMAGE FILE NAME: " + imageFileName + "\n") # DEBUGGING
+        #self.DEBUG_MESSAGE += ("TO INSERT: " + toInsert + "\n")
+        #if "e" in tag_dict:
+        #self.DEBUG_MESSAGE += "DIR YO: " + ' '.join(dir) + "\n"
+        if "e=" in ' '.join(dir):
+            path_list.append(toInsert + imageFileName)
+        else:
+        #    self.DEBUG_MESSAGE += "e tag not found in: " + ' '.join(dir) + "\n"
+            path_list.append("") # Experiment: Fill the slot when a leaf node that isn't to be exported is sent here.
+                                 # Maybe a dictionary can be used instead.
 
 
-    def pathRec(self, node, path, path_list, pathLen):
+        # OLD VERSION
+#        if "e=png,jpg" in dir[len-1].lower() or "e=jpg,png" in dir[len-1].lower():
+#            toInsertA = toInsert + (imageFileName + ".png")
+#            toInsertB = toInsert + (imageFileName + ".jpg")
+#            path_list.append(toInsertA)
+#            path_list.append(toInsertB)
+#        elif "e=png" in dir[len-1].lower():
+#            toInsert = toInsert + (imageFileName + ".png")
+#            path_list.append(toInsert)
+#        elif "e=jpg" in dir[len-1].lower():
+#            toInsert = toInsert + (imageFileName + ".jpg")
+#            path_list.append(toInsert)
+
+
+    # BUG: Can give incorrect paths
+    def pathRec(self, node, path, tag_dict, path_list, pathLen):
+
+        layerData = node.name().split(' ')
+        layerName = layerData[0] # parse out actual layer name from metadata
+        self.DEBUG_MESSAGE += "A) pathRec() on " + layerName + " with pathLen of: " + str(pathLen) + "\n"
+        self.DEBUG_MESSAGE += "B) path is: " + ' '.join(path) + "\n"
+        #for tag in layerData[1:]:
+        #    tagPieces = tag.split('=')
+        #    tag_dict[tagPieces[0].lower()] = tagPieces[1].lower()
         if (len(path) > pathLen):
             path[pathLen] = node.name()
+            self.DEBUG_MESSAGE += (str(len(path)) + " is greater than " + str(pathLen) + ".\n")
+            #self.DEBUG_MESSAGE += ("setting path[pathlen] " + path[pathLen] + " to " + node.name() + " \n")
         else:
             path.append(node.name())
         pathLen = pathLen + 1
         if len(node.childNodes()) == 0:
-            self.storeArray(path, path_list, pathLen)
+            #if " e=" in node.name():
+            self.DEBUG_MESSAGE += ("Calling storeArray() on a pathLen of " + str(pathLen) + " with path: " + "\n")
+            #if tag_dict["e"]:
+            #    self.DEBUG_MESSAGE += "e tag found" + "\n"
+            #else:
+            #    self.DEBUG_MESSAGE += "e tag NOT found for " + node.name() + "\n"
+            #self.DEBUG_MESSAGE += "zzz   " + ' '.join(path) + "   zzz" + "\n"
+            self.storeArray(path, tag_dict, path_list, pathLen)
         else:
-            for i in node.childNodes():    
-                self.pathRec(i, path, path_list, pathLen)
+            self.DEBUG_MESSAGE += "Checking the child nodes of parent: " + node.name() + ":\n"
+            for i in node.childNodes():
+                # EXPERIMENTAL: Looks silly and work-aroundy but seems to work.
+                removeAmount = len(path) - pathLen      # EXPERIMENTAL
+                path = path[: len(path) - removeAmount] # EXPERIMENTAL
+                self.DEBUG_MESSAGE += "Child node: " + i.name() + " of parent: " + node.name() + " -> " + "will start with path: " + ' '.join(path) + "\n"
+                self.pathRec(i, path, tag_dict, path_list, pathLen)
 
 
-    #TODO: figure out the recursive aspect
-    # try starting it with the root
+    #TODO: Eventually, this should be used to get the tags for the non-image def scripting as well.
     def recordLayerStructure(self, node, path_list):
         path = []
-        self.pathRec(node, path, path_list, 0)
+        tag_dict = defaultdict(str)
+        self.pathRec(node, path, tag_dict, path_list, 0)
         return path_list
 
     def getData(self, button_num, spacing_num):
