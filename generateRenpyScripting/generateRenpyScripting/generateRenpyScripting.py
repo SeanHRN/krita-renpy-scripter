@@ -309,6 +309,14 @@ the Krita layer structure for the directory.")
     def writeScript(self, button_num, spacing_num):
         """
         Do nothing if the data_list isn't populated.
+
+        Image Definition:
+            Button 5: Normal
+                - Currently outputs both png and jpg lines if requested,
+                  though that would be a double definition, and I don't
+                  think anyone would request both png and jpg and not
+                  just use the png in a Ren'Py project.
+            Button 6: Layered Image (The Ren'Py Feature)
         """
         script = ""
         data_list = self.getData(button_num, spacing_num)
@@ -320,20 +328,19 @@ the Krita layer structure for the directory.")
             ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
 
         # For image definition scripting
-        # TODO: Make system to properly parse through layer structure to get the directories stored
+        #
         # d[1] is the xcoord
         # d[2] is the ycoord
-        #d[3] is a list
-        #d[3][0] is the scale (in this test), so it can't be printed without casting to str.
-        #d[4][0] is the file format
-        #d[4][1] is out of range on this test
-        #d[5] is the list of paths
+        # d[3] is a list
+        # d[3][0] is the scale (in this test), so it can't be printed without casting to str.
+        # d[4][0] is the file format
+        # d[4][1] is out of range on this test
+        # d[5] is the list of paths
         #
         if button_num == 5 or button_num == 6:
 
-            script += self.DEBUG_MESSAGE
+            #script += self.DEBUG_MESSAGE
             if button_num == 5: # Normal Images
-                something = ""
                 for index, d in enumerate(data_list):
                     for format in d[4]:
                         script += "image " + d[0] + " = " + "\"" + d[5][index] + "." + format + "\"" + "\n"
@@ -405,59 +412,44 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             ending with the layer name as it appears in Krita, with the batch exporter tags.
             The directory strings must be modified to use the corresponding names
             instead of the layer names.
-            It starts at 1 instead of 0 because 0 is just the root node in Krita.     
+            It starts at 1 instead of 0 because 0 is just the root node in Krita.
+
+        The image formats aren't added to the string here. Instead, the formats are added by writeScript().   
         """
         toInsert = "images/"
         imageFileName = dir[pathLen-1].split(' ')[0]
         for i in dir[1 : pathLen-1]:
             toInsert = toInsert + (i + "/")
-
-
-        # MINIMAL VERSION: Don't add the format here at all. Instead, use the formats from data_list later.
         if "e=" in ''.join(dir).lower():
             path_list.append(toInsert + imageFileName)
-        # OLD VERSION
-#        if "e=png,jpg" in dir[len-1].lower() or "e=jpg,png" in dir[len-1].lower():
-#            toInsertA = toInsert + (imageFileName + ".png")
-#            toInsertB = toInsert + (imageFileName + ".jpg")
-#            path_list.append(toInsertA)
-#            path_list.append(toInsertB)
-#        elif "e=png" in dir[len-1].lower():
-#            toInsert = toInsert + (imageFileName + ".png")
-#            path_list.append(toInsert)
-#        elif "e=jpg" in dir[len-1].lower():
-#            toInsert = toInsert + (imageFileName + ".jpg")
-#            path_list.append(toInsert)
 
 
-    # TODO: Get the path inheritance system working.
+    # TODO: Get the meta tag inheritance system working.
     def pathRec(self, node, path, tag_dict, path_list, pathLen):
-
+        """
+        Searches for all the node to leaf paths and stores them in path_list.
+        Currently, layers that aren't batch exporter formated are still sent to storeArray(),
+        but they would be ignored. tag_dict isn't used for anything yet because it's not working.
+        Reference: GeeksforGeeks solution to finding paths in a binary search tree
+        """
         layerData = node.name().split(' ')
         layerName = layerData[0] # parse out actual layer name from metadata
-        #self.DEBUG_MESSAGE += "A) pathRec() on " + layerName + " with pathLen of: " + str(pathLen) + "\n"
-        #self.DEBUG_MESSAGE += "B) path is: " + ' '.join(path) + "\n"
         #for tag in layerData[1:]:
         #    tagPieces = tag.split('=')
         #    tag_dict[tagPieces[0].lower()] = tagPieces[1].lower()
         if (len(path) > pathLen):
             path[pathLen] = node.name()
-            #self.DEBUG_MESSAGE += (str(len(path)) + " is greater than " + str(pathLen) + ".\n")
         else:
-            #self.DEBUG_MESSAGE += (str(len(path)) + " is less than or equal to " + str(pathLen) + ".\n")
             path.append(node.name())
         pathLen = pathLen + 1
         if len(node.childNodes()) == 0:
-            #self.DEBUG_MESSAGE += ("Calling storeArray() on a pathLen of " + str(pathLen) + " with path: " + ' '.join(path) + "\n")
             self.storeArray(path, tag_dict, path_list, pathLen)
         else:
-            #self.DEBUG_MESSAGE += "Checking the child nodes of parent: " + node.name() + ":\n"
             for i in node.childNodes():
                 # EXPERIMENTAL: Looks silly and work-aroundy but seems to work.
                 # The pathbuilding gets messed up without this subtraction on path.
                 removeAmount = len(path) - pathLen
                 path = path[: len(path) - removeAmount]
-                #self.DEBUG_MESSAGE += "Child node: " + i.name() + " of parent: " + node.name() + " -> " + "will start with path: " + ' '.join(path) + "\n"
                 self.pathRec(i, path, tag_dict, path_list, pathLen)
 
 
