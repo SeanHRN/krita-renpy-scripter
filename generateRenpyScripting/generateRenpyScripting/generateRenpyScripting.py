@@ -312,16 +312,18 @@ the Krita layer structure for the directory.")
 
         Image Definition:
             Button 5: Normal
-                - Currently outputs both png and jpg lines if requested,
-                  though that would be a double definition, and I don't
-                  think anyone would request both png and jpg and not
-                  just use the png in a Ren'Py project.
+                - If both png and jpg are requested for a single image,
+                  the jpg line will be written but commented out.
             Button 6: Layered Image (The Ren'Py Feature)
         """
         script = ""
+
         data_list = self.getData(button_num, spacing_num)
+        script += self.DEBUG_MESSAGE
         if len(data_list) == 0:
+            script += "Error: data_list not populated.\n"
             return script
+
         ATL_dict = {}
         currentDoc = KI.activeDocument()
         if currentDoc != None:
@@ -338,19 +340,27 @@ the Krita layer structure for the directory.")
         # d[5] is the list of paths
         #
         if button_num == 5 or button_num == 6:
-
-            #script += self.DEBUG_MESSAGE
-            if button_num == 5: # Normal Images
-                for index, d in enumerate(data_list):
-                    for format in d[4]:
-                        script += "image " + d[0] + " = " + "\"" + d[5][index] + "." + format + "\"" + "\n"
-                #        script += "BISON: " + s + "\n"
-            else: # Layered Image
-                overall_image_name = ""
-                script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
-                for d in data_list:
-                    script += (' '*indent)
-                    script += "attribute " + d[0] + ":\n"
+            script += "Printing data from button 5:"
+            for line in data_list:
+                #for datum in line:
+                script += line[0] + "\n"
+                script += line[1] + "\n"
+                script += str(line[3]) + "\n"
+                script += "<<<<<<<<<<<<<\n"
+            #bison
+            pass #temp
+            ##if button_num == 5: # Normal Images
+            ##    for index, d in enumerate(data_list):
+            ##        for format in d[4]:
+            ##            if len(d[4])>1 and format == "jpg":
+            ##                script += '#'
+            ##            script += "image " + d[0] + " = " + "\"" + d[5][index] + "." + format + "\"" + "\n"
+            ##else: # Layered Image
+            ##    overall_image_name = ""
+            ##    script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
+            ##    for d in data_list:
+            ##        script += (' '*indent)
+            ##        script += "attribute " + d[0] + ":\n"
 
         # For image position scripting
         else:
@@ -395,75 +405,271 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     script += f"{' ' * (indent * 2)}{ATL}\n"
         return script
 
-    def storeArray(self, dir, tag_dict, path_list, pathLen):
+    def storeArray(self, dir, path_list, pathLen):
         """
-        Concept: Store each max-length path into the final path_list with the
-        image file name for each layer.
-
-        Template: "images/your-directory/your-image-name.file-format"
-
-        The Batch Exporter supports png and jpg format, so path_list would get
-        a path for each individual format request.
-        Layers with no file format tag would be simply skipped over in case
-        the user has files in the Krita document that aren't meant to get scripting.
-
-        Why dir[1 : pathLen-1]:
-            At this stage, the path (or dir in this function) consists of the directory,
-            ending with the layer name as it appears in Krita, with the batch exporter tags.
-            The directory strings must be modified to use the corresponding names
-            instead of the layer names.
-            It starts at 1 instead of 0 because 0 is just the root node in Krita.
-
-        The image formats aren't added to the string here. Instead, the formats are added by writeScript().   
+        Concept: Store each max-length path into the final path_list (starting with images instead of root).
         """
         toInsert = "images/"
-        imageFileName = dir[pathLen-1].split(' ')[0]
         for i in dir[1 : pathLen-1]:
             toInsert = toInsert + (i + "/")
-        if "e=" in ''.join(dir).lower():
-            path_list.append(toInsert + imageFileName)
+        imageFileName = dir[pathLen-1]
+        self.DEBUG_MESSAGE += "appending to path_list: " + toInsert + imageFileName + "\n"
+        path_list.append(toInsert + imageFileName)
+
+    def getTags(self, path_list):
+        """
+        Function to take in the list of complete layer paths (from within data_list)
+        and populate a list of dictionaries of tags for each path.
+        It works this way because the Batch Exporter offers meta tag inheritance.
+        If [i=false] or [i=no] is found, inheritance is disabled for that layer,
+        so the dictionary for that path would be cleared before adding anything.
+
+        problem: d[5] doesn't have the tag data!
+        """
+        tag_dict_list = []
+        for path in path_list:
+            tag_dict = {}
+            path_pieces = path.split('/')
+            for layer in path_pieces:
+                layer = layer.lower()
+                tag_data = layer.split(' ')[1:]
+
+                # First pass: See if 'i=false' or 'i=no' is present.
+                # If so, clear the dictionary before adding any tags.
+                for tag in tag_data:
+                    letter, value = tag.split('=', 1)
+                    if letter == "i":
+                        if value == "false" or value == "no":
+                            tag_dict.clear()
+
+                # Second pass: Add the tags.
+                for tag in tag_data:
+                    letter, value = tag.split('=', 1)
+                    tag_dict[letter] = value
+                    #self.DEBUG_MESSAGE += "letter found: " + letter + "\n"
+                    #self.DEBUG_MESSAGE += "value found: " + str(value) + "\n"
+            tag_dict_list.append(tag_dict)
+            #self.DEBUG_MESSAGE += "Printing out tag_dict_list:\n"
+            #for index, d in enumerate(tag_dict_list):
+                #self.DEBUG_MESSAGE += "Path: " + path_list[index] + "\n"
+                #self.DEBUG_MESSAGE += ("index:" , str(index) + "\n")
+                #for key, value in d.items():
+                #    self.DEBUG_MESSAGE += key + " : " + value + "\n"
+                #self.DEBUG_MESSAGE += "<><><><><>\n"
+            #self.DEBUG_MESSAGE += "DICT DONE\n"
+        #tag_dict_list.reverse() # EXPERIMENTAL: Get the list in the expected order.
+        return tag_dict_list
 
 
-    # TODO: Get the meta tag inheritance system working.
-    def pathRec(self, node, path, tag_dict, path_list, pathLen):
+    def pathRec(self, node, path, path_list, pathLen, coords_list):
         """
         Searches for all the node to leaf paths and stores them in path_list.
         Currently, layers that aren't batch exporter formated are still sent to storeArray(),
         but they would be ignored. tag_dict isn't used for anything yet because it's not working.
         Reference: GeeksforGeeks solution to finding paths in a binary search tree
+
+        New version: Takes out all tag data because it'll be handled elsewhere for the inheritance system.
+
+        Current concept: give storeArray() the entire paths (including all the tags)
+        and correct the path data later (while picking up the tags with inheritance)
+
+        New concept: Pick up the coordinates during the process.
         """
-        layerData = node.name().split(' ')
-        layerName = layerData[0] # parse out actual layer name from metadata
-        #for tag in layerData[1:]:
-        #    tagPieces = tag.split('=')
-        #    tag_dict[tagPieces[0].lower()] = tagPieces[1].lower()
+        layer_data = node.name().split(' ')
         if (len(path) > pathLen):
             path[pathLen] = node.name()
         else:
             path.append(node.name())
         pathLen = pathLen + 1
         if len(node.childNodes()) == 0:
-            self.storeArray(path, tag_dict, path_list, pathLen)
+            self.storeArray(path, path_list, pathLen)
+            coord_x = node.bounds().topLeft().x()
+            coord_y = node.bounds().topLeft().y()
+            coord_center = node.bounds().center()
+            coords_list.append([coord_x, coord_y, coord_center])
         else:
             for i in node.childNodes():
-                # EXPERIMENTAL: Looks silly and work-aroundy but seems to work.
+                # Looks silly and work-aroundy but seems to work.
                 # The pathbuilding gets messed up without this subtraction on path.
                 removeAmount = len(path) - pathLen
                 path = path[: len(path) - removeAmount]
-                self.pathRec(i, path, tag_dict, path_list, pathLen)
+                self.pathRec(i, path, path_list, pathLen, coords_list)
 
+    def removeUnusedPaths(self, path_list, tag_dict_list, coords_list):
+        """
+        Copy over usable paths to different lists, which are returned.
+        """
+        smaller_path_list = []
+        smaller_coords_list = []
+        for index, path in enumerate(path_list):
+            if "e" in tag_dict_list[index]:
+                smaller_path_list.append(path_list[index])
+                smaller_coords_list.append(coords_list[index])
+        return smaller_path_list, smaller_coords_list
+
+    def removeTagsFromPaths(self, path_list):
+        """
+        Remove the meta tags from the paths.
+        The cleaned path gets the last slash cut off because that would
+        be between the file name and the extension (which is attached during the print step).
+        """
+        cleaned_path_list = []
+        for path in path_list:
+            layers = path.split('/')
+            cleaned_path = ""
+            for layer in layers:
+                #self.DEBUG_MESSAGE += "layer: " + layer + "\n"
+                cleaned_path = cleaned_path + layer.split(' ')[0] + "/"
+            cleaned_path = cleaned_path[:-1]
+            cleaned_path_list.append(cleaned_path)
+        return cleaned_path_list
+
+    def getExportLayerList(self, path_list):
+        """
+        Pre-requisite: removeTagsFromPaths() should have been called to clean path_list.
+        Makes a list of the names of the image files (without the extensions) by pulling
+        them from the paths.
+        """
+        export_layer_list = []
+        for path in path_list:
+            layer_data = path.split('/')
+            layer_name_to_export = layer_data[-1]
+            export_layer_list.append(layer_name_to_export)
+        return export_layer_list
 
     #TODO: Eventually, this should be used to get the tags for the non-image def scripting as well.
     def recordLayerStructure(self, node, path_list):
+        """
+        Exports:
+            path_list            (Unused paths and tags are filtered out.)
+            path_list_with_tags  (Unused paths are filtered out,
+                                  but tags (at the layers they are declared) are not.)
+            tag_dict_list        (List where each index corresponds to the index of its path,
+                                  and the content is a dictionary with the tags applicable to
+                                  the final layer of that path, adjusted for Batch Exporter
+                                  inheritance.)
+            export_layer_list    (List of the names of the layers to be exported; no tags.)
+
+            coords_list          (For each layer: x position, y position, and center point)
+        """
         path = []
-        tag_dict = defaultdict(str)
-        self.pathRec(node, path, tag_dict, path_list, 0)
-        return path_list
+        path_list_with_tags = []
+        tag_dict_list = []
+        export_layer_list = []
+        coords_list = []
+        self.pathRec(node, path, path_list, 0, coords_list)
+        tag_dict_list = self.getTags(path_list)
+
+        self.DEBUG_MESSAGE += "Checking coords_list BEFORE pruning: \n"
+        for index, c_tuple in enumerate(coords_list):
+            self.DEBUG_MESSAGE += "List #" + str(index) + ": " + str(c_tuple)+ "\n"
+        path_list, coords_list = self.removeUnusedPaths(path_list, tag_dict_list, coords_list)
+        path_list_with_tags = path_list
+        path_list = self.removeTagsFromPaths(path_list)
+        tag_dict_list = list(filter(None, tag_dict_list))
+
+        export_layer_list = self.getExportLayerList(path_list)
+        return path_list, path_list_with_tags, tag_dict_list, export_layer_list, coords_list
+
 
     def getData(self, button_num, spacing_num):
         """
+        New version of getData() that fully utilizes the dictionary system so that it works with inheritance.
+        """
+        outScript = ""
+        data_list =  []
+        export_layer_list = []
+        contents = []
+        #all_coords = []
+        coords_list = []
+        all_centers = []
+        layer_dict = defaultdict(dict)
+        test_list = []
+        path_list = []
+        tag_dict_list = []
+        coords_list = []
+        currentDoc = KI.activeDocument()
+        if currentDoc != None:
+            root_node = currentDoc.rootNode()
+            """
+            Concept: 1) Get all the paths.
+                     2) Get all the tags (with inheritance).
+                     3) Filter the paths by checking them with tags.
+                     4) Get the names of the layers.
+            """
+            path_list, path_list_with_tags, tag_dict_list, export_layer_list, coords_list = self.recordLayerStructure(root_node, path_list)
+
+            self.DEBUG_MESSAGE += "Checking path_list_with_tags: \n"
+            for p in path_list_with_tags:
+                self.DEBUG_MESSAGE += p + "\n"
+            self.DEBUG_MESSAGE += "\n"
+            self.DEBUG_MESSAGE += "checking path_list: \n"
+            for p in path_list:
+                self.DEBUG_MESSAGE += p + "\n"
+            self.DEBUG_MESSAGE += "checking export_layer_list: \n"
+            for e in export_layer_list:
+                self.DEBUG_MESSAGE += e + "\n"
+            self.DEBUG_MESSAGE += "\n"
+            self.DEBUG_MESSAGE += "Checking tag_dict_list: \n"
+            for index,td in enumerate(tag_dict_list):
+                self.DEBUG_MESSAGE += "Dict " + str(index) + "\n"
+                for key,value in td.items():
+                    self.DEBUG_MESSAGE += key + " : " + value  + "\n"
+
+            #coords_list = self.getCoordinates(root_node, path_list_with_tags)
+            self.DEBUG_MESSAGE += "Checking coords_list: \n"
+            for index, c_tuple in enumerate(coords_list):
+                self.DEBUG_MESSAGE += "List #" + str(index) + ": " + str(c_tuple)+ "\n"
+
+            for i,layer in enumerate(export_layer_list):
+                data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i]]))
+            #data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
+
+
+            #for path in path_list:
+            #for i in root_node.childNodes():
+            #    parseLayers(i, layer_list, all_coords, all_centers)
+            #for l in layer_list:
+            #    contents = l.name().split(" ")
+            #    layer_dict[l.name()]["actual name"] = contents[0]
+            #    for c in contents[1:]:
+            #        if "=" in c:
+            #            category_data = c.split("=") # 0: Category String, 1: Data String
+            #            category_data_list = category_data[1].split(",")
+            #            layer_dict[l.name()][category_data[0]] = category_data_list
+            #for layer, coord_indv in zip(layer_list, all_coords):
+            #    x = 0
+            #    y = 0
+            #    size_list = []
+            #    image_format_list = []
+            #    if "e" in layer_dict[layer.name()]:
+            #        image_format_list = [str(j) for j in layer_dict[layer.name()]["e"]]
+            #    if "m" in layer_dict[layer.name()]:
+            #        for i in layer_dict[layer.name()]["m"]:
+            #            margin_list = [int(i) for i in layer_dict[layer.name()]["m"]]
+            #            coord_indv[0] -= max(margin_list)
+            #            coord_indv[1] -= max(margin_list)
+            #    if "s" in layer_dict[layer.name()]:
+            #        size_list = [float(i) for i in layer_dict[layer.name()]["s"]]
+            #        x = round(coord_indv[0] * (min(size_list)/100))
+            #        y = round(coord_indv[1] * (min(size_list)/100))
+            #    data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
+            #    if button_num == 3 or button_num == 4:
+            #        data_list = calculateAlign(data_list, all_centers, spacing_num)
+
+
+        #self.DEBUG_MESSAGE += "getData() sending data_list of len: " + str(len(data_list)) + "\n"
+        return data_list
+        
+
+
+    def getDataOLD(self, button_num, spacing_num):
+        """
         Uses a dictionary system to parse the
         layer data and apply changes to coordinates.
+
+        TODO: Have the dictionaries from tag_dict_list handle the data_list population instead
+        so that tag inheritance would work.
 
         """
         outScript = ""
@@ -475,10 +681,16 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         layer_dict = defaultdict(dict)
         test_list = []
         path_list = []
+        tag_dict_list = []
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             root_node = currentDoc.rootNode()
-            path_list = self.recordLayerStructure(root_node, path_list)
+            """
+            Concept: 1) Get all the paths.
+                     2) Get all the tags (with inheritance).
+                     3) Filter the paths by checking them with tags.
+            """
+            #path_list,tag_dict_list = self.recordLayerStructure(root_node, path_list)
             for i in root_node.childNodes():
                 parseLayers(i, layer_list, all_coords, all_centers)
             for l in layer_list:
@@ -508,7 +720,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                 data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
                 if button_num == 3 or button_num == 4:
                     data_list = calculateAlign(data_list, all_centers, spacing_num)
-        return data_list
+
+        return data_list, tag_dict_list
 
     def getATL(self, curr_node):
         """
