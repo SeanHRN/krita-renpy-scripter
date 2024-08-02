@@ -325,7 +325,8 @@ the Krita layer structure for the directory.")
         """
         script = ""
 
-        data_list = self.getData(button_num, spacing_num)
+        #data_list = self.getData(button_num, spacing_num)
+        data_list = self.getDataList(button_num, spacing_num)
         script += self.DEBUG_MESSAGE
         if len(data_list) == 0:
             script += "Cannot find layers to script. Check whether your target layers have Batch Exporter format.\n"
@@ -367,7 +368,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += config_data["string_atsetposxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                #TODO: Correct the align versions
                 elif button_num == 3:
                     script += config_data["string_alignxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
@@ -420,7 +420,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         """
         return script
 
-    def storeArray(self, dir, path_list, pathLen):
+
+    def storePath(self, dir, path_list, pathLen):
         """
         Concept: Store each max-length path into the final path_list (starting with images instead of root).
         """
@@ -430,6 +431,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         imageFileName = dir[pathLen-1]
         #self.DEBUG_MESSAGE += "appending to path_list: " + toInsert + imageFileName + "\n"
         path_list.append(toInsert + imageFileName)
+
 
     def getTags(self, path_list):
         """
@@ -469,8 +471,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                         for s in additional_scale_list:
                             scale_list.append(float(s))
                         if 's' in tag_dict:
-                            tag_dict['s'].extend(scale_list)         # experimental
-                            tag_dict['s'] = list(set(tag_dict['s'])) # remove duplicates; note that order is destroyed
+                            tag_dict['s'].extend(scale_list)
+                            tag_dict['s'] = list(set(tag_dict['s'])) # Remove duplicates.
                         else:
                             tag_dict['s'] = scale_list
                     elif letter == 'e':
@@ -479,8 +481,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                         for f in additional_format_list:
                             format_list.append(f)
                         if 'e' in tag_dict:
-                            tag_dict['e'].extend(format_list) #experimental
-                            tag_dict['e'] = list(set(tag_dict['e']))
+                            tag_dict['e'].extend(format_list)
+                            tag_dict['e'] = list(set(tag_dict['e'])) # Remove duplicates.
                         else:
                             tag_dict['e'] = format_list
 
@@ -495,17 +497,12 @@ xcoord=str(d[1]),ycoord=str(d[2]))
 
     def pathRec(self, node, path, path_list, pathLen, coords_list):
         """
-        Searches for all the node to leaf paths and stores them in path_list.
-        Currently, layers that aren't batch exporter formated are still sent to storeArray(),
-        but they would be ignored. tag_dict isn't used for anything yet because it's not working.
+        Searches for all the node to leaf paths and stores them in path_list using storePath().
+        storePath() takes in the entire paths (including all the tags at this step).
+
+        Coordinates are also found and inserted into coords_list.
+
         Reference: GeeksforGeeks solution to finding paths in a binary search tree
-
-        New version: Takes out all tag data because it'll be handled elsewhere for the inheritance system.
-
-        Current concept: give storeArray() the entire paths (including all the tags)
-        and correct the path data later (while picking up the tags with inheritance)
-
-        New concept: Pick up the coordinates during the process.
         """
         layer_data = node.name().split(' ')
         if (len(path) > pathLen):
@@ -514,7 +511,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             path.append(node.name())
         pathLen = pathLen + 1
         if len(node.childNodes()) == 0:
-            self.storeArray(path, path_list, pathLen)
+            self.storePath(path, path_list, pathLen)
             coord_x = node.bounds().topLeft().x()
             coord_y = node.bounds().topLeft().y()
             coord_center = node.bounds().center()
@@ -527,6 +524,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                 path = path[: len(path) - removeAmount]
                 self.pathRec(i, path, path_list, pathLen, coords_list)
 
+
     def removeUnusedPaths(self, path_list, coords_list, tag_dict_list):
         """
         Copy over usable paths to different lists, which are returned.
@@ -536,11 +534,12 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         smaller_tag_dict_list = []
         for index, path in enumerate(path_list):
             if "e" in tag_dict_list[index]:
-                if not "i" in tag_dict_list[index]: #EXPERIMENTAL SECOND CONDITION
+                if not "i" in tag_dict_list[index]:
                     smaller_path_list.append(path_list[index])
                     smaller_coords_list.append(coords_list[index])
                     smaller_tag_dict_list.append(tag_dict_list[index])
         return smaller_path_list, smaller_coords_list, smaller_tag_dict_list
+
 
     def removeTagsFromPaths(self, path_list):
         """
@@ -558,6 +557,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             cleaned_path_list.append(cleaned_path)
         return cleaned_path_list
 
+
     def getExportLayerList(self, path_list):
         """
         Pre-requisite: removeTagsFromPaths() should have been called to clean path_list.
@@ -571,35 +571,36 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             export_layer_list.append(layer_name_to_export)
         return export_layer_list
 
+
     def scaleCoordinates(self, coords_list, tag_dict_list):
         """
         Modifies the coordinates
-            0: x on top left corner
-            1: y on top left corner
-            2: QPoint of the center
+            0,1 : x,y on top left corner
+              2 : QPoint of the center
         by scaling them with the smallest given size from the 's=' layer tags
         """
         for i in range(len(coords_list)):
             scale = 1.0
             if "s" in tag_dict_list[i]:
-                #self.DEBUG_MESSAGE += "modifying " + str(coords_list[i]) + "\n"
-                #self.DEBUG_MESSAGE += "checking the scales: \n"
-                #for s in tag_dict_list[i]["s"]:
-                #    self.DEBUG_MESSAGE += str(s) + ","
-                #self.DEBUG_MESSAGE += "\n"
                 coords_list[i][0] = round(coords_list[i][0] * min(tag_dict_list[i]["s"]) / 100)
                 coords_list[i][1] = round(coords_list[i][1] * min(tag_dict_list[i]["s"]) / 100)
                 center_x_new = float(coords_list[i][2].x()) * min(tag_dict_list[i]["s"]) / 100
                 center_y_new = float(coords_list[i][2].y()) * min(tag_dict_list[i]["s"]) / 100
                 coords_list[i][2].setX(int(center_x_new))
                 coords_list[i][2].setY(int(center_y_new))
-                #self.DEBUG_MESSAGE += "now: " + str(coords_list[i]) + "\n"
         return coords_list
 
-    #TODO: Eventually, this should be used to get the tags for the non-image def scripting as well.
-    def recordLayerStructure(self, node, path_list):
+
+    def getDataList(self, button_num, spacing_num):
         """
-        Exports:
+        Concept: 1) Get all the paths.
+                 2) Get all the tags (with inheritance).
+                 3) Filter the paths by checking them with tags.
+                 4) Get the names of the layers.
+                 5) Put the data into the list.
+                 6) TODO: Modify coordinates where margins are applied. 
+                 7) If 'align' type output is selected, swap out the xy pixel coordinates with align coordinates.
+
             path_list            (Unused paths and tags are filtered out.)
             path_list_with_tags  (Unused paths are filtered out,
                                   but tags (at the layers they are declared) are not.)
@@ -612,12 +613,18 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             coords_list          (For each layer: x position, y position, and center point as a QPoint.
                                   Values are modified for the scale given by tag.)
         """
-        path = []
-        path_list_with_tags = []
-        tag_dict_list = []
+        data_list =  []
         export_layer_list = []
         coords_list = []
-        self.pathRec(node, path, path_list, 0, coords_list)
+        path_list = []
+        tag_dict_list = []
+        coords_list = []
+        currentDoc = KI.activeDocument()
+        if currentDoc != None:
+            root_node = currentDoc.rootNode()
+        path = []
+        path_list_with_tags = []
+        self.pathRec(root_node, path, path_list, 0, coords_list)
         tag_dict_list = self.getTags(path_list)
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
         path_list_with_tags = path_list
@@ -625,74 +632,9 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         tag_dict_list = list(filter(None, tag_dict_list))
         coords_list = self.scaleCoordinates(coords_list, tag_dict_list)
         export_layer_list = self.getExportLayerList(path_list)
-        return path_list, path_list_with_tags, tag_dict_list, export_layer_list, coords_list
 
-
-    def getData(self, button_num, spacing_num):
-        """
-        New version of getData() that fully utilizes the dictionary system so that it works with inheritance.
-        """
-        outScript = ""
-        data_list =  []
-        export_layer_list = []
-        contents = []
-        coords_list = []
-        all_centers = []
-        layer_dict = defaultdict(dict)
-        test_list = []
-        path_list = []
-        tag_dict_list = []
-        coords_list = []
-        currentDoc = KI.activeDocument()
-        if currentDoc != None:
-            root_node = currentDoc.rootNode()
-            """
-            Concept: 1) Get all the paths.
-                     2) Get all the tags (with inheritance).
-                     3) Filter the paths by checking them with tags.
-                     4) Get the names of the layers.
-            """
-            path_list, path_list_with_tags, tag_dict_list, export_layer_list, coords_list \
-= self.recordLayerStructure(root_node, path_list)
-            """
-            self.DEBUG_MESSAGE += "Checking path_list_with_tags: \n"
-            for p in path_list_with_tags:
-                self.DEBUG_MESSAGE += p + "\n"
-            self.DEBUG_MESSAGE += "\n"
-            self.DEBUG_MESSAGE += "checking path_list: \n"
-            for p in path_list:
-                self.DEBUG_MESSAGE += p + "\n"
-            self.DEBUG_MESSAGE += "checking export_layer_list: \n"
-            for e in export_layer_list:
-                self.DEBUG_MESSAGE += e + "\n"
-            self.DEBUG_MESSAGE += "\n"
-            self.DEBUG_MESSAGE += "Checking tag_dict_list: \n"
-            for index,td in enumerate(tag_dict_list):
-                self.DEBUG_MESSAGE += "Dict " + str(index) + "\n"
-                for key,value in td.items():
-                    self.DEBUG_MESSAGE += key + " : " + value  + "\n"
-            self.DEBUG_MESSAGE += "Checking coords_list: \n"
-            if len(coords_list) is not 0:
-                for c in coords_list:
-                    self.DEBUG_MESSAGE += "List #" + str(c) + "\n"
-            #else:
-                self.DEBUG_MESSAGE += "coords_list is empty!\n"
-
-            """
-            for i,layer in enumerate(export_layer_list):
-                data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i]]))
-            #data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
-            #for path in path_list:
-            #for i in root_node.childNodes():
-            #    parseLayers(i, layer_list, all_coords, all_centers)
-            #for l in layer_list:
-            #    contents = l.name().split(" ")
-            #    layer_dict[l.name()]["actual name"] = contents[0]
-            #    for c in contents[1:]:
-            #        if "=" in c:
-            #            category_data = c.split("=") # 0: Category String, 1: Data String
-            #            category_data_list = category_data[1].split(",")
-            #            layer_dict[l.name()][category_data[0]] = category_data_list
+        for i,layer in enumerate(export_layer_list):
+            data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i]]))
 
             #    if "m" in layer_dict[layer.name()]:
             #        for i in layer_dict[layer.name()]["m"]:
@@ -700,14 +642,15 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             #            coord_indv[0] -= max(margin_list)
             #            coord_indv[1] -= max(margin_list)
 
-            #    data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
-            if button_num == 3 or button_num == 4:
-                data_list = calculateAlign(data_list, spacing_num)
+        if button_num == 3 or button_num == 4:
+            data_list = calculateAlign(data_list, spacing_num)
+
         return data_list
-        
+
 
     def getATL(self, curr_node):
         """
+        NOTE: This is old. It will have to be rewritten to fit the new system.
         getATL() checks for ATL information in invisible layers.
         Since spaces are used to split the contents, I don't think
         the function statement could allow any spaces.
@@ -736,6 +679,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
 
         return ATL_dict, invalid_dict
 
+
     def getATLFunction(input_string, input_layer_tuple, input_data):
         """
         The regex is a thing from stack overflow to find
@@ -751,9 +695,11 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     modified_string = modified_string.replace("currY", str(input_layer_tuple[2]))
         return modified_string
 
+
     def ruleOfThirdsFlag(self, c):
         if c.isChecked() == True:
             self.spacing_slider.setSliderPosition(4)
+
 
     def updateSpacingValue(self):
         self.spacing_number_label.setText(str(self.spacing_slider.value()))
@@ -761,6 +707,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             self.rule_of_thirds_check.setChecked(True)
         else:
             self.rule_of_thirds_check.setChecked(False)
+
 
     def settingCustomize(self):
         self.pos_button_text = "Senku"
@@ -787,11 +734,11 @@ class GenerateRenpyScripting(DockWidget):
             self.wipeScaleCalculation()
 
 
-
     def showErrorMessage(self, toPrint):
         msg = QMessageBox()
         msg.setText(toPrint)
         msg.exec_()
+
 
     def createInterface(self):
         generate_button = QPushButton("Generate")
@@ -804,11 +751,13 @@ class GenerateRenpyScripting(DockWidget):
         mainWidget.setLayout(main_layout)
         self.setWidget(mainWidget)
 
+
     def decideStep(self):
         #Consideration: Add a system to check if there are solid color layers and/or scrolling.
         #The program should proceed to the generate menu afterwards.
         #For now, it will go straight to the generate menu.
         self.show_format_menu()
+
 
     def show_format_menu(self):
         self.f = FormatMenu()
