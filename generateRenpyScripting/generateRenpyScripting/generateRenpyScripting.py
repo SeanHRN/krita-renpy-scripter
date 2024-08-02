@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtGui import *
 
-from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtCore import Qt, QEvent, QPoint
 
 
 import os
@@ -110,12 +110,11 @@ def parseLayers(layer, layer_list, coordinates_list, centers_list):
             for child in layer.childNodes():
                 parseLayers(child, layer_sublist, coordinates_sublist, \
 centers_sublist)
-            layer_list.extend(layer_sublist) # TODO: Experiment: putting these indented into the elif instead of by the elif
+            layer_list.extend(layer_sublist)
             coordinates_list.extend(coordinates_sublist)
             centers_list.extend(centers_sublist)
 
-
-def calculateAlign(data_list, centers_list, spacing_num):
+def calculateAlign(data_list, spacing_num):
     """
     calculateAlign converts the pos(x,y) coordinates
     in the data list into align(x,y) coordinates
@@ -127,14 +126,16 @@ def calculateAlign(data_list, centers_list, spacing_num):
     if currentDoc != None:
         width = currentDoc.width()
         height = currentDoc.height()
-        
     spacing_list = generateSpaces(spacing_num)
-    new_data_list = []
-    for d, c in zip(data_list, centers_list):
-        xalign = closestNum(spacing_list, (c[0] / width))
-        yalign = closestNum(spacing_list, (c[1] / height))
-        new_data_list.append(tuple((d[0],xalign,yalign,d[3],d[4])))
-    return new_data_list
+    align_modified_data_list = []
+    for line in data_list:
+        center = line[3][2]
+        xalign = closestNum(spacing_list, (line[3][2].x() / width))
+        yalign = closestNum(spacing_list, (line[3][2].y() / height))
+        modified_coords = [xalign, yalign, center]
+        align_modified_data_list.append(tuple((line[0],line[1],line[2],modified_coords)))
+    return align_modified_data_list
+
 
 def convertKeyValue(input_dict_value):
     """
@@ -355,6 +356,28 @@ the Krita layer structure for the directory.")
 
         # For image position scripting
         else:
+            for line in data_list:
+                if button_num == 1:
+                    script += config_data["string_xposypos"].format\
+(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                elif button_num == 2:
+                    #if no_property_block:
+                    #    optional_colon = ""
+                    script += config_data["string_atsetposxy"].format\
+(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                #TODO: Correct the align versions
+                elif button_num == 3:
+                    script += config_data["string_alignxy"].format\
+(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                elif button_num == 4:
+                    script += config_data["string_xalignyalign"].format\
+(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+            """
+            # The property dict system would have to be reimplemented with how the new data_list works.
             for d in data_list:
                 at_statement = ""
                 ATL = ""
@@ -394,6 +417,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                         script += f"{' ' * (indent * 2)}{key} {property_dict[key]}\n"
                 if ATL and button_num == 4:
                     script += f"{' ' * (indent * 2)}{ATL}\n"
+        """
         return script
 
     def storeArray(self, dir, path_list, pathLen):
@@ -595,10 +619,6 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         coords_list = []
         self.pathRec(node, path, path_list, 0, coords_list)
         tag_dict_list = self.getTags(path_list)
-
-        #self.DEBUG_MESSAGE += "Checking coords_list BEFORE pruning: \n"
-        #for index, c_tuple in enumerate(coords_list):
-        #    self.DEBUG_MESSAGE += "List #" + str(index) + ": " + str(c_tuple)+ "\n"
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
         path_list_with_tags = path_list
         path_list = self.removeTagsFromPaths(path_list)
@@ -681,8 +701,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             #            coord_indv[1] -= max(margin_list)
 
             #    data_list.append(tuple((layer_dict[layer.name()]["actual name"], x, y, size_list, image_format_list, path_list)))
-            #    if button_num == 3 or button_num == 4:
-            #        data_list = calculateAlign(data_list, all_centers, spacing_num)
+            if button_num == 3 or button_num == 4:
+                data_list = calculateAlign(data_list, spacing_num)
         return data_list
         
 
