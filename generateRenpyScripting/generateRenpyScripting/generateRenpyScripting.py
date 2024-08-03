@@ -52,8 +52,9 @@ default_configs_dict = {
     "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
     "string_layeredimagedefstart" : "layeredimage {overall_image}:\n"
 }
-pos_button_text = "pos (x, y)"
-
+default_button_text_dict = {
+    "pos_button_text": "pos (x, y)"
+}
 # For parameterizing the menu text to allow customization
 replacer_dict = {
     "{xcoord}" : "x",
@@ -226,8 +227,7 @@ class FormatMenu(QWidget):
 
         format_label = QLabel("Output Format")
         pos_label = QLabel("pos")
-        #pos_button = QPushButton("pos (x, y)")
-        self.pos_button_text = pos_button_text
+        self.pos_button_text = default_button_text_dict["pos_button_text"]
         self.pos_button = QPushButton(self.pos_button_text, self)
         self.pos_button.clicked.connect(lambda: self.process(1))
         atSetPos_button = QPushButton("at setPos(x, y)")
@@ -235,7 +235,7 @@ class FormatMenu(QWidget):
         align_label = QLabel("align")
         self.spacing_slider = QSlider(Qt.Horizontal, self)
         self.spacing_slider.setGeometry(30, 40, 200, 30)
-        self.spacing_slider.setRange(1, 9)
+        self.spacing_slider.setRange(2, 9)
         self.spacing_slider.setValue(9)
         self.spacing_slider.setFocusPolicy(Qt.NoFocus)
         self.spacing_slider.setPageStep(1)
@@ -443,18 +443,23 @@ xcoord=str(d[1]),ycoord=str(d[2]))
 
         By default, the scale of each layer is understood to be 100.0%.
 
-        TODO: Accomodate the margin system.
+        For incomplete tags [tag=<no value>]:
+        i= : Nothing happens.
+        e= : png is used.
+        s= : The list always has at least 100.0 for 100% scale.
+        m= : Margin of 0 is inserted, so nothing changes, but only if the
+             value is empty since the smallest margin in a list is used by default.
+
         """
         tag_dict_list = []
         for path in path_list:
-            #self.DEBUG_MESSAGE += "Getting tags for path: " + path + "\n"
             tag_dict = {}
             path_pieces = path.split('/')
             for layer in path_pieces:
                 layer = layer.lower()
                 tag_data = layer.split(' ')[1:]
 
-                # First pass: See if 'i=false' or 'i=no' is present.
+                # First pass: See if inheritance disabling is present.
                 # If so, clear the dictionary before adding any tags.
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
@@ -467,25 +472,34 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     letter, value = tag.split('=', 1)
                     if letter == 's':
                         scale_list = [100.0]
-                        additional_scale_list = value.split(',')
-                        for s in additional_scale_list:
-                            scale_list.append(float(s))
+                        for v in value.split(','):
+                            if v:
+                                scale_list.append(float(v))
                         if 's' in tag_dict:
                             tag_dict['s'].extend(scale_list)
                             tag_dict['s'] = list(set(tag_dict['s'])) # Remove duplicates.
                         else:
                             tag_dict['s'] = scale_list
                     elif letter == 'e':
-                        format_list = []
-                        additional_format_list = value.split(',')
-                        for f in additional_format_list:
-                            format_list.append(f)
+                        if not value:
+                            value = "png"
+                        format_list = value.split(',')
                         if 'e' in tag_dict:
                             tag_dict['e'].extend(format_list)
                             tag_dict['e'] = list(set(tag_dict['e'])) # Remove duplicates.
                         else:
                             tag_dict['e'] = format_list
-
+                    elif letter == 'm':
+                        margin_list = []
+                        if not value:
+                            margin_list.append("0")
+                        else:
+                           margin_list = value.split(',')
+                        if 'm' in tag_dict:
+                            tag_dict['m'].extend(margin_list)
+                            tag_dict['m'] = list(set(tag_dict['m']))
+                        else:
+                            tag_dict['m'] = margin_list
                     elif letter == 'i': # Prevent the i=false tag from leaking down
                         continue        # the path after it's been used to block
                     else:               # the parents' tags.
@@ -572,15 +586,25 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         return export_layer_list
 
 
-    def scaleCoordinates(self, coords_list, tag_dict_list):
+    def modifyCoordinates(self, coords_list, tag_dict_list):
         """
         Modifies the coordinates
             0,1 : x,y on top left corner
               2 : QPoint of the center
-        by scaling them with the smallest given size from the 's=' layer tags
+        Step 1: Apply the margin tag if necessary.
+                The Batch Exporter uses the smallest margin
+                in the list by default, so that's what's used here.
+                The center points wouldn't change since each set
+                of 4 margins (around a single layer rectange) would be of equal size.
+        Step 2: Scale the coordinates with the smallest
+                given size from the 's=' layer tags
         """
         for i in range(len(coords_list)):
             scale = 1.0
+            if "m" in tag_dict_list[i]:
+                coords_list[i][0] -= int(min(tag_dict_list[i]["m"]))
+                coords_list[i][1] -= int(min(tag_dict_list[i]["m"]))
+
             if "s" in tag_dict_list[i]:
                 coords_list[i][0] = round(coords_list[i][0] * min(tag_dict_list[i]["s"]) / 100)
                 coords_list[i][1] = round(coords_list[i][1] * min(tag_dict_list[i]["s"]) / 100)
@@ -598,7 +622,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                  3) Filter the paths by checking them with tags.
                  4) Get the names of the layers.
                  5) Put the data into the list.
-                 6) TODO: Modify coordinates where margins are applied. 
+                 6) Modify the coordinates for margins and scale.
                  7) If 'align' type output is selected, swap out the xy pixel coordinates with align coordinates.
 
             path_list            (Unused paths and tags are filtered out.)
@@ -630,17 +654,11 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         path_list_with_tags = path_list
         path_list = self.removeTagsFromPaths(path_list)
         tag_dict_list = list(filter(None, tag_dict_list))
-        coords_list = self.scaleCoordinates(coords_list, tag_dict_list)
+        coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
         export_layer_list = self.getExportLayerList(path_list)
 
         for i,layer in enumerate(export_layer_list):
             data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i]]))
-
-            #    if "m" in layer_dict[layer.name()]:
-            #        for i in layer_dict[layer.name()]["m"]:
-            #            margin_list = [int(i) for i in layer_dict[layer.name()]["m"]]
-            #            coord_indv[0] -= max(margin_list)
-            #            coord_indv[1] -= max(margin_list)
 
         if button_num == 3 or button_num == 4:
             data_list = calculateAlign(data_list, spacing_num)
@@ -771,7 +789,7 @@ class GenerateRenpyScripting(DockWidget):
 def kritaClosingEvent():
         clipboard = QApplication.clipboard()
         clipboard.clear(mode=clipboard.Clipboard)
-        clipboard.setText("application closed!!!", mode=clipboard.Clipboard)
+        clipboard.setText("Application closed!!!", mode=clipboard.Clipboard)
     #QApplication.closeAllWindows() # not successful yet
 
 def registerDocker():
