@@ -22,6 +22,7 @@ from PyQt5.QtGui import *
 
 from PyQt5.QtCore import Qt, QEvent, QPoint
 
+import xml.etree.ElementTree as ET
 
 import os
 import sys
@@ -35,6 +36,8 @@ import shutil
 import re
 import json
 from collections import defaultdict
+from typing import Iterable, List, TypeVar
+T = TypeVar("T")
 
 KI = Krita.instance()
 app_notifier = KI.notifier()
@@ -70,6 +73,17 @@ transform_properties = {
                         "subpixel", "delay", "events", "xpan", "ypan",
                         "xtile", "ytile", "matrixcolor", "blur"
                         }
+
+"""
+Function from Delena Malan to sort a list with a sublist given priority.
+sortListByPriority(values: <list to sort>, priority: <sublist>)
+"""
+def sortListByPriority(values: Iterable[T], priority: List[T]) -> List[T]:
+    priority_dict = {k: i for i, k in enumerate(priority)}
+    def priority_getter(value):
+        return priority_dict.get(value, len(values))
+    return sorted(values, key=priority_getter)
+
 def closestNum(num_list, value):
     return num_list[min(range(len(num_list)), key = lambda i: abs(num_list[i]-value))]
 
@@ -83,37 +97,6 @@ def generateSpaces(spacing_count):
     for i in range(spacing_count):
         spacing_list.append(truncate(i*step, decimal_place_count))
     return spacing_list
-
-def parseLayers(layer, layer_list, coordinates_list, centers_list):
-    """
-    parseLayers() gets the data from the layers.
-    """
-    if layer.visible() == True:
-        layer_sublist = []
-        coordinates_sublist = []
-        centers_sublist = []
-        lower_n = layer.name().lower()
-        if lower_n.find(" e=") != -1:
-            coord_x, coord_y, center_point = 0, 0, [0,0]
-            if lower_n.find(" t=false") == -1 and lower_n.find(" t=no") == -1:
-                coord_x = layer.bounds().topLeft().x()
-                coord_y = layer.bounds().topLeft().y()
-                center_point = layer.bounds().center()
-                centers_list.append([center_point.x(), center_point.y()])
-            else:
-                currentDoc = KI.activeDocument()
-                width = currentDoc.width()
-                height = currentDoc.height()
-                centers_list.append([round(width/2), round(height/2)])
-            layer_list.append(layer)
-            coordinates_list.append([coord_x, coord_y])
-        elif layer.type() == "grouplayer":
-            for child in layer.childNodes():
-                parseLayers(child, layer_sublist, coordinates_sublist, \
-centers_sublist)
-            layer_list.extend(layer_sublist)
-            coordinates_list.extend(coordinates_sublist)
-            centers_list.extend(centers_sublist)
 
 def calculateAlign(data_list, spacing_num):
     """
@@ -319,13 +302,17 @@ the Krita layer structure for the directory.")
 
         Image Definition:
             Button 5: Normal
-                - If both png and jpg/{any other format} are requested for a single image,
-                  the jpg/{any other format} line will be written but commented out.
+                - Format Priority:
+                      - If both png and jpg are requested for a single image,
+                        the jpg line will be written but commented out.
+                      - If webp is requested, it takes priority over png,
+                        though webp isn't actually supported by the Batch Exporter plugin;
+                        it's just preferred for Ren'Py.
+                      - Any unrecognized format get a commented out line.
             Button 6: Layered Image (The Ren'Py Feature)
         """
         script = ""
 
-        #data_list = self.getData(button_num, spacing_num)
         data_list = self.getDataList(button_num, spacing_num)
         script += self.DEBUG_MESSAGE
         if len(data_list) == 0:
@@ -340,10 +327,19 @@ the Krita layer structure for the directory.")
         if button_num == 5 or button_num == 6:
             if button_num == 5: # Normal Images
                 for line in data_list:
+                    line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
                     if "e" in line[2]:
+                        format_set = set(line[2]["e"])
+                        chosen_format = ""
+                        if "webp" in format_set:
+                            chosen_format = "webp"
+                        elif "png" in format_set:
+                            chosen_format = "png"
+                        elif "jpg" in format_set or "jpeg" in format_set:
+                            chosen_format = "jpg"
                         for f in line[2]["e"]:
-                            if f != "png" and len(line[2]["e"]) > 1:
-                                script += "#"
+                            if f != chosen_format:
+                                script += '#'
                             script += config_data["string_normalimagedef"].format\
 (image=line[0],path_to_image=line[1],file_extension=f)
                     else:
@@ -433,6 +429,33 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         path_list.append(toInsert + imageFileName)
 
 
+    def getMaskPropertiesRecursion(self, search_path_pieces, tag_dict, curr_node):
+        for dir_layer,actual_layer in zip(search_path_pieces, curr_node.childNodes()):
+            if actual_layer.type() == "transformmask":
+                tag_dict["TEST"] = "Klowns"
+                # get the stuff in here and apply it to the dictionary
+        for dir_layer,actual_layer in zip(search_path_pieces, curr_node.childNodes()): # Loop has to start over because masks affect all siblings.
+            if actual_layer.name() == dir_layer: # Implicitly, this should only ever be a group or a paint layer.
+        #    #if actual_layer.type() == "grouplayer" or actual_layer.type() == "paintlayer":
+                curr_node = actual_layer()
+                self.getMaskPropertiesRecursion(search_path_pieces[1:], tag_dict, curr_node)
+
+
+    def getMaskPropertiesStart(self, path, tag_dict, node):
+        """
+        TODO: Function to check a path for transform masks and add their properties to the dictionary.
+        """
+        currentDoc = KI.activeDocument()
+        if currentDoc != None:
+            curr_node = currentDoc.rootNode()
+        search_path = path.split("/",1)
+        #self.DEBUG_MESSAGE += "getMaskProperties() path: " + search_path + "\n"
+        search_path_pieces = search_path.split('/')
+        self.getMaskPropertiesRecursion(search_path_pieces, tag_dict, curr_node)
+
+        return tag_dict
+
+
     def getTags(self, path_list):
         """
         Function to take in the list of complete layer paths (from within data_list)
@@ -449,6 +472,9 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         s= : The list always has at least 100.0 for 100% scale.
         m= : Margin of 0 is inserted, so nothing changes, but only if the
              value is empty since the smallest margin in a list is used by default.
+        
+        TODO: Additionally, Add opacity/alpha (with inheritance) to the dictionaries.
+        TODO: Additionally, call the function to add properties from transform masks to the dictionaries.
 
         """
         tag_dict_list = []
@@ -505,26 +531,45 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                     else:               # the parents' tags.
                         tag_dict[letter] = value
  
+            # Next, check for changes from transform masks.
+            #tag_dict = self.getMaskPropertiesStart(path, tag_dict)
+
             tag_dict_list.append(tag_dict)
         return tag_dict_list
 
 
-    def pathRec(self, node, path, path_list, pathLen, coords_list):
+    def pathRecord(self, node, path, path_list, pathLen, coords_list):
         """
         Searches for all the node to leaf paths and stores them in path_list using storePath().
         storePath() takes in the entire paths (including all the tags at this step).
+
+        Only grouplayers and paintlayers are checked for this step; filters aren't usable here.
 
         Coordinates are also found and inserted into coords_list.
 
         Reference: GeeksforGeeks solution to finding paths in a binary search tree
         """
-        layer_data = node.name().split(' ')
+        #layer_data = node.name().split(' ')
         if (len(path) > pathLen):
             path[pathLen] = node.name()
         else:
             path.append(node.name())
-        pathLen = pathLen + 1
-        if len(node.childNodes()) == 0:
+        pathLen += 1
+        recordable_child_nodes = 0
+        for c in node.childNodes():
+            if c.type() == "grouplayer" or c.type() == "paintlayer":
+                recordable_child_nodes += 1
+            elif c.type() == "transformmask": # EXPERIMENTAL
+                #self.DEBUG_MESSAGE += "transform mask found!\n"
+                #self.DEBUG_MESSAGE += c.toXML() + "\n\n\n"
+                xml_root = ET.fromstring(c.toXML())
+                for ft in xml_root.iter("free_transform"):
+                    for p in ft:
+                        self.DEBUG_MESSAGE += str(p.tag) + " : " + str(p.attrib) + "\n"
+                    #for key in xml_child.tag:
+                    #    self.DEBUG_MESSAGE += key + "\n"
+                    #self.DEBUG_MESSAGE += xml_child.tag + " : " + xml_child.attrib + "\n"
+        if recordable_child_nodes == 0:
             self.storePath(path, path_list, pathLen)
             coord_x = node.bounds().topLeft().x()
             coord_y = node.bounds().topLeft().y()
@@ -532,11 +577,12 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             coords_list.append([coord_x, coord_y, coord_center])
         else:
             for i in node.childNodes():
+                if i.type() == "grouplayer" or i.type() == "paintlayer":
                 # Looks silly and work-aroundy but seems to work.
                 # The pathbuilding gets messed up without this subtraction on path.
-                removeAmount = len(path) - pathLen
-                path = path[: len(path) - removeAmount]
-                self.pathRec(i, path, path_list, pathLen, coords_list)
+                    removeAmount = len(path) - pathLen
+                    path = path[: len(path) - removeAmount]
+                    self.pathRecord(i, path, path_list, pathLen, coords_list)
 
 
     def removeUnusedPaths(self, path_list, coords_list, tag_dict_list):
@@ -628,6 +674,8 @@ xcoord=str(d[1]),ycoord=str(d[2]))
             path_list            (Unused paths and tags are filtered out.)
             path_list_with_tags  (Unused paths are filtered out,
                                   but tags (at the layers they are declared) are not.)
+                                  Currently not in use, but the lines are commented out where
+                                  they should be activated.
             tag_dict_list        (List where each index corresponds to the index of its path,
                                   and the content is a dictionary with the tags applicable to
                                   the final layer of that path, adjusted for Batch Exporter
@@ -647,11 +695,11 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         if currentDoc != None:
             root_node = currentDoc.rootNode()
         path = []
-        path_list_with_tags = []
-        self.pathRec(root_node, path, path_list, 0, coords_list)
+        #path_list_with_tags = []
+        self.pathRecord(root_node, path, path_list, 0, coords_list)
         tag_dict_list = self.getTags(path_list)
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
-        path_list_with_tags = path_list
+        #path_list_with_tags = path_list
         path_list = self.removeTagsFromPaths(path_list)
         tag_dict_list = list(filter(None, tag_dict_list))
         coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
