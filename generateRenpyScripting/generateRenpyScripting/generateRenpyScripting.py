@@ -53,7 +53,9 @@ default_configs_dict = {
     "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
     "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
     "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
-    "string_layeredimagedefstart" : "layeredimage {overall_image}:\n"
+    "string_layeredimagedefstart" : "layeredimage {overall_image}:\n",
+    "atl_zoom_decimal_places" : "3",
+    "atl_rotate_decimal_places" : "3"
 }
 default_button_text_dict = {
     "pos_button_text": "pos (x, y)"
@@ -323,7 +325,7 @@ the Krita layer structure for the directory.")
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
-
+        #BISON
         if button_num == 5 or button_num == 6:
             if button_num == 5: # Normal Images
                 for line in data_list:
@@ -344,6 +346,10 @@ the Krita layer structure for the directory.")
 (image=line[0],path_to_image=line[1],file_extension=f)
                     else:
                         script += "### Error: File format not defined for layer " + line[0] + "\n"
+                    if "scaleX" in line[2]:
+                        script += str(line[2]["scaleX"])+"\n"
+                    if "scaleY" in line[2]:
+                        script += str(line[2]["scaleY"])+"\n"
             ##else: # Layered Image
             ##    overall_image_name = ""
             ##    script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
@@ -354,16 +360,19 @@ the Krita layer structure for the directory.")
         # For image position scripting
         else:
             for line in data_list:
+                modifier_block = self.getModifierBlock(line)
                 if button_num == 1:
                     script += config_data["string_xposypos"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                    script += modifier_block
                 elif button_num == 2:
                     #if no_property_block:
                     #    optional_colon = ""
                     script += config_data["string_atsetposxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                    script += modifier_block
                 elif button_num == 3:
                     script += config_data["string_alignxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
@@ -372,48 +381,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += config_data["string_xalignyalign"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-            """
-            # The property dict system would have to be reimplemented with how the new data_list works.
-            for d in data_list:
-                at_statement = ""
-                ATL = ""
-                property_dict = {}
-                for t in transform_properties:
-                    property_dict[t] = None
-                no_property_block = True
-                if d[0] in ATL_dict:
-                    for key in property_dict:
-                        if key in ATL_dict[d[0]]:
-                            no_property_block = False
-                            property_dict[key] = ATL_dict[d[0]][key]
-                    for f in ["f", "func", "function"]:
-                        if f in ATL_dict[d[0]]:
-                            ATL = self.getATLFunction(ATL_dict[d[0]][f], d, data_list)
-                            break
-                if button_num == 1:
-                    script += config_data["string_xposypos"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-                elif button_num == 2:
-                    if no_property_block:
-                        optional_colon = ""
-                    script += config_data["string_atsetposxy"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-                elif button_num == 3:
-                    script += config_data["string_alignxy"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-                elif button_num == 4:
-                    script += config_data["string_xalignyalign"].format\
-(four_space_indent=(' '*indent),image=d[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(d[1]),ycoord=str(d[2]))
-                for key in property_dict:
-                    if property_dict[key] is not None:
-                        script += f"{' ' * (indent * 2)}{key} {property_dict[key]}\n"
-                if ATL and button_num == 4:
-                    script += f"{' ' * (indent * 2)}{ATL}\n"
-        """
+
         return script
 
 
@@ -425,33 +393,107 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         for i in dir[1 : pathLen-1]:
             toInsert = toInsert + (i + "/")
         imageFileName = dir[pathLen-1]
-        #self.DEBUG_MESSAGE += "appending to path_list: " + toInsert + imageFileName + "\n"
         path_list.append(toInsert + imageFileName)
 
 
+    def updateMaskPropertiesDict(self, tag_dict, tm_node):
+        """
+        Helper function to make sure the transform properties update correctly
+        in a given dictionary.
+
+        The node passed in must be a transform mask.
+
+        Property                                : Data Type (Not in the original XML string, but instead how it's stored)
+        scaleX and scaleY (xzoom and yzoom)     : floats
+
+        transformedCenter (xoffset and yoffset) : int array of [x, y]
+            [Must]
+        
+        #basic:
+        #tag_dict[p.tag] = p.attrib
+        """
+        xml_root = ET.fromstring(tm_node.toXML())
+        for ft in xml_root.iter("free_transform"):
+            for p in ft:
+                #self.DEBUG_MESSAGE += p.tag + "   :  " + str(p.attrib) + "\n" # Keep this for checking the data.
+                # scaleX and scaleY: Multiply the new scale by the existing scale.
+                if p.tag == "scaleX":
+                    if "scaleX" in tag_dict.keys():
+                        tag_dict["scaleX"] = float(tag_dict["scaleX"]) * float(p.attrib["value"])
+                    else:
+                        tag_dict["scaleX"] = p.attrib["value"]
+                elif p.tag == "scaleY":
+                    if "scaleY" in tag_dict.keys():
+                        tag_dict["scaleY"] = float(tag_dict["scaleY"]) * float(p.attrib["value"])
+                    else:
+                        tag_dict["scaleY"] = p.attrib["value"]
+
+                # rotation: Add to existing value. Convert from radians to degrees.
+                if p.tag == "aZ":
+                    new_rot_degrees = float(p.attrib["value"]) * (180 / math.pi)
+                    if "aZ" in tag_dict.keys():
+                        updated_rot_degrees = float(tag_dict["aZ"]) + new_rot_degrees
+                        tag_dict["aZ"] = float(updated_rot_degrees % 360)
+                    else:
+                        tag_dict["aZ"] = float(new_rot_degrees % 360)
+
+                # transformedCenter: Add to existing value.
+                """
+                Issue: This probably isn't an accurate use of offset.
+                if p.tag == "transformedCenter":
+                    if "transformedCenter" in tag_dict.keys():
+                        new_x = tag_dict["transformedCenter"][0] + int(float(p.attrib["x"]))
+                        new_y = tag_dict["transformedCenter"][0] + int(float(p.attrib["y"]))
+                        #self.DEBUG_MESSAGE += "new offset: " + str(p.attrib["x"]) + ", " + str(p.attrib["y"]) + "\n"
+                        tag_dict["transformedCenter"] = [new_x, new_y]
+                    else:
+                        #self.DEBUG_MESSAGE += "entering offset initially: " + str(p.attrib["x"]) + ", " + str(p.attrib["y"]) + "\n"
+                        tag_dict["transformedCenter"] = [int(float(p.attrib["x"])), int(float(p.attrib["y"]))]
+                """
+
+        return tag_dict
+
+
     def getMaskPropertiesRecursion(self, search_path_pieces, tag_dict, curr_node):
-        for dir_layer,actual_layer in zip(search_path_pieces, curr_node.childNodes()):
-            if actual_layer.type() == "transformmask":
-                tag_dict["TEST"] = "Klowns"
-                # get the stuff in here and apply it to the dictionary
-        for dir_layer,actual_layer in zip(search_path_pieces, curr_node.childNodes()): # Loop has to start over because masks affect all siblings.
-            if actual_layer.name() == dir_layer: # Implicitly, this should only ever be a group or a paint layer.
-        #    #if actual_layer.type() == "grouplayer" or actual_layer.type() == "paintlayer":
-                curr_node = actual_layer()
-                self.getMaskPropertiesRecursion(search_path_pieces[1:], tag_dict, curr_node)
+        """
+        Check through a path and pick up the transform mask properties for that path's tag_dict.
+        Case 1: The mask is a sibling layer, so it applies to all its siblings.
+        Case 2: The mask is a child layer, so it applies only to its parent.
+
+        Check for case 1 before descending. At the end of the path, case 2 will be seen if it's there.
+        
+        For now, all the XML info under "free_transform" is added to the dictionary.
+
+        The recursion halts because the list of layers in the path to explore decreases with each call.
+        """
+        # path is empty, so the leaf is reached, so check for child transform layers
+        if not search_path_pieces:
+            for leaf_child in curr_node.childNodes():
+                if leaf_child.type() == "transformmask" and leaf_child.visible():
+                    tag_dict = self.updateMaskPropertiesDict(tag_dict, leaf_child)
+        else:
+            for check_layer in curr_node.childNodes():
+                if check_layer.type() == "transformmask" and check_layer.visible():
+                    tag_dict = self.updateMaskPropertiesDict(tag_dict, check_layer)
+            for check_layer in curr_node.childNodes():
+                if search_path_pieces:
+                    if check_layer.name() == search_path_pieces[0]: # Implicitly, this should only ever be a group or a paint layer.
+        #            #if check_layer.type() == "grouplayer" or check_layer.type() == "paintlayer":
+                        curr_node = check_layer
+                        self.getMaskPropertiesRecursion(search_path_pieces[1:], tag_dict, curr_node)
 
 
-    def getMaskPropertiesStart(self, path, tag_dict, node):
+    def getMaskPropertiesStart(self, path_pieces, tag_dict):
         """
         TODO: Function to check a path for transform masks and add their properties to the dictionary.
         """
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             curr_node = currentDoc.rootNode()
-        search_path = path.split("/",1)
-        #self.DEBUG_MESSAGE += "getMaskProperties() path: " + search_path + "\n"
-        search_path_pieces = search_path.split('/')
-        self.getMaskPropertiesRecursion(search_path_pieces, tag_dict, curr_node)
+        #search_path = path_pieces.split("/",1)
+
+        #search_path_pieces = search_path.split('/')
+        self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
 
         return tag_dict
 
@@ -532,7 +574,7 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                         tag_dict[letter] = value
  
             # Next, check for changes from transform masks.
-            #tag_dict = self.getMaskPropertiesStart(path, tag_dict)
+            tag_dict = self.getMaskPropertiesStart(path_pieces, tag_dict)
 
             tag_dict_list.append(tag_dict)
         return tag_dict_list
@@ -559,13 +601,13 @@ xcoord=str(d[1]),ycoord=str(d[2]))
         for c in node.childNodes():
             if c.type() == "grouplayer" or c.type() == "paintlayer":
                 recordable_child_nodes += 1
-            elif c.type() == "transformmask": # EXPERIMENTAL
+            #elif c.type() == "transformmask": # EXPERIMENTAL
                 #self.DEBUG_MESSAGE += "transform mask found!\n"
                 #self.DEBUG_MESSAGE += c.toXML() + "\n\n\n"
-                xml_root = ET.fromstring(c.toXML())
-                for ft in xml_root.iter("free_transform"):
-                    for p in ft:
-                        self.DEBUG_MESSAGE += str(p.tag) + " : " + str(p.attrib) + "\n"
+                #xml_root = ET.fromstring(c.toXML())
+                #for ft in xml_root.iter("free_transform"):
+                #    for p in ft:
+                #        self.DEBUG_MESSAGE += str(p.tag) + " : " + str(p.attrib) + "\n"
                     #for key in xml_child.tag:
                     #    self.DEBUG_MESSAGE += key + "\n"
                     #self.DEBUG_MESSAGE += xml_child.tag + " : " + xml_child.attrib + "\n"
@@ -660,6 +702,41 @@ xcoord=str(d[1]),ycoord=str(d[2]))
                 coords_list[i][2].setY(int(center_y_new))
         return coords_list
 
+    def getModifierBlock(self, line):
+        modifier_block = ""
+
+        if "scaleX" in line[2] or "scaleY" in line[2]:
+            xzoom = 1.0
+            yzoom = 1.0
+            if "scaleX" in line[2]:
+                xzoom = float(line[2]["scaleX"])
+                xzoom = round(xzoom, int(config_data["atl_zoom_decimal_places"]))
+            if "scaleY" in line[2]:
+                yzoom = float(line[2]["scaleY"])
+                yzoom = round(yzoom, int(config_data["atl_zoom_decimal_places"]))
+            if xzoom == yzoom and xzoom != 1.0:
+                modifier_block += ((' ')*indent*2) + "zoom " + str(xzoom) + "\n"
+            else:
+                if xzoom != 1.0:
+                    modifier_block += ((' ')*indent*2) + "xzoom " + str(xzoom) + "\n"
+                if yzoom != 1.0:
+                    modifier_block += ((' ')*indent*2) + "yzoom " + str(yzoom) + "\n"
+        
+        if "aZ" in line[2]:
+            rounded_rot = round(line[2]["aZ"], int(config_data["atl_rotate_decimal_places"]))
+            modifier_block += ((' ')*indent*2) + "rotate " + str(rounded_rot) + "\n"
+        """
+        if "transformedCenter" in line[2]:
+            xoffset = line[2]["transformedCenter"][0]
+            yoffset = line[2]["transformedCenter"][1]
+            if xoffset == 0 and yoffset != 0:
+                modifier_block += ((' ')*indent*2) + "yoffset " + str(yoffset) + "\n"
+            elif yoffset == 0 and xoffset != 0:
+                modifier_block += ((' ')*indent*2) + "xoffset " + str(xoffset) + "\n"
+            elif xoffset != 0 and yoffset != 0:
+                modifier_block += ((' ')*indent*2) + "offset (" + str(xoffset) + ", " + str(yoffset) + ")\n"
+        """
+        return modifier_block
 
     def getDataList(self, button_num, spacing_num):
         """
@@ -837,7 +914,6 @@ class GenerateRenpyScripting(DockWidget):
 def kritaClosingEvent():
         clipboard = QApplication.clipboard()
         clipboard.clear(mode=clipboard.Clipboard)
-        clipboard.setText("Application closed!!!", mode=clipboard.Clipboard)
     #QApplication.closeAllWindows() # not successful yet
 
 def registerDocker():
