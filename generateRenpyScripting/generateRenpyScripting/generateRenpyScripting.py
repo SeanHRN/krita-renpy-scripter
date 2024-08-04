@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtGui import *
 
-from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtsignal
+from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject
 
 import xml.etree.ElementTree as ET
 
@@ -167,33 +167,36 @@ class TextOutput(QWidget):
     def __init__(self):
         super().__init__()
 
-        #self.setWindowTitle("Ren'Py Script Output")
-        #self.resize(500,500)
+    def setupUi(self, MainBox):
+        self.main_box = MainBox
         self.script = ""
         self.textEdit = QTextEdit()
         self.textEdit.setPlainText(self.script)
         self.copyButton = QPushButton("Copy To Clipboard")
         self.copyButton.clicked.connect(self.copyText)
+        #TODO: Make the button close the entire mainbox, not just the script window.
         self.closeButton = QPushButton("Close")
-        self.closeButton.clicked.connect(self.close)
-        #self.closeButton.clicked.connect(prevWindow.close)
-        self.backButton = QPushButton("Back To Format Selection")
-        self.backButton.clicked.connect(self.close)
+        self.closeButton.clicked.connect(self.onClose)
 
         textOutputLayout = QVBoxLayout()
         textOutputLayout.addWidget(self.textEdit)
         textOutputLayout.addWidget(self.copyButton)
         textOutputLayout.addWidget(self.closeButton)
-        textOutputLayout.addWidget(self.backButton)
         self.setLayout(textOutputLayout)
 
-    def receiveText(self, import_text):
-        self.textEdit.setPlainText(import_text)
+    def receiveText(self, value):
+        self.textEdit.setPlainText(value)
 
     def copyText(self):
         clipboard = QApplication.clipboard()
         clipboard.clear(mode=clipboard.Clipboard)
         clipboard.setText(self.textEdit.toPlainText(), mode=clipboard.Clipboard)
+
+    def onClose(self):
+        self.main_box.close()
+
+class TextSignalEmitter(QObject):
+    custom_signal = pyqtSignal(str)
 
 class FormatMenu(QWidget):
     """
@@ -206,7 +209,7 @@ class FormatMenu(QWidget):
         self.createFormatMenuInterface()
         self.DEBUG_MESSAGE = ""
         #self.outputWindow = None
-        self.textSignal = pyqtSignal(str)
+        self.text_signal_emitter = TextSignalEmitter()
 
     def createFormatMenuInterface(self):
         main_layout = QVBoxLayout()
@@ -293,8 +296,8 @@ the Krita layer structure for the directory.")
         A reference to the FormatMenu (the self) is passed
         so that the first window can be closed from TextOutput.
         """
-        outScript = self.writeScript(button_num, self.spacing_slider.value())
-        self.textSignal.emit(outScript)
+        out_script = self.writeScript(button_num, self.spacing_slider.value())
+        self.text_signal_emitter.custom_signal.emit(out_script)
         #TODO: Replace these with signals and slots with the output window.
         #self.outputWindow = TextOutput(outScript, self)
         #self.outputWindow.show()
@@ -823,33 +826,28 @@ class MainBox(QWidget):
     """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("The Window")
+        self.setWindowTitle("Choose Your Format!")
         self.createMainBox()
         self.format_menu = None
         self.outputWindow = None
     
     def createMainBox(self):
+        """
+        The output window's close button is connected to the main box.
+        """
         self.output_window = TextOutput()
-        self.format_menu = FormatMenu(self.output_window)
+        self.output_window.setupUi(self)
+        self.format_menu = FormatMenu()
+        self.format_menu.text_signal_emitter.custom_signal.connect(self.output_window.receiveText)
         main_box_layout = QHBoxLayout()
         main_box_layout.addWidget(self.format_menu)
         main_box_layout.addWidget(self.output_window)
         self.setLayout(main_box_layout)
 
-    #def decideStep(self):
-        #Consideration: Add a system to check if there are solid color layers and/or scrolling.
-        #The program should proceed to the generate menu afterwards.
-        #For now, it will go straight to the generate menu.
-    #    self.show_format_menu()
-    #
-    #def show_format_menu(self):
-    #    self.format_menu = FormatMenu()
-    #    self.format_menu.show()
-
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Generate Ren'Py Scripting V2")
+        self.setWindowTitle("Generate Ren'Py Scripting")
         self.createInterface()
         self.main_box = None
         #self.format_menu = None
@@ -876,7 +874,7 @@ class GenerateRenpyScripting(DockWidget):
 
     def createInterface(self):
         generate_button = QPushButton("Generate")
-        generate_button.clicked.connect(self.decideStep)
+        generate_button.clicked.connect(self.startWindow)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(generate_button)
@@ -886,17 +884,8 @@ class GenerateRenpyScripting(DockWidget):
         self.setWidget(mainWidget)
 
 
-    def decideStep(self):
-        #Consideration: Add a system to check if there are solid color layers and/or scrolling.
-        #The program should proceed to the generate menu afterwards.
-        #For now, it will go straight to the generate menu.
-        #self.show_format_menu()
+    def startWindow(self):
         self.showMainBox()
-
-    def show_format_menu(self): # TODO: remove this
-        pass
-        #self.format_menu = FormatMenu()
-        #self.format_menu.show()
     
     def showMainBox(self):
         self.main_box = MainBox()
