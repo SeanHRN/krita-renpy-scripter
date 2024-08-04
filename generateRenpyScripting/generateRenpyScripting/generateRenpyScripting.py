@@ -15,12 +15,12 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QTextEdit,
     QApplication,
-
+    QMainWindow
 )
 
 from PyQt5.QtGui import *
 
-from PyQt5.QtCore import Qt, QEvent, QPoint
+from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtsignal
 
 import xml.etree.ElementTree as ET
 
@@ -162,19 +162,21 @@ class TextOutput(QWidget):
         Back:  Closes only TextOutput (this window),
                so that the user can choose a different format.
     """
-    def __init__(self, script, prevWindow):
+    #def __init__(self, script, prevWindow):
+    #def __init__(self, script, prevWindow):
+    def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Ren'Py Script Output")
-        self.resize(500,500)
-
+        #self.setWindowTitle("Ren'Py Script Output")
+        #self.resize(500,500)
+        self.script = ""
         self.textEdit = QTextEdit()
-        self.textEdit.setPlainText(script)
+        self.textEdit.setPlainText(self.script)
         self.copyButton = QPushButton("Copy To Clipboard")
         self.copyButton.clicked.connect(self.copyText)
         self.closeButton = QPushButton("Close")
         self.closeButton.clicked.connect(self.close)
-        self.closeButton.clicked.connect(prevWindow.close)
+        #self.closeButton.clicked.connect(prevWindow.close)
         self.backButton = QPushButton("Back To Format Selection")
         self.backButton.clicked.connect(self.close)
 
@@ -185,6 +187,8 @@ class TextOutput(QWidget):
         textOutputLayout.addWidget(self.backButton)
         self.setLayout(textOutputLayout)
 
+    def receiveText(self, import_text):
+        self.textEdit.setPlainText(import_text)
 
     def copyText(self):
         clipboard = QApplication.clipboard()
@@ -195,12 +199,14 @@ class FormatMenu(QWidget):
     """
     Window that should open when called from the docker.
     """
+    #def __init__(self):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Choose Your Format")
         self.createFormatMenuInterface()
         self.DEBUG_MESSAGE = ""
-
+        #self.outputWindow = None
+        self.textSignal = pyqtSignal(str)
 
     def createFormatMenuInterface(self):
         main_layout = QVBoxLayout()
@@ -280,7 +286,6 @@ the Krita layer structure for the directory.")
         settings_layout.addWidget(default_button)
         main_layout.addLayout(settings_layout)
         self.setLayout(main_layout)
-        self.mainWindow = None
 
     def process(self, button_num):
         """
@@ -289,8 +294,10 @@ the Krita layer structure for the directory.")
         so that the first window can be closed from TextOutput.
         """
         outScript = self.writeScript(button_num, self.spacing_slider.value())
-        self.outputWindow = TextOutput(outScript, self)
-        self.outputWindow.show()
+        self.textSignal.emit(outScript)
+        #TODO: Replace these with signals and slots with the output window.
+        #self.outputWindow = TextOutput(outScript, self)
+        #self.outputWindow.show()
     
     def writeScript(self, button_num, spacing_num):
         """
@@ -323,8 +330,7 @@ the Krita layer structure for the directory.")
 
         ATL_dict = {}
         currentDoc = KI.activeDocument()
-        if currentDoc != None:
-            ATL_dict, invalid_dict = self.getATL(currentDoc.rootNode())
+
         #BISON
         if button_num == 5 or button_num == 6:
             if button_num == 5: # Normal Images
@@ -790,55 +796,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return data_list
 
-
-    def getATL(self, curr_node):
-        """
-        NOTE: This is old. It will have to be rewritten to fit the new system.
-        getATL() checks for ATL information in invisible layers.
-        Since spaces are used to split the contents, I don't think
-        the function statement could allow any spaces.
-
-        Tags that are not recognized from the list transform_properties
-        are recorded and put in the dictionary invalid_dict.
-        """
-        ATL_dict = defaultdict(dict)
-        invalid_dict = defaultdict(dict)
-        for i in curr_node.childNodes():
-            if i.visible() == False and i.name().upper().startswith("ATL"):
-                if i.type() == "grouplayer":
-                    ATL_dict.update(self.getATL(i))
-                elif i.type() == "paintlayer":
-                    contents = i.name().split(" ")
-                    invalid_list = []
-                    for c in contents[2:]:
-                        if "=" in c:
-                            ATL_data = c.split("=") #0: Tag string, 1: Data String
-                            ATL_data_list = ATL_data[1]
-                            ATL_dict[contents[1]][ATL_data[0]] = ATL_data_list
-                            if ATL_data[0] not in transform_properties:
-                                invalid_list.append(ATL_data[0])
-                    if len(invalid_list) != 0:
-                        invalid_dict[contents[1]] = invalid_list
-
-        return ATL_dict, invalid_dict
-
-
-    def getATLFunction(input_string, input_layer_tuple, input_data):
-        """
-        The regex is a thing from stack overflow to find
-        'comma that is followed by a char that is not a space'.
-        """
-        modified_string = input_string
-        modified_string = re.sub('(,(?=\S)|:)', ", ", modified_string)
-        for i in input_data:
-            if i[0] == input_layer_tuple[0]:
-                if "currX" in modified_string:
-                    modified_string = modified_string.replace("currX", str(input_layer_tuple[1]))
-                if "currY" in modified_string:
-                    modified_string = modified_string.replace("currY", str(input_layer_tuple[2]))
-        return modified_string
-
-
     def ruleOfThirdsFlag(self, c):
         if c.isChecked() == True:
             self.spacing_slider.setSliderPosition(4)
@@ -856,12 +813,46 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         self.pos_button_text = "Senku"
         self.customize_button.setText("CHECK") #TEST PROBLEM: text isn't updating
 
+    #def closeEvent(self, event):
+    #    if not self.outputWindow is None:
+    #        self.outputWindow.close()
+
+class MainBox(QWidget):
+    """
+    Idea: Put the pop-up windows into a single box.
+    """
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("The Window")
+        self.createMainBox()
+        self.format_menu = None
+        self.outputWindow = None
+    
+    def createMainBox(self):
+        self.output_window = TextOutput()
+        self.format_menu = FormatMenu(self.output_window)
+        main_box_layout = QHBoxLayout()
+        main_box_layout.addWidget(self.format_menu)
+        main_box_layout.addWidget(self.output_window)
+        self.setLayout(main_box_layout)
+
+    #def decideStep(self):
+        #Consideration: Add a system to check if there are solid color layers and/or scrolling.
+        #The program should proceed to the generate menu afterwards.
+        #For now, it will go straight to the generate menu.
+    #    self.show_format_menu()
+    #
+    #def show_format_menu(self):
+    #    self.format_menu = FormatMenu()
+    #    self.format_menu.show()
+
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Generate Ren'Py Scripting V2 WIP")
+        self.setWindowTitle("Generate Ren'Py Scripting V2")
         self.createInterface()
-        self.mainWindow = None
+        self.main_box = None
+        #self.format_menu = None
         #open_notifier.imageCreated.connect(self.updateScaleCalculation)
         #open_notifier.imageCreated.connect(self.initiateScaleCalculation)
         #close_notifier.viewClosed.connect(self.wasLast)
@@ -899,26 +890,34 @@ class GenerateRenpyScripting(DockWidget):
         #Consideration: Add a system to check if there are solid color layers and/or scrolling.
         #The program should proceed to the generate menu afterwards.
         #For now, it will go straight to the generate menu.
-        self.show_format_menu()
+        #self.show_format_menu()
+        self.showMainBox()
 
-
-    def show_format_menu(self):
-        self.f = FormatMenu()
-        self.f.show()
+    def show_format_menu(self): # TODO: remove this
+        pass
+        #self.format_menu = FormatMenu()
+        #self.format_menu.show()
+    
+    def showMainBox(self):
+        self.main_box = MainBox()
+        self.main_box.show()
 
     # notifies when views are added or removed
     # 'pass' means do not do anything
     def canvasChanged(self, canvas):
         pass
 
-def kritaClosingEvent():
-        clipboard = QApplication.clipboard()
-        clipboard.clear(mode=clipboard.Clipboard)
-    #QApplication.closeAllWindows() # not successful yet
+    def closeEvent(self, event):
+        if not set.main_box is None:
+            self.main_box.close()
+        #if not self.format_menu is None:
+        #    self.format_menu.close()
+
+#def kritaClosingEvent():
 
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
 ("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
  , GenerateRenpyScripting))
 
-app_notifier.applicationClosing.connect(kritaClosingEvent) #EXPERIMENTAL
+#app_notifier.applicationClosing.connect(kritaClosingEvent) #EXPERIMENTAL
