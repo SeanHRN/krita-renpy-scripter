@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QHBoxLayout,
     QVBoxLayout,
+    QGridLayout,
     QGroupBox,
     QWidget,
     QDoubleSpinBox,
@@ -58,7 +59,10 @@ default_configs_dict = {
     "atl_rotate_decimal_places" : "3"
 }
 default_button_text_dict = {
-    "pos_button_text": "pos (x, y)"
+    "pos_button_text" : "pos (x, y)",
+    "setpos_button_text" : "at setPos(x, y)",
+    "align_button_text" : "align (x, y)",
+    "xalignyalign_button_text" : "xalign x yalign y"
 }
 # For parameterizing the menu text to allow customization
 replacer_dict = {
@@ -162,8 +166,6 @@ class TextOutput(QWidget):
         Back:  Closes only TextOutput (this window),
                so that the user can choose a different format.
     """
-    #def __init__(self, script, prevWindow):
-    #def __init__(self, script, prevWindow):
     def __init__(self):
         super().__init__()
 
@@ -174,7 +176,6 @@ class TextOutput(QWidget):
         self.textEdit.setPlainText(self.script)
         self.copyButton = QPushButton("Copy To Clipboard")
         self.copyButton.clicked.connect(self.copyText)
-        #TODO: Make the button close the entire mainbox, not just the script window.
         self.closeButton = QPushButton("Close")
         self.closeButton.clicked.connect(self.onClose)
 
@@ -219,7 +220,7 @@ class FormatMenu(QWidget):
         image_definition_layout = QHBoxLayout()
         settings_layout = QHBoxLayout()
 
-        format_label = QLabel("Output Format")
+        #format_label = QLabel("Output Format")
         pos_label = QLabel("pos")
         self.pos_button_text = default_button_text_dict["pos_button_text"]
         self.pos_button = QPushButton(self.pos_button_text, self)
@@ -265,7 +266,7 @@ the Krita layer structure for the directory.")
         self.customize_button = QPushButton("Customize", self)
         self.customize_button.setToolTip("Open configs.json in your default text editor to make changes to the output formats.")
         self.customize_button.clicked.connect(lambda: self.settingCustomize)
-        main_layout.addWidget(format_label)
+        #main_layout.addWidget(format_label)
         main_layout.addWidget(pos_label)
         pos_layout.addWidget(self.pos_button)
         pos_layout.addWidget(atSetPos_button)
@@ -394,15 +395,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         return script
 
 
-    def storePath(self, dir, path_list, pathLen):
+    def storePath(self, dir, path_list, path_len):
         """
         Concept: Store each max-length path into the final path_list (starting with images instead of root).
         """
-        toInsert = "images/"
-        for i in dir[1 : pathLen-1]:
-            toInsert = toInsert + (i + "/")
-        imageFileName = dir[pathLen-1]
-        path_list.append(toInsert + imageFileName)
+        to_insert = "images/"
+        for i in dir[1 : path_len-1]:
+            to_insert = to_insert + (i + "/")
+        imageFileName = dir[path_len-1]
+        path_list.append(to_insert + imageFileName)
 
 
     def updateMaskPropertiesDict(self, tag_dict, tm_node):
@@ -494,13 +495,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def getMaskPropertiesStart(self, path_pieces, tag_dict):
         """
-        TODO: Function to check a path for transform masks and add their properties to the dictionary.
         """
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             curr_node = currentDoc.rootNode()
         #search_path = path_pieces.split("/",1)
-
         #search_path_pieces = search_path.split('/')
         self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
 
@@ -523,9 +522,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         s= : The list always has at least 100.0 for 100% scale.
         m= : Margin of 0 is inserted, so nothing changes, but only if the
              value is empty since the smallest margin in a list is used by default.
-        
-        TODO: Additionally, Add opacity/alpha (with inheritance) to the dictionaries.
-        TODO: Additionally, call the function to add properties from transform masks to the dictionaries.
 
         """
         tag_dict_list = []
@@ -589,7 +585,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         return tag_dict_list
 
 
-    def pathRecord(self, node, path, path_list, pathLen, coords_list):
+    def pathRecord(self, node, path, path_list, path_len, coords_list):
         """
         Searches for all the node to leaf paths and stores them in path_list using storePath().
         storePath() takes in the entire paths (including all the tags at this step).
@@ -601,11 +597,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Reference: GeeksforGeeks solution to finding paths in a binary search tree
         """
         #layer_data = node.name().split(' ')
-        if (len(path) > pathLen):
-            path[pathLen] = node.name()
+        if (len(path) > path_len):
+            path[path_len] = node.name()
         else:
             path.append(node.name())
-        pathLen += 1
+        path_len += 1
         recordable_child_nodes = 0
         for c in node.childNodes():
             if c.type() == "grouplayer" or c.type() == "paintlayer":
@@ -621,7 +617,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     #    self.DEBUG_MESSAGE += key + "\n"
                     #self.DEBUG_MESSAGE += xml_child.tag + " : " + xml_child.attrib + "\n"
         if recordable_child_nodes == 0:
-            self.storePath(path, path_list, pathLen)
+            self.storePath(path, path_list, path_len)
             coord_x = node.bounds().topLeft().x()
             coord_y = node.bounds().topLeft().y()
             coord_center = node.bounds().center()
@@ -631,9 +627,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 if i.type() == "grouplayer" or i.type() == "paintlayer":
                 # Looks silly and work-aroundy but seems to work.
                 # The pathbuilding gets messed up without this subtraction on path.
-                    removeAmount = len(path) - pathLen
-                    path = path[: len(path) - removeAmount]
-                    self.pathRecord(i, path, path_list, pathLen, coords_list)
+                    remove_amount = len(path) - path_len # This is always either 0 or 1.
+                    path = path[: len(path) - remove_amount]
+                    self.pathRecord(i, path, path_list, path_len, coords_list)
 
 
     def removeUnusedPaths(self, path_list, coords_list, tag_dict_list):
@@ -711,9 +707,29 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 coords_list[i][2].setY(int(center_y_new))
         return coords_list
 
-    def getModifierBlock(self, line):
-        modifier_block = ""
 
+    def getModifierBlock(self, line):
+        """
+        Order of Property Application in Ren'Py
+        crop, corner1, corner2
+        xysize, size, maxsize
+        zoom, xzoom, yzoom
+        point_to
+        orientation
+        xrotate, yrotate, zrotate
+        rotate
+        zpos
+        matrixtransform, matrixanchor
+        zzoom
+        perspective
+        nearest, blend, alpha, additive, shader
+        matrixcolor
+        GL Properties, Uniforms
+        position properties
+        show_cancels_hide
+        """
+        modifier_block = ""
+        # zoom
         if "scaleX" in line[2] or "scaleY" in line[2]:
             xzoom = 1.0
             yzoom = 1.0
@@ -730,7 +746,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     modifier_block += ((' ')*indent*2) + "xzoom " + str(xzoom) + "\n"
                 if yzoom != 1.0:
                     modifier_block += ((' ')*indent*2) + "yzoom " + str(yzoom) + "\n"
-        
+        # Rotate
         if "aZ" in line[2]:
             rounded_rot = round(line[2]["aZ"], int(config_data["atl_rotate_decimal_places"]))
             modifier_block += ((' ')*indent*2) + "rotate " + str(rounded_rot) + "\n"
@@ -816,10 +832,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         self.pos_button_text = "Senku"
         self.customize_button.setText("CHECK") #TEST PROBLEM: text isn't updating
 
-    #def closeEvent(self, event):
-    #    if not self.outputWindow is None:
-    #        self.outputWindow.close()
-
 class MainBox(QWidget):
     """
     Idea: Put the pop-up windows into a single box.
@@ -843,6 +855,63 @@ class MainBox(QWidget):
         main_box_layout.addWidget(self.format_menu)
         main_box_layout.addWidget(self.output_window)
         self.setLayout(main_box_layout)
+
+class ScaleCalculateBox(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Check Your Scale!")
+        self.createScaleCalculateBox()
+    
+    def createScaleCalculateBox(self):
+        preset_label_layout = QHBoxLayout()
+        preset_width_label = QLabel("Width")
+        preset_height_label = QLabel("Height")
+        percentage_label = QLabel("Percentage")
+        size_layout = QGridLayout()
+        custom_size_input_width = QLineEdit(parent=self)
+        custom_size_input_height = QLineEdit(parent=self)
+        button_1280_w = QPushButton("1280")
+        button_720_h = QPushButton("720")
+        button_1920_w = QPushButton("1920")
+        button_1080_h = QPushButton("1080")
+        button_2560_w = QPushButton("2560")
+        button_1440_h = QPushButton("1440")
+        button_3840_w = QPushButton("3840")
+        button_2160_h = QPushButton("2160")
+        rename_button = QPushButton("Rename Batch-Exported Files To Percentage")
+        rename_button.setToolTip("The Batch Exporter labels exported files with \
+    the suffix '_@[scale]x'. This button will make GRS copy over the batch-exported \
+    images of the smallest scale to a new folder in which they don't have that suffix, \
+    so that those images may be transferred to your Ren'Py project without having to \
+    rename them manually.")
+        size_layout.addWidget(preset_width_label,0,0)
+        size_layout.addWidget(custom_size_input_width,0,1)
+        size_layout.addWidget(button_1280_w,0,2)
+        size_layout.addWidget(button_1920_w,0,3)
+        size_layout.addWidget(button_2560_w,0,4)
+        size_layout.addWidget(button_3840_w,0,5)
+        size_layout.addWidget(preset_height_label,1,0)
+        size_layout.addWidget(custom_size_input_height,1,1)
+        size_layout.addWidget(button_720_h,1,2)
+        size_layout.addWidget(button_1080_h,1,3)
+        size_layout.addWidget(button_1440_h,1,4)
+        size_layout.addWidget(button_2160_h,1,5)
+        size_layout.addWidget(percentage_label,2,0)
+
+        #custom_label_layout.addWidget(custom_size_input)
+        result_label = QLabel("Result")
+        size_output = QLineEdit(parent=self)
+        size_output.setReadOnly(True)
+        scale_top_layout = QVBoxLayout()
+        scale_top_layout.addLayout(preset_label_layout)
+        scale_top_layout.addLayout(size_layout)
+        #scale_top_layout.addWidget(custom_size_label)
+        #scale_top_layout.addLayout(custom_label_layout)
+        scale_top_layout.addWidget(result_label)
+        scale_top_layout.addWidget(size_output)
+        scale_top_layout.addWidget(rename_button)
+
+        self.setLayout(scale_top_layout)
 
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
@@ -874,22 +943,28 @@ class GenerateRenpyScripting(DockWidget):
 
     def createInterface(self):
         generate_button = QPushButton("Generate")
-        generate_button.clicked.connect(self.startWindow)
+        generate_button.clicked.connect(self.startMainBox)
+
+        calculate_button = QPushButton("Scale Calculate and Rename")
+        calculate_button.clicked.connect(self.startScaleCalculateBox)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(generate_button)
+        main_layout.addWidget(calculate_button)
 
         mainWidget = QWidget(self)
         mainWidget.setLayout(main_layout)
         self.setWidget(mainWidget)
 
 
-    def startWindow(self):
-        self.showMainBox()
-    
-    def showMainBox(self):
+    def startMainBox(self):
         self.main_box = MainBox()
         self.main_box.show()
+    
+    def startScaleCalculateBox(self):
+        self.scale_calculate_box = ScaleCalculateBox()
+        self.scale_calculate_box.show()
+
 
     # notifies when views are added or removed
     # 'pass' means do not do anything
