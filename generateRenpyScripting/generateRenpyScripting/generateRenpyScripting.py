@@ -50,16 +50,12 @@ open_notifier.setActive(True)
 close_notifier = KI.notifier()
 close_notifier.setActive(True)
 
-
-# Load configs from JSON file
-z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
-c = json.load(z)
-config_data = c["configs"][0]
 default_configs_dict = {
     "string_xposypos" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
     "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
     "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
     "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
+    "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedefstart" : "layeredimage {overall_image}:\n",
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3"
@@ -75,6 +71,16 @@ replacer_dict = {
     "{xcoord}" : "x",
     "{ycoord}" : "y"
 }
+
+# Load configs from JSON file.
+# If the file cannot be loaded, the default configurations are used.
+config_data = default_configs_dict
+try:
+    z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+    c = json.load(z)
+    config_data = c["configs"][0]
+except IOError:
+    pass
 
 indent = 4
 decimal_place_count = 3
@@ -174,6 +180,7 @@ class TextOutput(QWidget):
     """
     def __init__(self):
         super().__init__()
+        close_notifier.viewClosed.connect(self.close)
 
     def setupUi(self, MainBox):
         self.main_box = MainBox
@@ -362,10 +369,10 @@ the Krita layer structure for the directory.")
 (image=line[0],path_to_image=line[1],file_extension=f)
                     else:
                         script += "### Error: File format not defined for layer " + line[0] + "\n"
-                    if "scaleX" in line[2]:
-                        script += str(line[2]["scaleX"])+"\n"
-                    if "scaleY" in line[2]:
-                        script += str(line[2]["scaleY"])+"\n"
+                    #if "scaleX" in line[2]:
+                    #    script += str(line[2]["scaleX"])+"\n"
+                    #if "scaleY" in line[2]:
+                    #    script += str(line[2]["scaleY"])+"\n"
             ##else: # Layered Image
             ##    overall_image_name = ""
             ##    script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
@@ -622,16 +629,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         for c in node.childNodes():
             if c.type() == "grouplayer" or c.type() == "paintlayer":
                 recordable_child_nodes += 1
-            #elif c.type() == "transformmask": # EXPERIMENTAL
-                #self.DEBUG_MESSAGE += "transform mask found!\n"
-                #self.DEBUG_MESSAGE += c.toXML() + "\n\n\n"
-                #xml_root = ET.fromstring(c.toXML())
-                #for ft in xml_root.iter("free_transform"):
-                #    for p in ft:
-                #        self.DEBUG_MESSAGE += str(p.tag) + " : " + str(p.attrib) + "\n"
-                    #for key in xml_child.tag:
-                    #    self.DEBUG_MESSAGE += key + "\n"
-                    #self.DEBUG_MESSAGE += xml_child.tag + " : " + xml_child.attrib + "\n"
+            #elif c.type() == "transformmask": # Toggle this on
+            #    self.checkTransformMask(c)    # to check transform mask XML
         if recordable_child_nodes == 0:
             self.storePath(path, path_list, path_len)
             coord_x = node.bounds().topLeft().x()
@@ -647,6 +646,17 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     path = path[: len(path) - remove_amount]
                     self.pathRecord(i, path, path_list, path_len, coords_list)
 
+    def checkTransformMask(self, c):
+        """
+        Dev method to print out the contents of the XML of a transform mask.
+        c is the transform mask, given by the search in pathRecord().
+        """
+        self.DEBUG_MESSAGE += "transform mask found!\n"
+        self.DEBUG_MESSAGE += c.toXML() + "\n\n\n"
+        xml_root = ET.fromstring(c.toXML())
+        for ft in xml_root.iter("free_transform"):
+            for p in ft:
+                self.DEBUG_MESSAGE += str(p.tag) + " : " + str(p.attrib) + "\n"
 
     def removeUnusedPaths(self, path_list, coords_list, tag_dict_list):
         """
@@ -662,7 +672,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     smaller_coords_list.append(coords_list[index])
                     smaller_tag_dict_list.append(tag_dict_list[index])
         return smaller_path_list, smaller_coords_list, smaller_tag_dict_list
-
 
     def removeTagsFromPaths(self, path_list):
         """
@@ -680,7 +689,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             cleaned_path_list.append(cleaned_path)
         return cleaned_path_list
 
-
     def getExportLayerList(self, path_list):
         """
         Pre-requisite: removeTagsFromPaths() should have been called to clean path_list.
@@ -693,7 +701,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             layer_name_to_export = layer_data[-1]
             export_layer_list.append(layer_name_to_export)
         return export_layer_list
-
 
     def modifyCoordinates(self, coords_list, tag_dict_list):
         """
@@ -858,6 +865,7 @@ class MainBox(QWidget):
         self.createMainBox()
         self.format_menu = None
         self.outputWindow = None
+        close_notifier.viewClosed.connect(self.close)
     
     def createMainBox(self):
         """
@@ -883,8 +891,10 @@ class ScaleCalculateBox(QWidget):
         super().__init__()
         self.setWindowTitle("Check Your Scale!")
         self.createScaleCalculateBox()
-        close_notifier.viewClosed.connect(self.clearMeasurements)
-        open_notifier.imageCreated.connect(self.calculatorScaleChanged)
+        close_notifier.viewClosed.connect(self.close)
+        #close_notifier.viewClosed.connect(self.clearMeasurements)
+        #open_notifier.imageCreated.connect(self.calculatorScaleChanged)
+
 
     def createScaleCalculateBox(self):
         preset_label_layout = QHBoxLayout()
@@ -993,14 +1003,14 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             if self.line_height.hasFocus() == False:
                 self.line_height.setText(str(height) + " px")
 
-    def clearMeasurements(self):
-        """
-        At the moment a view is closed, the view is still part of the window's
-        view count, so when the final view is closed, Window.views() is 1, not 0.
-        Set the dimensions back to 0.
-        """
-        if len(KI.activeWindow().views()) == 1:
-            self.scale_box_percent.setValue(100.0)
+    #def clearMeasurements(self):
+    #    """
+    #    At the moment a view is closed, the view is still part of the window's
+    #    view count, so when the final view is closed, Window.views() is 1, not 0.
+    #    Set the dimensions back to 0.
+    #    """
+    #    if len(KI.activeWindow().views()) == 1:
+    #        self.scale_box_percent.setValue(100.0)
 
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
@@ -1051,8 +1061,6 @@ class GenerateRenpyScripting(DockWidget):
     def closeEvent(self, event):
         if not set.main_box is None:
             self.main_box.close()
-        #if not self.format_menu is None:
-        #    self.format_menu.close()
 
 #def kritaClosingEvent():
 
