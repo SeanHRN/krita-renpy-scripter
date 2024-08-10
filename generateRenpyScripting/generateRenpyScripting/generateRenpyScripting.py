@@ -45,6 +45,10 @@ T = TypeVar("T")
 KI = Krita.instance()
 app_notifier = KI.notifier()
 app_notifier.setActive(True)
+open_notifier = KI.notifier()
+open_notifier.setActive(True)
+close_notifier = KI.notifier()
+close_notifier.setActive(True)
 
 
 # Load configs from JSON file
@@ -246,7 +250,7 @@ spaces to use for align(x, y).")
         self.spacing_number_label.setAlignment(Qt.AlignVCenter)
         self.rule_of_thirds_check = QCheckBox("Rule of Thirds")
         self.rule_of_thirds_check.setToolTip("Set align(x, y) \
-statements to Rule of Thirds intersections. This is equivalent to using 4 spaces.")
+statements to Rule of Thirds intersections.\nThis is equivalent to using 4 spaces.")
         self.rule_of_thirds_check.setChecked(False)
         self.rule_of_thirds_check.toggled.connect(lambda:self.ruleOfThirdsFlag(self.rule_of_thirds_check))
         align_button = QPushButton("align (x, y)")
@@ -255,18 +259,18 @@ statements to Rule of Thirds intersections. This is equivalent to using 4 spaces
         xalignyalign_button.clicked.connect(lambda: self.process(4))
         image_definition_label = QLabel("Image Definition")
         normal_image_def_button = QPushButton("Normal Images")
-        normal_image_def_button.setToolTip("Generate the definitions of individual images in Ren'Py using \
+        normal_image_def_button.setToolTip("Generate the definitions of individual images in Ren'Py\nusing \
 the Krita layer structure for the directory.")
         normal_image_def_button.clicked.connect(lambda: self.process(5))
         layered_image_def_button = QPushButton("Layered Image")
-        layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage using \
+        layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage\nusing \
 the Krita layer structure for the directory.")
         layered_image_def_button.clicked.connect(lambda: self.process(6))
         settings_label = QLabel("Output Settings")
         default_button = QPushButton("Default")
         default_button.setToolTip("Revert output text format to the default configurations.")
         self.customize_button = QPushButton("Customize", self)
-        self.customize_button.setToolTip("Open configs.json in your default text editor to make changes to the output formats.")
+        self.customize_button.setToolTip("Open configs.json in your default text editor\nto make changes to the output formats.")
         self.customize_button.clicked.connect(lambda: self.settingCustomize)
         #main_layout.addWidget(format_label)
         main_layout.addWidget(pos_label)
@@ -869,10 +873,18 @@ class MainBox(QWidget):
         self.setLayout(main_box_layout)
 
 class ScaleCalculateBox(QWidget):
+    """
+    When image document is closed and the calculator window is still open:
+        - The scale is set to 100%.
+        - When another document is opened while the same calculator window is still open:
+            - The dimensions are updated for that document.
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Check Your Scale!")
         self.createScaleCalculateBox()
+        close_notifier.viewClosed.connect(self.clearMeasurements)
+        open_notifier.imageCreated.connect(self.calculatorScaleChanged)
 
     def createScaleCalculateBox(self):
         preset_label_layout = QHBoxLayout()
@@ -889,25 +901,25 @@ class ScaleCalculateBox(QWidget):
             self.line_width.setText(str(float(currentDoc.width()))+" px")
             self.line_height.setText(str(float(currentDoc.height()))+" px")
         button_1280_w = QPushButton("1280")
-        button_1280_w.clicked.connect(lambda: self.dimensionChosen(1280,0))
+        button_1280_w.clicked.connect(lambda: self.dimensionSet(1280,0))
         button_720_h = QPushButton("720")
-        button_720_h.clicked.connect(lambda: self.dimensionChosen(720,1))
+        button_720_h.clicked.connect(lambda: self.dimensionSet(720,1))
         button_1920_w = QPushButton("1920")
-        button_1920_w.clicked.connect(lambda: self.dimensionChosen(1920,0))
+        button_1920_w.clicked.connect(lambda: self.dimensionSet(1920,0))
         button_1080_h = QPushButton("1080")
-        button_1080_h.clicked.connect(lambda: self.dimensionChosen(1080,1))
+        button_1080_h.clicked.connect(lambda: self.dimensionSet(1080,1))
         button_2560_w = QPushButton("2560")
-        button_2560_w.clicked.connect(lambda: self.dimensionChosen(2560,0))
+        button_2560_w.clicked.connect(lambda: self.dimensionSet(2560,0))
         button_1440_h = QPushButton("1440")
-        button_1440_h.clicked.connect(lambda: self.dimensionChosen(1440,1))
+        button_1440_h.clicked.connect(lambda: self.dimensionSet(1440,1))
         button_3840_w = QPushButton("3840")
-        button_3840_w.clicked.connect(lambda: self.dimensionChosen(3840,0))
+        button_3840_w.clicked.connect(lambda: self.dimensionSet(3840,0))
         button_2160_h = QPushButton("2160")
-        button_2160_h.clicked.connect(lambda: self.dimensionChosen(2160,1))
+        button_2160_h.clicked.connect(lambda: self.dimensionSet(2160,1))
         rename_button = QPushButton("Rename Batch-Exported Files To Percentage")
         rename_button.setToolTip("The Batch Exporter labels exported files with \
-the suffix '_@[scale]x'. This button will make GRS copy over the batch-exported \
-images of the smallest scale to a new folder in which they don't have that suffix, \
+the suffix '_@[scale]x'.\nThis button will make GRS copy over the batch-exported \
+images of the smallest scale to a new folder in which they don't have that suffix,\n\
 so that those images may be transferred to your Ren'Py project without having to \
 rename them manually.")
         size_layout.addWidget(preset_width_label,0,0)
@@ -931,17 +943,9 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         self.scale_box_percent.setValue(100.0)
         self.scale_box_percent.valueChanged[float].connect(self.calculatorScaleChanged)
         size_layout.addWidget(self.scale_box_percent)
-        #custom_label_layout.addWidget(line)
-        #result_label = QLabel("Result")
-        #self.size_output = QLineEdit(parent=self)
-        #self.size_output.setReadOnly(True)
         scale_top_layout = QVBoxLayout()
         scale_top_layout.addLayout(preset_label_layout)
         scale_top_layout.addLayout(size_layout)
-        #scale_top_layout.addWidget(custom_size_label)
-        #scale_top_layout.addLayout(custom_label_layout)
-        #scale_top_layout.addWidget(result_label)
-        #scale_top_layout.addWidget(self.size_output)
         scale_top_layout.addWidget(rename_button)
         self.setLayout(scale_top_layout)
 
@@ -949,7 +953,7 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         """
         Function to handle the case where the user hits backspace
         and gets rid of all the usable text, which cannot be converted
-        into a float. dimensionChosen() is called for the custom dimension
+        into a float. dimensionSet() is called for the custom dimension
         inputs from here.
         Regex: Filter anything other than numbers with/without a decimal point.
         The code after filters all but the first . occurrence.
@@ -959,22 +963,17 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         line_to_text = line_parts[0] + '.' + ''.join(line_parts[1:])
         if line_to_text == "" or line_to_text == ".":
             line_to_text = "0.0"
-        self.dimensionChosen(float(line_to_text), dimension)
+        self.dimensionSet(float(line_to_text), dimension)
 
-    def dimensionChosen(self, value, dimension):
+    def dimensionSet(self, value, d):
         """
-        dimension: 0: width, 1: height
+        d(imension): 0: width, 1: height
         """
         currentDoc = KI.activeDocument()
         if currentDoc != None:
-            if dimension == 0:
-                #self.line_width.setText(str(value) + " px")
-                scale = float(value/currentDoc.width())
-                self.scale_box_percent.setValue(scale * 100.0)
-            elif dimension == 1:
-                #self.line_height.setText(str(value) + " px")
-                scale = float(value/currentDoc.height())
-                self.scale_box_percent.setValue(scale * 100.0)
+            flip_d = 1-d
+            scale = float(value/((currentDoc.width()*flip_d)+(currentDoc.height()*d)))
+            self.scale_box_percent.setValue(scale * 100.0)
 
     def calculatorScaleChanged(self):
         """
@@ -994,6 +993,15 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             if self.line_height.hasFocus() == False:
                 self.line_height.setText(str(height) + " px")
 
+    def clearMeasurements(self):
+        """
+        At the moment a view is closed, the view is still part of the window's
+        view count, so when the final view is closed, Window.views() is 1, not 0.
+        Set the dimensions back to 0.
+        """
+        if len(KI.activeWindow().views()) == 1:
+            self.scale_box_percent.setValue(100.0)
+
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
         super().__init__()
@@ -1003,18 +1011,6 @@ class GenerateRenpyScripting(DockWidget):
         #self.format_menu = None
         #open_notifier.imageCreated.connect(self.updateScaleCalculation)
         #open_notifier.imageCreated.connect(self.initiateScaleCalculation)
-        #close_notifier.viewClosed.connect(self.wasLast)
-
-
-    def wasLast(self):
-        """
-        At the moment a view is closed, the view is still part of the window's
-        view count, so when the final view is closed, Window.views() is 1.
-        Set the dimensions back to 0x0.
-        """
-        if len(KI.activeWindow().views()) == 1:
-            self.wipeScaleCalculation()
-
 
     def showErrorMessage(self, toPrint):
         msg = QMessageBox()
