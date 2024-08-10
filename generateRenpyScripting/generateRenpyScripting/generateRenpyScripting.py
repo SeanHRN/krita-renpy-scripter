@@ -16,8 +16,10 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QTextEdit,
     QApplication,
-    QMainWindow
+    QMainWindow,
 )
+
+from PyQt5 import QtCore
 
 from PyQt5.QtGui import *
 
@@ -532,7 +534,17 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 layer = layer.lower()
                 tag_data = layer.split(' ')[1:]
 
-                # First pass: See if inheritance disabling is present.
+                # First pass: Filter out unusable pieces of text from the layer name.
+                usable_tag_data = []
+                for tag in tag_data:
+                    try:
+                        letter, value = tag.split('=',1)
+                        usable_tag_data.append(tag)
+                    except ValueError:
+                        continue
+                tag_data = usable_tag_data
+
+                # Second pass: See if inheritance disabling is present.
                 # If so, clear the dictionary before adding any tags.
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
@@ -540,7 +552,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         if value == "false" or value == "no":
                             tag_dict.clear()
 
-                # Second pass: Add the tags.
+                # Third pass: Add the tags.
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
                     if letter == 's':
@@ -861,57 +873,122 @@ class ScaleCalculateBox(QWidget):
         super().__init__()
         self.setWindowTitle("Check Your Scale!")
         self.createScaleCalculateBox()
-    
+
     def createScaleCalculateBox(self):
         preset_label_layout = QHBoxLayout()
         preset_width_label = QLabel("Width")
         preset_height_label = QLabel("Height")
         percentage_label = QLabel("Percentage")
         size_layout = QGridLayout()
-        custom_size_input_width = QLineEdit(parent=self)
-        custom_size_input_height = QLineEdit(parent=self)
+        self.line_width = QLineEdit(parent=self)
+        self.line_width.textEdited[str].connect(lambda: self.lineEdited(self.line_width.text(), 0))
+        self.line_height = QLineEdit(parent=self)
+        self.line_height.textEdited[str].connect(lambda: self.lineEdited(self.line_height.text(), 1))
+        currentDoc = KI.activeDocument()
+        if currentDoc != None:
+            self.line_width.setText(str(float(currentDoc.width()))+" px")
+            self.line_height.setText(str(float(currentDoc.height()))+" px")
         button_1280_w = QPushButton("1280")
+        button_1280_w.clicked.connect(lambda: self.dimensionChosen(1280,0))
         button_720_h = QPushButton("720")
+        button_720_h.clicked.connect(lambda: self.dimensionChosen(720,1))
         button_1920_w = QPushButton("1920")
+        button_1920_w.clicked.connect(lambda: self.dimensionChosen(1920,0))
         button_1080_h = QPushButton("1080")
+        button_1080_h.clicked.connect(lambda: self.dimensionChosen(1080,1))
         button_2560_w = QPushButton("2560")
+        button_2560_w.clicked.connect(lambda: self.dimensionChosen(2560,0))
         button_1440_h = QPushButton("1440")
+        button_1440_h.clicked.connect(lambda: self.dimensionChosen(1440,1))
         button_3840_w = QPushButton("3840")
+        button_3840_w.clicked.connect(lambda: self.dimensionChosen(3840,0))
         button_2160_h = QPushButton("2160")
+        button_2160_h.clicked.connect(lambda: self.dimensionChosen(2160,1))
         rename_button = QPushButton("Rename Batch-Exported Files To Percentage")
         rename_button.setToolTip("The Batch Exporter labels exported files with \
-    the suffix '_@[scale]x'. This button will make GRS copy over the batch-exported \
-    images of the smallest scale to a new folder in which they don't have that suffix, \
-    so that those images may be transferred to your Ren'Py project without having to \
-    rename them manually.")
+the suffix '_@[scale]x'. This button will make GRS copy over the batch-exported \
+images of the smallest scale to a new folder in which they don't have that suffix, \
+so that those images may be transferred to your Ren'Py project without having to \
+rename them manually.")
         size_layout.addWidget(preset_width_label,0,0)
-        size_layout.addWidget(custom_size_input_width,0,1)
+        size_layout.addWidget(self.line_width,0,1)
         size_layout.addWidget(button_1280_w,0,2)
         size_layout.addWidget(button_1920_w,0,3)
         size_layout.addWidget(button_2560_w,0,4)
         size_layout.addWidget(button_3840_w,0,5)
         size_layout.addWidget(preset_height_label,1,0)
-        size_layout.addWidget(custom_size_input_height,1,1)
+        size_layout.addWidget(self.line_height,1,1)
         size_layout.addWidget(button_720_h,1,2)
         size_layout.addWidget(button_1080_h,1,3)
         size_layout.addWidget(button_1440_h,1,4)
         size_layout.addWidget(button_2160_h,1,5)
         size_layout.addWidget(percentage_label,2,0)
-
-        #custom_label_layout.addWidget(custom_size_input)
-        result_label = QLabel("Result")
-        size_output = QLineEdit(parent=self)
-        size_output.setReadOnly(True)
+        percentage_label.setToolTip("Check the image's dimensions \
+at the given scale.\nHold Alt to increment by 0.01%.\nHold Shift to increment \
+by 0.1%.\nHold Ctrl to edit by 10%.")
+        self.scale_box_percent = CustomDoubleSpinBox(self)
+        self.scale_box_percent.setRange(0.0, 200.0)
+        self.scale_box_percent.setValue(100.0)
+        self.scale_box_percent.valueChanged[float].connect(self.calculatorScaleChanged)
+        size_layout.addWidget(self.scale_box_percent)
+        #custom_label_layout.addWidget(line)
+        #result_label = QLabel("Result")
+        #self.size_output = QLineEdit(parent=self)
+        #self.size_output.setReadOnly(True)
         scale_top_layout = QVBoxLayout()
         scale_top_layout.addLayout(preset_label_layout)
         scale_top_layout.addLayout(size_layout)
         #scale_top_layout.addWidget(custom_size_label)
         #scale_top_layout.addLayout(custom_label_layout)
-        scale_top_layout.addWidget(result_label)
-        scale_top_layout.addWidget(size_output)
+        #scale_top_layout.addWidget(result_label)
+        #scale_top_layout.addWidget(self.size_output)
         scale_top_layout.addWidget(rename_button)
-
         self.setLayout(scale_top_layout)
+
+    def lineEdited(self, line, dimension):
+        """
+        Function to handle the case where the user hits backspace
+        and gets rid of all the usable text, which cannot be converted
+        into a float. dimensionChosen() is called for the custom dimension
+        inputs from here.
+        """
+        line_to_text = re.sub('\D','',str(line))
+        if line_to_text == "":
+            line_to_text = "0"
+        self.dimensionChosen(float(line_to_text), dimension)
+
+    def dimensionChosen(self, value, dimension):
+        """
+        dimension: 0: width, 1: height
+        """
+        currentDoc = KI.activeDocument()
+        if currentDoc != None:
+            if dimension == 0:
+                #self.line_width.setText(str(value) + " px")
+                scale = float(value/currentDoc.width())
+                self.scale_box_percent.setValue(scale * 100.0)
+            elif dimension == 1:
+                #self.line_height.setText(str(value) + " px")
+                scale = float(value/currentDoc.height())
+                self.scale_box_percent.setValue(scale * 100.0)
+
+    def calculatorScaleChanged(self):
+        """
+        Updates the width XOR the height on display.
+        This is called when the scale box is directly modified,
+        or when either of the dimension boxes is edited.
+        Only the box that is not focused is edited by this function
+        since the user would be editing the focused box.
+        """
+        currentDoc = KI.activeDocument()
+        scale = float(self.scale_box_percent.value() / 100.0)
+        if currentDoc != None:
+            width = round((float(currentDoc.width()) * scale), 1)
+            height = round((float(currentDoc.height()) * scale), 1)
+            if self.line_width.hasFocus() == False:
+                self.line_width.setText(str(width) + " px")
+            if self.line_height.hasFocus() == False:
+                self.line_height.setText(str(height) + " px")
 
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
