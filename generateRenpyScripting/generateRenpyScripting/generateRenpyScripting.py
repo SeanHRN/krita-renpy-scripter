@@ -72,15 +72,16 @@ replacer_dict = {
     "{ycoord}" : "y"
 }
 
+#Moved over to generator
 # Load configs from JSON file.
 # If the file cannot be loaded, the default configurations are used.
-config_data = default_configs_dict
-try:
-    z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
-    c = json.load(z)
-    config_data = c["configs"][0]
-except IOError:
-    pass
+#config_data = default_configs_dict
+#try:
+#    z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+#    c = json.load(z)
+#    config_data = c["configs"][0]
+#except IOError:
+#    pass
 
 indent = 4
 decimal_place_count = 3
@@ -215,15 +216,22 @@ class TextSignalEmitter(QObject):
 class FormatMenu(QWidget):
     """
     Window that should open when called from the docker.
+    The configs are loaded from the external file configs.json if possible;
+    if not possible, default_configs_dict is used.
     """
-    #def __init__(self):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Choose Your Format")
         self.createFormatMenuInterface()
         self.DEBUG_MESSAGE = ""
-        #self.outputWindow = None
         self.text_signal_emitter = TextSignalEmitter()
+        self.config_data = default_configs_dict
+        try:
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            imported_configs = json.load(configs_file)
+            self.config_data = imported_configs
+        except IOError:
+            pass
 
     def createFormatMenuInterface(self):
         main_layout = QVBoxLayout()
@@ -233,7 +241,6 @@ class FormatMenu(QWidget):
         image_definition_layout = QHBoxLayout()
         settings_layout = QHBoxLayout()
 
-        #format_label = QLabel("Output Format")
         pos_label = QLabel("pos")
         self.pos_button_text = default_button_text_dict["pos_button_text"]
         self.pos_button = QPushButton(self.pos_button_text, self)
@@ -274,12 +281,13 @@ the Krita layer structure for the directory.")
 the Krita layer structure for the directory.")
         layered_image_def_button.clicked.connect(lambda: self.process(6))
         settings_label = QLabel("Output Settings")
-        default_button = QPushButton("Default")
-        default_button.setToolTip("Revert output text format to the default configurations.")
+        self.default_button = QPushButton("Default")
+        self.default_button.setToolTip("Revert output text format to the default configurations.\n\
+This will overwrite your customizations.")
+        self.default_button.clicked.connect(self.settingDefault)
         self.customize_button = QPushButton("Customize", self)
         self.customize_button.setToolTip("Open configs.json in your default text editor\nto make changes to the output formats.")
-        self.customize_button.clicked.connect(lambda: self.settingCustomize)
-        #main_layout.addWidget(format_label)
+        self.customize_button.clicked.connect(self.settingCustomize)
         main_layout.addWidget(pos_label)
         pos_layout.addWidget(self.pos_button)
         pos_layout.addWidget(atSetPos_button)
@@ -300,7 +308,7 @@ the Krita layer structure for the directory.")
         main_layout.addLayout(image_definition_layout)
         main_layout.addWidget(settings_label)
         settings_layout.addWidget(self.customize_button)
-        settings_layout.addWidget(default_button)
+        settings_layout.addWidget(self.default_button)
         main_layout.addLayout(settings_layout)
         self.setLayout(main_layout)
 
@@ -312,9 +320,6 @@ the Krita layer structure for the directory.")
         """
         out_script = self.writeScript(button_num, self.spacing_slider.value())
         self.text_signal_emitter.custom_signal.emit(out_script)
-        #TODO: Replace these with signals and slots with the output window.
-        #self.outputWindow = TextOutput(outScript, self)
-        #self.outputWindow.show()
     
     def writeScript(self, button_num, spacing_num):
         """
@@ -365,7 +370,7 @@ the Krita layer structure for the directory.")
                         for f in line[2]["e"]:
                             if f != chosen_format:
                                 script += '#'
-                            script += config_data["string_normalimagedef"].format\
+                            script += self.config_data["string_normalimagedef"].format\
 (image=line[0],path_to_image=line[1],file_extension=f)
                     else:
                         script += "### Error: File format not defined for layer " + line[0] + "\n"
@@ -375,7 +380,7 @@ the Krita layer structure for the directory.")
                     #    script += str(line[2]["scaleY"])+"\n"
             ##else: # Layered Image
             ##    overall_image_name = ""
-            ##    script += config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
+            ##    script += self.config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
             ##    for d in data_list:
             ##        script += (' '*indent)
             ##        script += "attribute " + d[0] + ":\n"
@@ -385,23 +390,23 @@ the Krita layer structure for the directory.")
             for line in data_list:
                 modifier_block = self.getModifierBlock(line)
                 if button_num == 1:
-                    script += config_data["string_xposypos"].format\
+                    script += self.config_data["string_xposypos"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += modifier_block
                 elif button_num == 2:
                     #if no_property_block:
                     #    optional_colon = ""
-                    script += config_data["string_atsetposxy"].format\
+                    script += self.config_data["string_atsetposxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += modifier_block
                 elif button_num == 3:
-                    script += config_data["string_alignxy"].format\
+                    script += self.config_data["string_alignxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 elif button_num == 4:
-                    script += config_data["string_xalignyalign"].format\
+                    script += self.config_data["string_xalignyalign"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
@@ -758,10 +763,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             yzoom = 1.0
             if "scaleX" in line[2]:
                 xzoom = float(line[2]["scaleX"])
-                xzoom = round(xzoom, int(config_data["atl_zoom_decimal_places"]))
+                xzoom = round(xzoom, int(self.config_data["atl_zoom_decimal_places"]))
             if "scaleY" in line[2]:
                 yzoom = float(line[2]["scaleY"])
-                yzoom = round(yzoom, int(config_data["atl_zoom_decimal_places"]))
+                yzoom = round(yzoom, int(self.config_data["atl_zoom_decimal_places"]))
             if xzoom == yzoom and xzoom != 1.0:
                 modifier_block += ((' ')*indent*2) + "zoom " + str(xzoom) + "\n"
             else:
@@ -771,7 +776,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     modifier_block += ((' ')*indent*2) + "yzoom " + str(yzoom) + "\n"
         # Rotate
         if "aZ" in line[2]:
-            rounded_rot = round(line[2]["aZ"], int(config_data["atl_rotate_decimal_places"]))
+            rounded_rot = round(line[2]["aZ"], int(self.config_data["atl_rotate_decimal_places"]))
             modifier_block += ((' ')*indent*2) + "rotate " + str(rounded_rot) + "\n"
         """
         if "transformedCenter" in line[2]:
@@ -850,6 +855,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         else:
             self.rule_of_thirds_check.setChecked(False)
 
+    def settingDefault(self):
+        """
+        Behavior for the default button
+        """
+        self.config_data = default_configs_dict
+        with open(os.path.join(os.path.dirname\
+(os.path.realpath(__file__)), "configs.json"), 'w') as f: #ZUKO
+            json.dump(default_configs_dict, f)
+        self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!")
 
     def settingCustomize(self):
         self.pos_button_text = "Senku"
@@ -1029,10 +1043,10 @@ class GenerateRenpyScripting(DockWidget):
 
 
     def createInterface(self):
-        generate_button = QPushButton("Generate")
+        generate_button = QPushButton("Scripting Generator")
         generate_button.clicked.connect(self.startMainBox)
 
-        calculate_button = QPushButton("Scale Calculate and Rename")
+        calculate_button = QPushButton("Scale Calculator and Renamer")
         calculate_button.clicked.connect(self.startScaleCalculateBox)
 
         main_layout = QVBoxLayout()
@@ -1062,11 +1076,7 @@ class GenerateRenpyScripting(DockWidget):
         if not set.main_box is None:
             self.main_box.close()
 
-#def kritaClosingEvent():
-
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
 ("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
  , GenerateRenpyScripting))
-
-#app_notifier.applicationClosing.connect(kritaClosingEvent) #EXPERIMENTAL
