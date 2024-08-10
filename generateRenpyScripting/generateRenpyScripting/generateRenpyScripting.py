@@ -927,7 +927,7 @@ rename them manually.")
 at the given scale.\nHold Alt to increment by 0.01%.\nHold Shift to increment \
 by 0.1%.\nHold Ctrl to edit by 10%.")
         self.scale_box_percent = CustomDoubleSpinBox(self)
-        self.scale_box_percent.setRange(0.0, 200.0)
+        self.scale_box_percent.setRange(0.0, 1000.0)
         self.scale_box_percent.setValue(100.0)
         self.scale_box_percent.valueChanged[float].connect(self.calculatorScaleChanged)
         size_layout.addWidget(self.scale_box_percent)
@@ -951,10 +951,14 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         and gets rid of all the usable text, which cannot be converted
         into a float. dimensionChosen() is called for the custom dimension
         inputs from here.
+        Regex: Filter anything other than numbers with/without a decimal point.
+        The code after filters all but the first . occurrence.
         """
-        line_to_text = re.sub('\D','',str(line))
-        if line_to_text == "":
-            line_to_text = "0"
+        line_to_text = re.sub("[^\.\d]",'',str(line))
+        line_parts = line_to_text.split('.')
+        line_to_text = line_parts[0] + '.' + ''.join(line_parts[1:])
+        if line_to_text == "" or line_to_text == ".":
+            line_to_text = "0.0"
         self.dimensionChosen(float(line_to_text), dimension)
 
     def dimensionChosen(self, value, dimension):
