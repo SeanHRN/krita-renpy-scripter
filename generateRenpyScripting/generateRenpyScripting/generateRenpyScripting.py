@@ -66,22 +66,13 @@ default_button_text_dict = {
     "align_button_text" : "align (x, y)",
     "xalignyalign_button_text" : "xalign x yalign y"
 }
-# For parameterizing the menu text to allow customization
+
+# For parameterizing the menu text to allow customization,
+# but it's currently not in use because the buttons aren't updatable.
 replacer_dict = {
     "{xcoord}" : "x",
     "{ycoord}" : "y"
 }
-
-#Moved over to generator
-# Load configs from JSON file.
-# If the file cannot be loaded, the default configurations are used.
-#config_data = default_configs_dict
-#try:
-#    z = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
-#    c = json.load(z)
-#    config_data = c["configs"][0]
-#except IOError:
-#    pass
 
 indent = 4
 decimal_place_count = 3
@@ -318,6 +309,7 @@ This will overwrite your customizations.")
         A reference to the FormatMenu (the self) is passed
         so that the first window can be closed from TextOutput.
         """
+        self.refreshConfigData()
         out_script = self.writeScript(button_num, self.spacing_slider.value())
         self.text_signal_emitter.custom_signal.emit(out_script)
     
@@ -861,13 +853,32 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         self.config_data = default_configs_dict
         with open(os.path.join(os.path.dirname\
-(os.path.realpath(__file__)), "configs.json"), 'w') as f: #ZUKO
+(os.path.realpath(__file__)), "configs.json"), 'w') as f:
             json.dump(default_configs_dict, f)
         self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!")
 
     def settingCustomize(self):
-        self.pos_button_text = "Senku"
-        self.customize_button.setText("CHECK") #TEST PROBLEM: text isn't updating
+        """
+        Ideally, refreshConfigData() would be called soon after webbrowser.open(),
+        but I don't think there is a signal for right after the user edits the external file.
+
+        Idea: Update the buttons with the customized template text. It would likely be complicated.
+              It would use the setText() call below.
+        """
+        webbrowser.open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+        #self.pos_button_text = "NEWBUTTONNAME"
+        #self.pos_button.setText(self.pos_button_text)
+    
+    def refreshConfigData(self):
+        """
+        Function to reload the config dict after it has been customized.
+        """
+        try:
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            imported_configs = json.load(configs_file)
+            self.config_data = imported_configs
+        except IOError:
+            pass
 
 class MainBox(QWidget):
     """
