@@ -266,7 +266,7 @@ spaces to use for align(x, y).")
         self.rule_of_thirds_check.setToolTip("Set align(x, y) \
 statements to Rule of Thirds intersections.\nThis is equivalent to using 4 spaces.")
         self.rule_of_thirds_check.setChecked(False)
-        self.rule_of_thirds_check.toggled.connect(lambda:self.ruleOfThirdsFlag(self.rule_of_thirds_check))
+        self.rule_of_thirds_check.toggled.connect(self.ruleOfThirdsFlag)
         align_button = QPushButton("align (x, y)")
         align_button.clicked.connect(lambda: self.process(3))
         xalignyalign_button = QPushButton("xalign x yalign y")
@@ -838,9 +838,16 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return data_list
 
-    def ruleOfThirdsFlag(self, c):
-        if c.isChecked() == True:
+    def ruleOfThirdsFlag(self):
+        """
+        The elif part covers the case where the user tries to uncheck the box
+        by directly clicking it (which would be while the slider is at 4),
+        which shouldn't have an effect since the slider bar would be in the same position.
+        """
+        if self.rule_of_thirds_check.isChecked() == True:
             self.spacing_slider.setSliderPosition(4)
+        elif self.spacing_slider.value() == 4:
+            self.rule_of_thirds_check.setChecked(True)
 
 
     def updateSpacingValue(self):
