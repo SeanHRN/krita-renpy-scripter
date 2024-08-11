@@ -84,6 +84,25 @@ replacer_dict = {
     "{ycoord}" : "y"
 }
 
+# Sets to serve as a tag thesaurus
+rpli_set       = {"rpli", "rli"}               # layeredimage (the start)
+rplidef_set    = {"rplidef", "rid", "rlid"}    # default
+rplialways_set = {"rplial", "ral", "rpalways"} # always
+rpliattrib_set = {"rpliatt", "rpliat"}         # attribute
+rpligroup_set  = {"rpligroup", "rplig"}        # group
+rpli_list = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
+rpli_main_tag = "rpli"
+rplidef_main_tag = "rplidef"
+rplialways_main_tag = "rplial"
+rpliattrib_main_tag = "rpliatt"
+rpligroup_main_tag = "rpligroup"
+
+# Synonyms for true and false for rpli tags
+value_true_set = {"true", "t", "yes"}
+value_false_set = {"false", "f", "no"}
+value_true_main_tag = "true"
+value_false_main_tag = "false"
+
 indent = 4
 decimal_place_count = 3
 transform_properties = {
@@ -137,7 +156,7 @@ def calculateAlign(data_list, spacing_num):
         xalign = closestNum(spacing_list, (line[3][2].x() / width))
         yalign = closestNum(spacing_list, (line[3][2].y() / height))
         modified_coords = [xalign, yalign, center]
-        align_modified_data_list.append(tuple((line[0],line[1],line[2],modified_coords)))
+        align_modified_data_list.append(tuple((line[0],line[1],line[2],modified_coords, line[4])))
     return align_modified_data_list
 
 def convertKeyValue(input_dict_value):
@@ -331,6 +350,7 @@ This will overwrite your customizations.")
             line[1] - Directory from /images/ to /layername/, with no file extension.
             line[2] - Dictionary of meta tags applicable to the layer.
             line[3] - Tuple containing xcoord, ycoord, and center point (as a QPoint)
+            line[4] - Directory from /images/ to /layername/, with tags.
 
         Image Definition:
             Button 5: Normal
@@ -354,33 +374,27 @@ This will overwrite your customizations.")
         ATL_dict = {}
         currentDoc = KI.activeDocument()
 
-        #BISON
-        if button_num == 5 or button_num == 6:
-            if button_num == 5: # Normal Images
-                for line in data_list:
-                    line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
-                    if "e" in line[2]:
-                        format_set = set(line[2]["e"])
-                        chosen_format = ""
-                        if "webp" in format_set:
-                            chosen_format = "webp"
-                        elif "png" in format_set:
-                            chosen_format = "png"
-                        elif "jpg" in format_set or "jpeg" in format_set:
-                            chosen_format = "jpg"
-                        for f in line[2]["e"]:
-                            if f != chosen_format:
-                                script += '#'
-                            script += self.config_data["string_normalimagedef"].format\
+        if button_num == 5: # Normal Images
+            for line in data_list:
+                line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
+                if "e" in line[2]:
+                    format_set = set(line[2]["e"])
+                    chosen_format = ""
+                    if "webp" in format_set:
+                        chosen_format = "webp"
+                    elif "png" in format_set:
+                        chosen_format = "png"
+                    elif "jpg" in format_set or "jpeg" in format_set:
+                        chosen_format = "jpg"
+                    for f in line[2]["e"]:
+                        if f != chosen_format:
+                            script += '#'
+                        script += self.config_data["string_normalimagedef"].format\
 (image=line[0],path_to_image=line[1],file_extension=f)
-                    else:
-                        script += "### Error: File format not defined for layer " + line[0] + "\n"
-            ##else: # Layered Image
-            ##    overall_image_name = ""
-            ##    script += self.config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
-            ##    for d in data_list:
-            ##        script += (' '*indent)
-            ##        script += "attribute " + d[0] + ":\n"
+                else:
+                    script += "### Error: File format not defined for layer " + line[0] + "\n"
+        elif button_num == 6: # Layered Image
+            script += self.writeLayeredImage(data_list)
 
         # For image position scripting
         else:
@@ -392,8 +406,6 @@ This will overwrite your customizations.")
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += modifier_block
                 elif button_num == 2:
-                    #if no_property_block:
-                    #    optional_colon = ""
                     script += self.config_data["string_atsetposxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
@@ -409,6 +421,25 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return script
 
+    def writeLayeredImage(self, data_list):
+        """
+        """
+        out_script = ""
+        visited_paths = {}
+        for line in data_list: #Nico
+            layer_line = line[4].lower()
+            layer_list = layer_line.split('/')
+            start_of_layered_image = []
+            for index, layer in enumerate(layer_list):
+                for tag in rpli_set:
+                    if tag in layer:
+                        # start of a layered image found
+                        start_of_layered_image = layer_list[0:index]
+                        visited_paths.add(tuple(start_of_layered_image))
+                out_script += " ".join(str(x) for x in start_of_layered_image) + "\n"
+                #script += (layer+"\n") #checking
+            #script += line[1] + "\n"
+        return out_script
 
     def storePath(self, dir, path_list, path_len):
         """
@@ -564,8 +595,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             tag_dict.clear()
 
                 # Third pass: Add the tags.
+                # Turn true/false values into true/false (as opposed to t/f, yes/no, etc.)
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
+                    if value.lower() in value_true_set:
+                        value = value_true_main_tag
+                    else:
+                        value = value_false_main_tag
                     if letter == 's':
                         scale_list = [100.0]
                         for v in value.split(','):
@@ -596,6 +632,20 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             tag_dict['m'] = list(set(tag_dict['m']))
                         else:
                             tag_dict['m'] = margin_list
+                    # System to turn tags for the Ren'Py LayeredImage system into
+                    # usable synonyms so it's easier for the LayeredImage scripting.
+                    elif letter in rpli_set:
+                        if value.lower() in value_true_set:
+                            value = value_true_main_tag
+                        tag_dict[rpli_main_tag] = value
+                    elif letter in rplidef_set:
+                        tag_dict[rplidef_main_tag] = value
+                    elif letter in rplialways_set:
+                        tag_dict[rplialways_main_tag] = value
+                    elif letter in rpliattrib_set:
+                        tag_dict[rpliattrib_main_tag] = value
+                    elif letter in rpligroup_set:
+                        tag_dict[rpligroup_main_tag] = value
                     elif letter == 'i': # Prevent the i=false tag from leaking down
                         continue        # the path after it's been used to block
                     else:               # the parents' tags.
@@ -799,14 +849,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             path_list            (Unused paths and tags are filtered out.)
             path_list_with_tags  (Unused paths are filtered out,
                                   but tags (at the layers they are declared) are not.)
-                                  Currently not in use, but the lines are commented out where
-                                  they should be activated.
             tag_dict_list        (List where each index corresponds to the index of its path,
                                   and the content is a dictionary with the tags applicable to
                                   the final layer of that path, adjusted for Batch Exporter
                                   inheritance.)
             export_layer_list    (List of the names of the layers to be exported; no tags.)
-
             coords_list          (For each layer: x position, y position, and center point as a QPoint.
                                   Values are modified for the scale given by tag.)
         """
@@ -820,18 +867,18 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         if currentDoc != None:
             root_node = currentDoc.rootNode()
         path = []
-        #path_list_with_tags = []
+        path_list_with_tags = []
         self.pathRecord(root_node, path, path_list, 0, coords_list)
         tag_dict_list = self.getTags(path_list)
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
-        #path_list_with_tags = path_list
+        path_list_with_tags = path_list
         path_list = self.removeTagsFromPaths(path_list)
         tag_dict_list = list(filter(None, tag_dict_list))
         coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
         export_layer_list = self.getExportLayerList(path_list)
 
         for i,layer in enumerate(export_layer_list):
-            data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i]]))
+            data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
         if button_num == 3 or button_num == 4:
             data_list = calculateAlign(data_list, spacing_num)
