@@ -1,3 +1,12 @@
+"""
+Generate Ren'Py Scripting V2
+
+@author Sean Castillo
+
+Credits
+Delena Malan website: Function to sort a list with a sublist given priority.
+"""
+
 from krita import DockWidget, DockWidgetFactory, DockWidgetFactoryBase, Krita
 
 from PyQt5.QtWidgets import (
@@ -17,13 +26,14 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QApplication,
     QMainWindow,
+    QStatusBar
 )
 
 from PyQt5 import QtCore
 
 from PyQt5.QtGui import *
 
-from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject, QThread
 
 import xml.etree.ElementTree as ET
 
@@ -84,8 +94,8 @@ transform_properties = {
                         "xtile", "ytile", "matrixcolor", "blur"
                         }
 
+
 """
-Function from Delena Malan to sort a list with a sublist given priority.
 sortListByPriority(values: <list to sort>, priority: <sublist>)
 """
 def sortListByPriority(values: Iterable[T], priority: List[T]) -> List[T]:
@@ -129,7 +139,6 @@ def calculateAlign(data_list, spacing_num):
         modified_coords = [xalign, yalign, center]
         align_modified_data_list.append(tuple((line[0],line[1],line[2],modified_coords)))
     return align_modified_data_list
-
 
 def convertKeyValue(input_dict_value):
     """
@@ -177,26 +186,26 @@ class TextOutput(QWidget):
     def setupUi(self, MainBox):
         self.main_box = MainBox
         self.script = ""
-        self.textEdit = QTextEdit()
-        self.textEdit.setPlainText(self.script)
-        self.copyButton = QPushButton("Copy To Clipboard")
-        self.copyButton.clicked.connect(self.copyText)
-        self.closeButton = QPushButton("Close")
-        self.closeButton.clicked.connect(self.onClose)
+        self.text_edit = QTextEdit()
+        self.text_edit.setPlainText(self.script)
+        self.copy_button = QPushButton("Copy To Clipboard")
+        self.copy_button.clicked.connect(self.copyText)
+        self.close_button = QPushButton("Close")
+        self.close_button.clicked.connect(self.onClose)
 
         textOutputLayout = QVBoxLayout()
-        textOutputLayout.addWidget(self.textEdit)
-        textOutputLayout.addWidget(self.copyButton)
-        textOutputLayout.addWidget(self.closeButton)
+        textOutputLayout.addWidget(self.text_edit)
+        textOutputLayout.addWidget(self.copy_button)
+        textOutputLayout.addWidget(self.close_button)
         self.setLayout(textOutputLayout)
 
     def receiveText(self, value):
-        self.textEdit.setPlainText(value)
+        self.text_edit.setPlainText(value)
 
     def copyText(self):
         clipboard = QApplication.clipboard()
         clipboard.clear(mode=clipboard.Clipboard)
-        clipboard.setText(self.textEdit.toPlainText(), mode=clipboard.Clipboard)
+        clipboard.setText(self.text_edit.toPlainText(), mode=clipboard.Clipboard)
 
     def onClose(self):
         self.main_box.close()
@@ -366,10 +375,6 @@ This will overwrite your customizations.")
 (image=line[0],path_to_image=line[1],file_extension=f)
                     else:
                         script += "### Error: File format not defined for layer " + line[0] + "\n"
-                    #if "scaleX" in line[2]:
-                    #    script += str(line[2]["scaleX"])+"\n"
-                    #if "scaleY" in line[2]:
-                    #    script += str(line[2]["scaleY"])+"\n"
             ##else: # Layered Image
             ##    overall_image_name = ""
             ##    script += self.config_data["string_layeredimagedefstart"].format(overall_image=overall_image_name)
@@ -509,8 +514,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             curr_node = currentDoc.rootNode()
-        #search_path = path_pieces.split("/",1)
-        #search_path_pieces = search_path.split('/')
         self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
 
         return tag_dict
@@ -905,6 +908,40 @@ class MainBox(QWidget):
         main_box_layout.addWidget(self.output_window)
         self.setLayout(main_box_layout)
 
+class RenameWorkerThread(QThread):
+    """
+    """
+    def __init__(self, dir_name, export_dir_name, suffix, new_folder_name):
+        self.dir_name = dir_name
+        self.export_dir_name = export_dir_name
+        self.suffix = suffix
+        self.new_folder_name = new_folder_name
+        self.file_found = False
+        super().__init__()
+
+    def run(self):
+        self.renameRecursion(self.dir_name, self.export_dir_name, self.suffix, self.new_folder_name)
+
+    def renameRecursion(self, dir_name, export_dir_name, suffix, folder_name):
+      for filename in os.listdir(dir_name):
+            f = os.path.join(dir_name, filename)
+            if filename.find(suffix) != -1:
+                if os.path.isfile(f):
+                    if not self.file_found:
+                        self.file_found = True
+                    exp_fname, exp_ext = os.path.splitext(filename)
+                    exp_fname = exp_fname[:exp_fname.find(suffix)]
+                    exp_fname += exp_ext
+                    dst = os.path.join(export_dir_name, exp_fname)
+                    shutil.copy(f, dst)
+            elif os.path.isdir(f):
+                if filename == folder_name:
+                    continue
+                else:
+                    sub_export_dir_name = os.path.join(export_dir_name, filename)
+                    Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
+                    self.renameRecursion(f, sub_export_dir_name, suffix, folder_name)
+
 class ScaleCalculateBox(QWidget):
     """
     When image document is closed and the calculator window is still open:
@@ -919,13 +956,16 @@ class ScaleCalculateBox(QWidget):
         close_notifier.viewClosed.connect(self.close)
         #close_notifier.viewClosed.connect(self.clearMeasurements)
         #open_notifier.imageCreated.connect(self.calculatorScaleChanged)
+        self.status_signal_emitter = TextSignalEmitter()
+        self.status_signal_emitter.custom_signal.connect(self.receiveStatus)
 
 
     def createScaleCalculateBox(self):
         preset_label_layout = QHBoxLayout()
         preset_width_label = QLabel("Width")
         preset_height_label = QLabel("Height")
-        percentage_label = QLabel("Percentage")
+        percentage_label = QLabel("Scale Percentage")
+        self.status_bar = QStatusBar()
         size_layout = QGridLayout()
         self.line_width = QLineEdit(parent=self)
         self.line_width.textEdited[str].connect(lambda: self.lineEdited(self.line_width.text(), 0))
@@ -951,12 +991,15 @@ class ScaleCalculateBox(QWidget):
         button_3840_w.clicked.connect(lambda: self.dimensionSet(3840,0))
         button_2160_h = QPushButton("2160")
         button_2160_h.clicked.connect(lambda: self.dimensionSet(2160,1))
-        rename_button = QPushButton("Rename Batch-Exported Files To Percentage")
+        rename_button = QPushButton("Rename Batch-Exported Files Of That Scale Percentage")
         rename_button.setToolTip("The Batch Exporter labels exported files with \
 the suffix '_@[scale]x'.\nThis button will make GRS copy over the batch-exported \
-images of the smallest scale to a new folder in which they don't have that suffix,\n\
+images of the currently selected scale to a new folder in which they don't have that suffix,\n\
 so that those images may be transferred to your Ren'Py project without having to \
 rename them manually.")
+        rename_button.clicked.connect(lambda: self.renameClicked())
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(lambda: self.onClose())
         size_layout.addWidget(preset_width_label,0,0)
         size_layout.addWidget(self.line_width,0,1)
         size_layout.addWidget(button_1280_w,0,2)
@@ -982,7 +1025,12 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         scale_top_layout.addLayout(preset_label_layout)
         scale_top_layout.addLayout(size_layout)
         scale_top_layout.addWidget(rename_button)
+        scale_top_layout.addWidget(close_button)
+        scale_top_layout.addWidget(self.status_bar)
         self.setLayout(scale_top_layout)
+
+    def onClose(self):
+        self.close()
 
     def lineEdited(self, line, dimension):
         """
@@ -1028,14 +1076,55 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             if self.line_height.hasFocus() == False:
                 self.line_height.setText(str(height) + " px")
 
-    #def clearMeasurements(self):
-    #    """
-    #    At the moment a view is closed, the view is still part of the window's
-    #    view count, so when the final view is closed, Window.views() is 1, not 0.
-    #    Set the dimensions back to 0.
-    #    """
-    #    if len(KI.activeWindow().views()) == 1:
-    #        self.scale_box_percent.setValue(100.0)
+    def nothing(self): # for debugging
+        pass
+
+    def receiveStatus(self, value):
+        self.status_bar.showMessage(value, 5000)
+
+    def renamerFinished(self, file_found, dir_to_check, folder_name):
+        """
+        """
+        if file_found == False:
+            self.status_bar.showMessage("No files to copy and rename have been found!", 5000)
+            if os.path.exists(dir_to_check) and os.path.isdir(dir_to_check):
+                shutil.rmtree(dir_to_check)
+        else:
+            self.status_bar.showMessage("Files have been copied and renamed at {folder}!".\
+format(folder=folder_name), 5000)
+
+    def recursiveRenameStart(self):
+        """
+        Uses data_list to get the layer names and the scales.
+        A folder named after the scale from scale_box_percent is created.
+        The images of that scale are copied over with the scale tag removed from
+        their names.
+        The data_list gives the scale list in numbers out of 100, so this function
+        divides those numbers by 100 to get the multiplier for the folder name.
+
+        Uses a RenameWorkerThread to handle the renaming/directory copying
+        because handling it directly in this class prevented
+        the status_bar from correctly updating.
+
+        Pre-requisite: KI.activeDocument() != None
+        """
+        dir_name = os.path.dirname(KI.activeDocument().fileName())
+        dir_name = os.path.join(dir_name, "export")
+        scale = float(self.scale_box_percent.value() / 100.0)
+        suffix = "_@" + str(scale) + "x"
+        new_folder_name = "grs_x" + str(scale)
+        export_dir_name = dir_name + os.sep + new_folder_name
+        Path(export_dir_name).mkdir(parents=True, exist_ok=True)
+        self.worker = RenameWorkerThread(dir_name, export_dir_name, suffix, new_folder_name)
+        self.worker.start()
+        self.worker.finished.connect(lambda: self.renamerFinished(self.worker.file_found, export_dir_name, new_folder_name))
+
+    def renameClicked(self):
+        """
+        TODO: Add a window that asks if this is what the user wants.
+        """
+        if KI.activeDocument() != None:
+            self.recursiveRenameStart()
 
 class GenerateRenpyScripting(DockWidget):
     def __init__(self):
@@ -1043,15 +1132,11 @@ class GenerateRenpyScripting(DockWidget):
         self.setWindowTitle("Generate Ren'Py Scripting")
         self.createInterface()
         self.main_box = None
-        #self.format_menu = None
-        #open_notifier.imageCreated.connect(self.updateScaleCalculation)
-        #open_notifier.imageCreated.connect(self.initiateScaleCalculation)
 
     def showErrorMessage(self, toPrint):
         msg = QMessageBox()
         msg.setText(toPrint)
         msg.exec_()
-
 
     def createInterface(self):
         generate_button = QPushButton("Scripting Generator")
