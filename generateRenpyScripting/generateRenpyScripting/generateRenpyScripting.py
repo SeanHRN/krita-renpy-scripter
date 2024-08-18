@@ -96,6 +96,8 @@ rplidef_main_tag = "rplidef"
 rplialways_main_tag = "rplial"
 rpliattrib_main_tag = "rpliatt"
 rpligroup_main_tag = "rpligroup"
+rpli_main_tag_list = [rpli_main_tag, rplidef_main_tag, \
+rplialways_main_tag, rpliattrib_main_tag, rpligroup_main_tag]
 
 # Synonyms for true and false for rpli tags
 value_true_set = {"true", "t", "yes"}
@@ -423,23 +425,75 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def writeLayeredImage(self, data_list):
         """
+        Note: The directories in line[4] start with "images" instead of "root" as the result
+        of the data_list building process.
+        (index+1) should always be in range since index 0 is always 'images',
+        but I'll keep the try/except checker here in case the structure
+        of data_list ever changes.
+        The for loop skips 'images'.
+
+        visited_paths is a list of paths to layered image starts (rpli=true)
+        vp_data is a list of [lists of data lines with each visited path as a prefix]
+        For example, visited_paths [ 1, 2, 3 ]
+                     vp_data [ [1a,1b], [2a], [3a,3b,3c] ]
         """
-        out_script = ""
-        visited_paths = {}
-        for line in data_list: #Nico
+        script = ""
+        visited_paths = []
+        vp_data = [] # A list of lists of data lines with the visited path as a prefix
+        for line in data_list:
             layer_line = line[4].lower()
             layer_list = layer_line.split('/')
-            start_of_layered_image = []
+            layer_list.pop(0)
             for index, layer in enumerate(layer_list):
+                #script += "checking layer: " + str(index) + " " + str(layer) + "\n"
+                rpli_found = False
                 for tag in rpli_set:
                     if tag in layer:
-                        # start of a layered image found
-                        start_of_layered_image = layer_list[0:index]
-                        visited_paths.add(tuple(start_of_layered_image))
-                out_script += " ".join(str(x) for x in start_of_layered_image) + "\n"
+                        rpli_found = True
+                        try:
+                            if str(layer_list[:index+1]) not in visited_paths:
+                                visited_paths.append(str(layer_list[:index+1]))
+                                prefix = "images/" + '/'.join(str(ele) for ele in layer_list[:index+1])
+                                single_list = []
+                                for line in data_list:
+                                    if prefix in line[4]:
+                                        #script += "adding " + line[4] + " for " + prefix + "\n" 
+                                        single_list.append(line) #muse
+                                vp_data.append(single_list)
+                        except:
+                            continue
+                    if rpli_found == True:
+                        break
+                if rpli_found == True:
+                    break
+        #script += "Found layeredimage paths: \n"
+        #for p,d in zip(visited_paths,vp_data):
+        #    script += p + "\n"
+        #    script += "With data:\n"
+        #    for i in d:
+        #        script += i[4] + "\n"
+        #script += "~ ~ ~ ~ ~\n"
+        #script += "END\n"
+
+        for p,d in zip(visited_paths, vp_data):
+            script += "~ ~ ~ ~"
+            script += (" "*indent) + p + "\n"
+            for l in d:
+                #script += "l[0]: " + l[0] + "\n"
+                #script +=  (" "*indent*2) + l[0] + "\n"
+                #script += "checking the group tag for: " +  l[4]  + " This one is: "
+                if rpligroup_main_tag in l[2].keys():
+                    script += "group " + l[0] + "\n"
+                elif rpliattrib_main_tag in l[2].keys():
+                    script += "attribute " + l[0] + "\n"
+                else:
+                    script += "NO RPLI TAG"
+                script += "\n"
+
+        #out_script += " ".join(str(x) for x in start_of_layered_image) + "\n"
                 #script += (layer+"\n") #checking
             #script += line[1] + "\n"
-        return out_script
+        return script
 
     def storePath(self, dir, path_list, path_len):
         """
@@ -570,6 +624,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         tag_dict_list = []
         for path in path_list:
+            self.DEBUG_MESSAGE += "path: " + str(path) + "\n"
             tag_dict = {}
             path_pieces = path.split('/')
             for layer in path_pieces:
@@ -586,27 +641,39 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         continue
                 tag_data = usable_tag_data
 
+                # Experimental pass: remove rpli tags so they wouldn't be inherited.
+                if rpligroup_main_tag in tag_dict.keys():
+                    tag_dict.pop(rpligroup_main_tag)
+                if rpliattrib_main_tag in tag_dict.keys():
+                    tag_dict.pop(rpliattrib_main_tag)
+
                 # Second pass: See if inheritance disabling is present.
                 # If so, clear the dictionary before adding any tags.
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
                     if letter == "i":
-                        if value == "false" or value == "no":
+                        if value in value_false_set:
                             tag_dict.clear()
 
                 # Third pass: Add the tags.
                 # Turn true/false values into true/false (as opposed to t/f, yes/no, etc.)
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
-                    if value.lower() in value_true_set:
+                    #self.DEBUG_MESSAGE += "letter/value is: " + letter + " : " + value + "\n"
+
+                    if value in value_true_set:
                         value = value_true_main_tag
-                    else:
+                    elif value in value_false_set:
                         value = value_false_main_tag
+
                     if letter == 's':
                         scale_list = [100.0]
                         for v in value.split(','):
-                            if v:
+                            if v.replace(".", "").isnumeric():
                                 scale_list.append(float(v))
+                            else:
+                                self.DEBUG_MESSAGE += "#Error: Non-numeric value given as scale: " + str(v)
+                                self.DEBUG_MESSAGE += " on layer: " + layer + "\n"
                         if 's' in tag_dict:
                             tag_dict['s'].extend(scale_list)
                             tag_dict['s'] = list(set(tag_dict['s'])) # Remove duplicates.
@@ -634,18 +701,28 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             tag_dict['m'] = margin_list
                     # System to turn tags for the Ren'Py LayeredImage system into
                     # usable synonyms so it's easier for the LayeredImage scripting.
-                    elif letter in rpli_set:
-                        if value.lower() in value_true_set:
-                            value = value_true_main_tag
-                        tag_dict[rpli_main_tag] = value
-                    elif letter in rplidef_set:
-                        tag_dict[rplidef_main_tag] = value
-                    elif letter in rplialways_set:
-                        tag_dict[rplialways_main_tag] = value
-                    elif letter in rpliattrib_set:
-                        tag_dict[rpliattrib_main_tag] = value
-                    elif letter in rpligroup_set:
-                        tag_dict[rpligroup_main_tag] = value
+                    
+                    #elif letter in rpli_set:
+                    #    if value.lower() in value_true_set:
+                    #        value = value_true_main_tag
+                    #    tag_dict[rpli_main_tag] = value
+                    #elif letter in rplidef_set:
+                    #    tag_dict[rplidef_main_tag] = value
+                    #elif letter in rplialways_set:
+                    #    tag_dict[rplialways_main_tag] = value
+                    #elif letter in rpliattrib_set:
+                    #    if letter in layer:
+                    #        self.DEBUG_MESSAGE += "GOOFY: " + layer + "\n"
+                    #        tag_dict[rpliattrib_main_tag] = value
+                    #    tag_dict[rpliattrib_main_tag] = value
+                    #elif letter in rpligroup_set:
+                    #    self.DEBUG_MESSAGE += letter + " called for: " + layer + "\n"
+                    #    if letter in layer:
+                    #        self.DEBUG_MESSAGE += "DONALD: " + layer + "\n"
+                    #        tag_dict[rpligroup_main_tag] = value
+                    #    continue
+                    #    tag_dict[rpligroup_main_tag] = value
+                    
                     elif letter == 'i': # Prevent the i=false tag from leaking down
                         continue        # the path after it's been used to block
                     else:               # the parents' tags.
@@ -668,6 +745,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Coordinates are also found and inserted into coords_list.
 
         Reference: GeeksforGeeks solution to finding paths in a binary search tree
+
+        TODO: New concept: Record an additional list for the Ren'Py layered image tags
+        since the required behavior for layered images isn't the same when it comes to
+        inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
         """
         #layer_data = node.name().split(' ')
         if (len(path) > path_len):
@@ -1008,8 +1089,6 @@ class ScaleCalculateBox(QWidget):
         self.setWindowTitle("Check Your Scale!")
         self.createScaleCalculateBox()
         close_notifier.viewClosed.connect(self.close)
-        #close_notifier.viewClosed.connect(self.clearMeasurements)
-        #open_notifier.imageCreated.connect(self.calculatorScaleChanged)
         self.status_signal_emitter = TextSignalEmitter()
         self.status_signal_emitter.custom_signal.connect(self.receiveStatus)
 
