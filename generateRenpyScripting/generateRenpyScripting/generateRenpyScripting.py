@@ -100,8 +100,8 @@ rpli_main_tag_list = [rpli_main_tag, rplidef_main_tag, \
 rplialways_main_tag, rpliattrib_main_tag, rpligroup_main_tag]
 
 # Synonyms for true and false for rpli tags
-value_true_set = {"true", "t", "yes"}
-value_false_set = {"false", "f", "no"}
+value_true_set = {"true", "t", "yes", "y"}
+value_false_set = {"false", "f", "no", "n"}
 value_true_main_tag = "true"
 value_false_main_tag = "false"
 
@@ -367,7 +367,11 @@ This will overwrite your customizations.")
         """
         script = ""
 
-        data_list = self.getDataList(button_num, spacing_num)
+        data_list, rpli_data_list = self.getDataList(button_num, spacing_num)
+        self.DEBUG_MESSAGE += "checking the rpli_data_list:" + "\n"
+        for r in rpli_data_list:
+            self.DEBUG_MESSAGE += "layer name: " + str(r[0]) + "  /////  directory: " + str(r[1]) + "\n"
+
         script += self.DEBUG_MESSAGE
         if len(data_list) == 0:
             script += "Cannot find layers to script. Check whether your target layers have Batch Exporter format.\n"
@@ -499,11 +503,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         Concept: Store each max-length path into the final path_list (starting with images instead of root).
         """
+        #self.DEBUG_MESSAGE += "From storePath(): " + ''.join(path_list) + "\n"
         to_insert = "images/"
         for i in dir[1 : path_len-1]:
             to_insert = to_insert + (i + "/")
-        imageFileName = dir[path_len-1]
-        path_list.append(to_insert + imageFileName)
+        image_file_name = dir[path_len-1]
+        to_insert = to_insert + image_file_name
+        path_list.append(to_insert)
 
 
     def updateMaskPropertiesDict(self, tag_dict, tm_node):
@@ -604,7 +610,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         return tag_dict
 
 
-    def getTags(self, path_list):
+    def getTags(self, path_list, rpli_mode):
         """
         Function to take in the list of complete layer paths (from within data_list)
         and populate a list of dictionaries of tags for each path.
@@ -621,10 +627,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         m= : Margin of 0 is inserted, so nothing changes, but only if the
              value is empty since the smallest margin in a list is used by default.
 
+        new concept: bool rpli_mode - True: Get tags for Ren'Py Layered Images and nothing else. False - The opposite.
+
         """
         tag_dict_list = []
         for path in path_list:
-            self.DEBUG_MESSAGE += "path: " + str(path) + "\n"
+            #self.DEBUG_MESSAGE += "path: " + str(path) + "\n"
             tag_dict = {}
             path_pieces = path.split('/')
             for layer in path_pieces:
@@ -641,19 +649,21 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         continue
                 tag_data = usable_tag_data
 
-                # Experimental pass: remove rpli tags so they wouldn't be inherited.
-                if rpligroup_main_tag in tag_dict.keys():
-                    tag_dict.pop(rpligroup_main_tag)
-                if rpliattrib_main_tag in tag_dict.keys():
-                    tag_dict.pop(rpliattrib_main_tag)
+                if rpli_mode == True:
+                    # Experimental pass: remove rpli tags so they wouldn't be inherited.
+                    if rpligroup_main_tag in tag_dict.keys():
+                        tag_dict.pop(rpligroup_main_tag)
+                    if rpliattrib_main_tag in tag_dict.keys():
+                        tag_dict.pop(rpliattrib_main_tag)
 
                 # Second pass: See if inheritance disabling is present.
                 # If so, clear the dictionary before adding any tags.
-                for tag in tag_data:
-                    letter, value = tag.split('=', 1)
-                    if letter == "i":
-                        if value in value_false_set:
-                            tag_dict.clear()
+                if rpli_mode == False:
+                    for tag in tag_data:
+                        letter, value = tag.split('=', 1)
+                        if letter == "i":
+                            if value in value_false_set:
+                                tag_dict.clear()
 
                 # Third pass: Add the tags.
                 # Turn true/false values into true/false (as opposed to t/f, yes/no, etc.)
@@ -666,68 +676,62 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     elif value in value_false_set:
                         value = value_false_main_tag
 
-                    if letter == 's':
-                        scale_list = [100.0]
-                        for v in value.split(','):
-                            if v.replace(".", "").isnumeric():
-                                scale_list.append(float(v))
+                    if rpli_mode == False:
+                        if letter == 's':
+                            scale_list = [100.0]
+                            for v in value.split(','):
+                                if v.replace(".", "").isnumeric():
+                                    scale_list.append(float(v))
+                                else:
+                                    self.DEBUG_MESSAGE += "#Error: Non-numeric value given as scale: " + str(v)
+                                    self.DEBUG_MESSAGE += " on layer: " + layer + "\n"
+                            if 's' in tag_dict:
+                                tag_dict['s'].extend(scale_list)
+                                tag_dict['s'] = list(set(tag_dict['s'])) # Remove duplicates.
                             else:
-                                self.DEBUG_MESSAGE += "#Error: Non-numeric value given as scale: " + str(v)
-                                self.DEBUG_MESSAGE += " on layer: " + layer + "\n"
-                        if 's' in tag_dict:
-                            tag_dict['s'].extend(scale_list)
-                            tag_dict['s'] = list(set(tag_dict['s'])) # Remove duplicates.
+                                tag_dict['s'] = scale_list
+                        elif letter == 'e':
+                            if not value:
+                                value = "png"
+                            format_list = value.split(',')
+                            if 'e' in tag_dict:
+                                tag_dict['e'].extend(format_list)
+                                tag_dict['e'] = list(set(tag_dict['e'])) # Remove duplicates.
+                            else:
+                                tag_dict['e'] = format_list
+                        elif letter == 'm':
+                            margin_list = []
+                            if not value:
+                                margin_list.append("0")
+                            else:
+                               margin_list = value.split(',')
+                            if 'm' in tag_dict:
+                                tag_dict['m'].extend(margin_list)
+                                tag_dict['m'] = list(set(tag_dict['m']))
+                            else:
+                                tag_dict['m'] = margin_list
+                        elif letter == 'i': # Prevent the i=false tag from leaking down
+                            continue        # the path after it's been used to block
+                        else:               # the parents' tags.
+                            tag_dict[letter] = value
+                    elif rpli_mode == True:
+                        if letter in rpli_set:
+                            if value.lower() in value_true_set:
+                                tag_dict[rpli_main_tag] = value_true_main_tag
+                            else:
+                                 tag_dict[rpli_main_tag] = value_false_main_tag
+                        elif letter in rplidef_set:
+                            tag_dict[rplidef_main_tag] = value
+                        elif letter in rplialways_set:
+                            tag_dict[rplialways_main_tag] = value
+                        elif letter in rpliattrib_set:
+                            tag_dict[rpliattrib_main_tag] = value
+                        elif letter in rpligroup_set:
+                            tag_dict[rpligroup_main_tag] = value
                         else:
-                            tag_dict['s'] = scale_list
-                    elif letter == 'e':
-                        if not value:
-                            value = "png"
-                        format_list = value.split(',')
-                        if 'e' in tag_dict:
-                            tag_dict['e'].extend(format_list)
-                            tag_dict['e'] = list(set(tag_dict['e'])) # Remove duplicates.
-                        else:
-                            tag_dict['e'] = format_list
-                    elif letter == 'm':
-                        margin_list = []
-                        if not value:
-                            margin_list.append("0")
-                        else:
-                           margin_list = value.split(',')
-                        if 'm' in tag_dict:
-                            tag_dict['m'].extend(margin_list)
-                            tag_dict['m'] = list(set(tag_dict['m']))
-                        else:
-                            tag_dict['m'] = margin_list
-                    # System to turn tags for the Ren'Py LayeredImage system into
-                    # usable synonyms so it's easier for the LayeredImage scripting.
+                            continue
                     
-                    #elif letter in rpli_set:
-                    #    if value.lower() in value_true_set:
-                    #        value = value_true_main_tag
-                    #    tag_dict[rpli_main_tag] = value
-                    #elif letter in rplidef_set:
-                    #    tag_dict[rplidef_main_tag] = value
-                    #elif letter in rplialways_set:
-                    #    tag_dict[rplialways_main_tag] = value
-                    #elif letter in rpliattrib_set:
-                    #    if letter in layer:
-                    #        self.DEBUG_MESSAGE += "GOOFY: " + layer + "\n"
-                    #        tag_dict[rpliattrib_main_tag] = value
-                    #    tag_dict[rpliattrib_main_tag] = value
-                    #elif letter in rpligroup_set:
-                    #    self.DEBUG_MESSAGE += letter + " called for: " + layer + "\n"
-                    #    if letter in layer:
-                    #        self.DEBUG_MESSAGE += "DONALD: " + layer + "\n"
-                    #        tag_dict[rpligroup_main_tag] = value
-                    #    continue
-                    #    tag_dict[rpligroup_main_tag] = value
-                    
-                    elif letter == 'i': # Prevent the i=false tag from leaking down
-                        continue        # the path after it's been used to block
-                    else:               # the parents' tags.
-                        tag_dict[letter] = value
- 
+
             # Next, check for changes from transform masks.
             tag_dict = self.getMaskPropertiesStart(path_pieces, tag_dict)
 
@@ -735,7 +739,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         return tag_dict_list
 
 
-    def pathRecord(self, node, path, path_list, path_len, coords_list):
+    def pathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list, rpli_coords_list):
         """
         Searches for all the node to leaf paths and stores them in path_list using storePath().
         storePath() takes in the entire paths (including all the tags at this step).
@@ -757,25 +761,52 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             path.append(node.name())
         path_len += 1
         recordable_child_nodes = 0
+        coord_x = node.bounds().topLeft().x()
+        coord_y = node.bounds().topLeft().y()
+        coord_center = node.bounds().center()
         for c in node.childNodes():
+            #EXPERIMENTAL
+            #for list in rpli_list:
+            #   for tag in list:
+            #       if tag in c.name():
+            #           temp_path = path
+            #           temp_path.append(c.name())
+            #           self.storePath(temp_path, rpli_path_list, path_len+1) #EXPERIMENTAL
+            #           self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + c.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
+            #           rpli_coords_list.append([coord_x, coord_y, coord_center])
             if c.type() == "grouplayer" or c.type() == "paintlayer":
                 recordable_child_nodes += 1
             #elif c.type() == "transformmask": # Toggle this on
             #    self.checkTransformMask(c)    # to check transform mask XML
         if recordable_child_nodes == 0:
+
             self.storePath(path, path_list, path_len)
-            coord_x = node.bounds().topLeft().x()
-            coord_y = node.bounds().topLeft().y()
-            coord_center = node.bounds().center()
             coords_list.append([coord_x, coord_y, coord_center])
         else:
             for i in node.childNodes():
                 if i.type() == "grouplayer" or i.type() == "paintlayer":
+                    layer_name = i.name().lower()
+                    tag_data = layer_name.split(' ')[1:]
+                    letter_data = []
+                    value_data = []
+                    for tag in tag_data:
+                        letter, value = tag.split('=', 1)
+                        letter_data.append(letter)
+                        value_data.append(value)
                 # Looks silly and work-aroundy but seems to work.
                 # The pathbuilding gets messed up without this subtraction on path.
                     remove_amount = len(path) - path_len # This is always either 0 or 1.
                     path = path[: len(path) - remove_amount]
-                    self.pathRecord(i, path, path_list, path_len, coords_list)
+                    self.pathRecord(i, path, path_list, path_len, coords_list, rpli_path_list, rpli_coords_list)
+                    for list in rpli_list:
+                        for tag in list:
+                            if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
+                                temp_path = path
+                                temp_path.append(i.name())
+                                self.storePath(temp_path, rpli_path_list, path_len+1)
+                                #self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + i.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
+                                rpli_coords_list.append([coord_x, coord_y, coord_center])
+                                break
 
     def checkTransformMask(self, c):
         """
@@ -939,32 +970,45 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                   Values are modified for the scale given by tag.)
         """
         data_list =  []
+        rpli_data_list = []
         export_layer_list = []
         coords_list = []
         path_list = []
+        rpli_path_list = []
         tag_dict_list = []
         coords_list = []
+        rpli_coords_list = []
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             root_node = currentDoc.rootNode()
         path = []
         path_list_with_tags = []
-        self.pathRecord(root_node, path, path_list, 0, coords_list)
-        tag_dict_list = self.getTags(path_list)
+        self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list, rpli_coords_list)
+        tag_dict_list = self.getTags(path_list, False)
+        rpli_tag_dict_list = self.getTags(rpli_path_list, True)
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
+        #not sure if removeUnusedPaths() is needed for rpli yet
         path_list_with_tags = path_list
+        rpli_path_list_with_tags = rpli_list
         path_list = self.removeTagsFromPaths(path_list)
+        #rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
         tag_dict_list = list(filter(None, tag_dict_list))
+        rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
         coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
         export_layer_list = self.getExportLayerList(path_list)
+        rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
 
         for i,layer in enumerate(export_layer_list):
             data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
+        for i,layer in enumerate(rpli_export_layer_list):
+            rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_coords_list[i], '0', '0'])) # debug
+            #rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i], tuple[0,0,0], rpli_path_list_with_tags[0]]))
+        #experiment with tuple of empty coords
         if button_num == 3 or button_num == 4:
             data_list = calculateAlign(data_list, spacing_num)
 
-        return data_list
+        return data_list, rpli_data_list
 
     def ruleOfThirdsFlag(self):
         """
