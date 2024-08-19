@@ -48,7 +48,7 @@ import subprocess
 import shutil
 import re
 import json
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import Iterable, List, TypeVar
 T = TypeVar("T")
 
@@ -85,11 +85,11 @@ replacer_dict = {
 }
 
 # Sets to serve as a tag thesaurus
-rpli_set       = {"rpli", "rli"}               # layeredimage (the start)
-rplidef_set    = {"rplidef", "rid", "rlid"}    # default
-rplialways_set = {"rplial", "ral", "rpalways"} # always
-rpliattrib_set = {"rpliatt", "rpliat"}         # attribute
-rpligroup_set  = {"rpligroup", "rplig"}        # group
+rpli_set       = {"rpli", "rli", "li"}               # layeredimage (the start)
+rplidef_set    = {"rplidef", "rid", "rlid", "df"}    # default
+rplialways_set = {"rplial", "ral", "rpalways", "al"} # always
+rpliattrib_set = {"rpliatt", "rpliat", "at"}         # attribute
+rpligroup_set  = {"rpligroup", "rplig", "gr"}        # group
 rpli_list = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
 rpli_main_tag = "rpli"
 rplidef_main_tag = "rplidef"
@@ -385,8 +385,8 @@ This will overwrite your customizations.")
 
         if button_num == 5: # Normal Images
             for line in data_list:
-                line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
                 if "e" in line[2]:
+                    line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
                     format_set = set(line[2]["e"])
                     chosen_format = ""
                     if "webp" in format_set:
@@ -433,12 +433,19 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
     def writeLayeredImage(self, rpli_data_list):
         """
         Pre-requisite: rpli_data_list is sorted.
+        I'm skipping duplicates from the data list here because I'm not sure if something
+        could break elsewhere.
         TODO: Make the image directories work.
         """
         script = ""
+        was_written = set()
 #        for r in rpli_data_list:
 #            script += r[1] + "\n"
         for r in rpli_data_list:
+            if not r[1] in was_written:
+                was_written.add(r[1])
+            else: # ignore duplicate lines
+                continue
 #            script += "\n"
 #            script += "layer     : " + r[0] + "\n"
 #            script += "directory :    " + r[1] + "\n"
@@ -447,10 +454,29 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 #                script += key + " : " + value + "\n"
 #            script += "\n"
             def_add_on = ""
+            image_add_on_list = []
+            if "e" in r[2]:
+                r[2]["e"] = sortListByPriority(values=r[2]["e"], priority=["webp","png","jpg","jpeg"])
+                format_set = set(r[2]["e"])
+                chosen_format = ""
+                if "webp" in format_set:
+                    chosen_format = "webp"
+                elif "png" in format_set:
+                    chosen_format = "png"
+                elif "jpg" in format_set or "jpeg" in format_set:
+                    chosen_format = "jpg"
+                for f in r[2]["e"]:
+                    to_add = r[1]
+                    pound = ""
+                    if f != chosen_format:
+                        pound = "#"
+                    image_add_on_list.append(pound + "\"" + to_add + "." + f + "\"")
             if rpli_main_tag in r[2] and r[2][rpli_main_tag] == value_true_main_tag:
                 script += "layeredimage " + r[0].split(' ')[0] + ":\n"
             elif rplialways_main_tag in r[2] and r[2][rplialways_main_tag] == value_true_main_tag:
                 script += (" " * indent * 2) + "always:\n" + (" " * indent * 3) + r[0].split(' ')[0] + ":\n"
+                for i in image_add_on_list:
+                    script += (" " * indent * 4) + i + "\n"
             elif rpligroup_main_tag in r[2] and r[2][rpligroup_main_tag] == value_true_main_tag:
                 script += (" " * indent * 2) + "group " + r[0].split(' ')[0] + ":\n"
             elif rpliattrib_main_tag in r[2] and r[2][rpliattrib_main_tag] == value_true_main_tag:
@@ -459,7 +485,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == value_true_main_tag:
                     script += (" " * indent)
                 script += (" " * indent * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
-   
+                for i in image_add_on_list:
+                    script += (" " * indent * 4) + i + "\n"
+
         return script
 
     def storePath(self, dir, path_list, path_len):
@@ -590,7 +618,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         m= : Margin of 0 is inserted, so nothing changes, but only if the
              value is empty since the smallest margin in a list is used by default.
 
-        new concept: bool rpli_mode - True: Get tags for Ren'Py Layered Images and nothing else. False - The opposite.
+        Boolean rpli_mode
+                    True: Get tags for Ren'Py Layered Images and image file formats.
+                    False - Get the tags for everything except Ren'Py Layered Images.
 
         """
         tag_dict_list = []
@@ -680,7 +710,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         elif letter == 'i': # Prevent the i=false tag from leaking down
                             continue        # the path after it's been used to block
                         else:               # the parents' tags.
-                            tag_dict[letter] = value
+                            if letter not in rpli_set: # Don't save rpli tags if not using that mode.
+                                tag_dict[letter] = value
                     elif rpli_mode == True:
                         if letter in rpli_set:
                             if value.lower() in value_true_set:
@@ -695,6 +726,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             tag_dict[rpliattrib_main_tag] = value
                         elif letter in rpligroup_set:
                             tag_dict[rpligroup_main_tag] = value
+                        elif letter == 'e':
+                            if not value:
+                                value = "png"
+                            format_list = value.split(',')
+                            if 'e' in tag_dict:
+                                tag_dict['e'].extend(format_list)
+                                tag_dict['e'] = list(set(tag_dict['e']))
+                            else:
+                                tag_dict['e'] = format_list
                         else:
                             continue
                     
@@ -932,8 +972,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         swap_occurred = False
         c = len(s_list)-1
         while not list_sorted:
-            curr_line = s_list[c][1]
-            comp_line = s_list[c-1][1]
+            curr_line = s_list[c][3]
+            comp_line = s_list[c-1][3]
             #self.DEBUG_MESSAGE += "Comparing " + curr_line + " with " + comp_line  + "\n"
             if curr_line in comp_line and curr_line < comp_line:
                 s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
@@ -964,16 +1004,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                  6) Modify the coordinates for margins and scale.
                  7) If 'align' type output is selected, swap out the xy pixel coordinates with align coordinates.
 
-            path_list            (Unused paths and tags are filtered out.)
-            path_list_with_tags  (Unused paths are filtered out,
-                                  but tags (at the layers they are declared) are not.)
-            tag_dict_list        (List where each index corresponds to the index of its path,
-                                  and the content is a dictionary with the tags applicable to
-                                  the final layer of that path, adjusted for Batch Exporter
-                                  inheritance.)
-            export_layer_list    (List of the names of the layers to be exported; no tags.)
-            coords_list          (For each layer: x position, y position, and center point as a QPoint.
-                                  Values are modified for the scale given by tag.)
+        data_list:
+            [0] path_list            (Unused paths and tags are filtered out.)
+            [1] export_layer_list    (List of the names of the layers to be exported; no tags.)
+            [2] tag_dict_list        (List where each index corresponds to the index of its path,
+                                      and the content is a dictionary with the tags applicable to
+                                      the final layer of that path, adjusted for Batch Exporter
+                                      inheritance.)
+            [3] coords_list          (For each layer: x position, y position, and center point as a QPoint.
+                                      Values are modified for the scale given by tag.)
+            [4] path_list_with_tags  (Unused paths are filtered out,
+                                      but tags (at the layers they are declared) are not.)
+        rpli_data_list:
+            [0] path_list
+            [1] export_layer_list
+            [2] rpli_tag_dict_list
+            [3] rpli_path_list_with_tags
         """
         data_list =  []
         rpli_data_list = []
@@ -994,22 +1040,31 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_tag_dict_list = self.getTags(rpli_path_list, True)
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
         path_list_with_tags = path_list
-        rpli_path_list_with_tags = rpli_list
+        rpli_path_list_with_tags = rpli_path_list
         path_list = self.removeTagsFromPaths(path_list)
-        #rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
+        rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
         tag_dict_list = list(filter(None, tag_dict_list))
         rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
         coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
         export_layer_list = self.getExportLayerList(path_list)
         rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
-
+        #experimental: remove duplicates
+        #self.DEBUG_MESSAGE += "before removal:\n"
+        #for p in rpli_export_layer_list:
+        #    self.DEBUG_MESSAGE += str(p) + "\n"
+        #rpli_export_layer_list = list(OrderedDict.fromkeys(rpli_export_layer_list))
+        #self.DEBUG_MESSAGE += "after:\n"
+        #for p in rpli_export_layer_list:
+        #    self.DEBUG_MESSAGE += str(p) + "\n"
         for i,layer in enumerate(export_layer_list):
             data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
         for i,layer in enumerate(rpli_export_layer_list):
-            rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i]]))
+            rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
 
         self.sortRpliData(rpli_data_list)
+
+
 
         if button_num == 3 or button_num == 4:
             data_list = calculateAlign(data_list, spacing_num)
