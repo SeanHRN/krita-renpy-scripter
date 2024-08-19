@@ -433,10 +433,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
     def writeLayeredImage(self, rpli_data_list):
         """
         Pre-requisite: rpli_data_list is sorted.
+        TODO: Make the image directories work.
         """
         script = ""
-        for r in rpli_data_list:
-            script += r[1] + "\n"
+#        for r in rpli_data_list:
+#            script += r[1] + "\n"
         for r in rpli_data_list:
 #            script += "\n"
 #            script += "layer     : " + r[0] + "\n"
@@ -445,14 +446,20 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 #            for key, value in r[2].items():
 #                script += key + " : " + value + "\n"
 #            script += "\n"
+            def_add_on = ""
             if rpli_main_tag in r[2] and r[2][rpli_main_tag] == value_true_main_tag:
                 script += "layeredimage " + r[0].split(' ')[0] + ":\n"
+            elif rplialways_main_tag in r[2] and r[2][rplialways_main_tag] == value_true_main_tag:
+                script += (" " * indent * 2) + "always:\n" + (" " * indent * 3) + r[0].split(' ')[0] + ":\n"
             elif rpligroup_main_tag in r[2] and r[2][rpligroup_main_tag] == value_true_main_tag:
-                script += (" " * indent * 2) + "group " + r[0].split(' ')[0] + "\n"
+                script += (" " * indent * 2) + "group " + r[0].split(' ')[0] + ":\n"
             elif rpliattrib_main_tag in r[2] and r[2][rpliattrib_main_tag] == value_true_main_tag:
+                if rplidef_main_tag in r[2] and r[2][rplidef_main_tag] == value_true_main_tag:
+                    def_add_on = " default"
                 if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == value_true_main_tag:
                     script += (" " * indent)
-                script += (" " * indent * 2) + "attribute " + r[0].split(' ')[0] + "\n"
+                script += (" " * indent * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
+   
         return script
 
     def storePath(self, dir, path_list, path_len):
@@ -908,42 +915,43 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         return modifier_block
 
     def sortRpliData(self, rpli_data_list):
-        self.DEBUG_MESSAGE += "list before sorting:\n"
-        for d in rpli_data_list:
-            self.DEBUG_MESSAGE += str(d[1]) + "\n"
+        """
+        This is an unusual sorting algorithm that positions data lines such that parent
+        layers would come sooner than their child layers, AND would not be swapped
+        with layers of different paths. It's meant to get the order of the list
+        to be the same as the Krita layer stack (though in reverse order since
+        Ren'Py displays the bottommost image declarations at the front, and
+        drawing programs do the opposite, though it wouldn't matter for a layered image
+        declaration block.
+        """
+        #self.DEBUG_MESSAGE += "list before sorting:\n"
+        #for d in rpli_data_list:
+        #    self.DEBUG_MESSAGE += str(d[1]) + "\n"
         s_list = rpli_data_list
-        top_counter = len(s_list)-1
-        c = len(s_list)-1
         list_sorted = False
+        swap_occurred = False
+        c = len(s_list)-1
         while not list_sorted:
-            part_sorted = False
-            while not part_sorted:
-                curr_line = s_list[c][1]
-                comp_line = s_list[c-1][1]
-                self.DEBUG_MESSAGE += "Comparing " + curr_line + " with " + comp_line  + "\n"
-                if curr_line in comp_line and curr_line < comp_line:
-                    s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
-                    self.DEBUG_MESSAGE += "SWAP!\n"
-                else:
-                    self.DEBUG_MESSAGE += "no swap\n"
-                    c = c-1
-                    part_sorted = True
+            curr_line = s_list[c][1]
+            comp_line = s_list[c-1][1]
+            #self.DEBUG_MESSAGE += "Comparing " + curr_line + " with " + comp_line  + "\n"
+            if curr_line in comp_line and curr_line < comp_line:
+                s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
+                #self.DEBUG_MESSAGE += "SWAP!\n"
+                swap_occurred = True
+            else:
+                #self.DEBUG_MESSAGE += "no swap\n"
+                swap_occurred = False
+            c = c - 1
             if c == 0:
-                list_sorted = True
-            #list_sorted = True #debugging
+                if swap_occurred:
+                    c = len(s_list)-1
+                else:
+                    list_sorted = True
 
-        #while c > 0:
-        #    curr_line = s_list[c]
-        #    part_sorted = False
-        #    while not part_sorted:
-        #        if curr_line in s_list[c-1] and curr_line < s_list[c-1]:
-        #            s_list[c-1], s_list[c] = s_list[c], s_list[c-1]
-        #        else:
-        #            c = c-1
-        #            part_sorted = True
-        self.DEBUG_MESSAGE += "sorted list:\n"
-        for l in s_list:
-            self.DEBUG_MESSAGE += str(l[1]) + "\n"
+        #self.DEBUG_MESSAGE += "sorted list:\n"
+        #for l in s_list:
+        #    self.DEBUG_MESSAGE += str(l[1]) + "\n"
         #return s_list
 
     def getDataList(self, button_num, spacing_num):
