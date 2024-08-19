@@ -98,6 +98,9 @@ rpliattrib_main_tag = "rpliatt"
 rpligroup_main_tag = "rpligroup"
 rpli_main_tag_list = [rpli_main_tag, rplidef_main_tag, \
 rplialways_main_tag, rpliattrib_main_tag, rpligroup_main_tag]
+# Additionally, rpligroupchild is a special tag to be used
+# for catching when an rpliatt should be indented in the scripting.
+
 
 # Synonyms for true and false for rpli tags
 value_true_set = {"true", "t", "yes", "y"}
@@ -368,9 +371,9 @@ This will overwrite your customizations.")
         script = ""
 
         data_list, rpli_data_list = self.getDataList(button_num, spacing_num)
-        self.DEBUG_MESSAGE += "checking the rpli_data_list:" + "\n"
-        for r in rpli_data_list:
-            self.DEBUG_MESSAGE += "layer name: " + str(r[0]) + "  /////  directory: " + str(r[1]) + "\n"
+        #self.DEBUG_MESSAGE += "checking the rpli_data_list:" + "\n"
+        #for r in rpli_data_list:
+        #    self.DEBUG_MESSAGE += "layer name: " + str(r[0]) + "  /////  directory: " + str(r[1]) + "\n"
 
         script += self.DEBUG_MESSAGE
         if len(data_list) == 0:
@@ -400,7 +403,7 @@ This will overwrite your customizations.")
                 else:
                     script += "### Error: File format not defined for layer " + line[0] + "\n"
         elif button_num == 6: # Layered Image
-            script += self.writeLayeredImage(data_list)
+            script += self.writeLayeredImage(rpli_data_list)
 
         # For image position scripting
         else:
@@ -427,76 +430,29 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return script
 
-    def writeLayeredImage(self, data_list):
+    def writeLayeredImage(self, rpli_data_list):
         """
-        Note: The directories in line[4] start with "images" instead of "root" as the result
-        of the data_list building process.
-        (index+1) should always be in range since index 0 is always 'images',
-        but I'll keep the try/except checker here in case the structure
-        of data_list ever changes.
-        The for loop skips 'images'.
-
-        visited_paths is a list of paths to layered image starts (rpli=true)
-        vp_data is a list of [lists of data lines with each visited path as a prefix]
-        For example, visited_paths [ 1, 2, 3 ]
-                     vp_data [ [1a,1b], [2a], [3a,3b,3c] ]
+        Pre-requisite: rpli_data_list is sorted.
         """
         script = ""
-        visited_paths = []
-        vp_data = [] # A list of lists of data lines with the visited path as a prefix
-        for line in data_list:
-            layer_line = line[4].lower()
-            layer_list = layer_line.split('/')
-            layer_list.pop(0)
-            for index, layer in enumerate(layer_list):
-                #script += "checking layer: " + str(index) + " " + str(layer) + "\n"
-                rpli_found = False
-                for tag in rpli_set:
-                    if tag in layer:
-                        rpli_found = True
-                        try:
-                            if str(layer_list[:index+1]) not in visited_paths:
-                                visited_paths.append(str(layer_list[:index+1]))
-                                prefix = "images/" + '/'.join(str(ele) for ele in layer_list[:index+1])
-                                single_list = []
-                                for line in data_list:
-                                    if prefix in line[4]:
-                                        #script += "adding " + line[4] + " for " + prefix + "\n" 
-                                        single_list.append(line) #muse
-                                vp_data.append(single_list)
-                        except:
-                            continue
-                    if rpli_found == True:
-                        break
-                if rpli_found == True:
-                    break
-        #script += "Found layeredimage paths: \n"
-        #for p,d in zip(visited_paths,vp_data):
-        #    script += p + "\n"
-        #    script += "With data:\n"
-        #    for i in d:
-        #        script += i[4] + "\n"
-        #script += "~ ~ ~ ~ ~\n"
-        #script += "END\n"
-
-        for p,d in zip(visited_paths, vp_data):
-            script += "~ ~ ~ ~"
-            script += (" "*indent) + p + "\n"
-            for l in d:
-                #script += "l[0]: " + l[0] + "\n"
-                #script +=  (" "*indent*2) + l[0] + "\n"
-                #script += "checking the group tag for: " +  l[4]  + " This one is: "
-                if rpligroup_main_tag in l[2].keys():
-                    script += "group " + l[0] + "\n"
-                elif rpliattrib_main_tag in l[2].keys():
-                    script += "attribute " + l[0] + "\n"
-                else:
-                    script += "NO RPLI TAG"
-                script += "\n"
-
-        #out_script += " ".join(str(x) for x in start_of_layered_image) + "\n"
-                #script += (layer+"\n") #checking
-            #script += line[1] + "\n"
+        for r in rpli_data_list:
+            script += r[1] + "\n"
+        for r in rpli_data_list:
+#            script += "\n"
+#            script += "layer     : " + r[0] + "\n"
+#            script += "directory :    " + r[1] + "\n"
+#            script += "key, value:\n"
+#            for key, value in r[2].items():
+#                script += key + " : " + value + "\n"
+#            script += "\n"
+            if rpli_main_tag in r[2] and r[2][rpli_main_tag] == value_true_main_tag:
+                script += "layeredimage " + r[0].split(' ')[0] + ":\n"
+            elif rpligroup_main_tag in r[2] and r[2][rpligroup_main_tag] == value_true_main_tag:
+                script += (" " * indent * 2) + "group " + r[0].split(' ')[0] + "\n"
+            elif rpliattrib_main_tag in r[2] and r[2][rpliattrib_main_tag] == value_true_main_tag:
+                if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == value_true_main_tag:
+                    script += (" " * indent)
+                script += (" " * indent * 2) + "attribute " + r[0].split(' ')[0] + "\n"
         return script
 
     def storePath(self, dir, path_list, path_len):
@@ -649,12 +605,16 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         continue
                 tag_data = usable_tag_data
 
+                # Experimental pass: remove rpli tags so they wouldn't be inherited.
+                 # HIGHLY EXPERIMENTAL FOR ATTRIBUTE INDENTATION
                 if rpli_mode == True:
-                    # Experimental pass: remove rpli tags so they wouldn't be inherited.
-                    if rpligroup_main_tag in tag_dict.keys():
-                        tag_dict.pop(rpligroup_main_tag)
-                    if rpliattrib_main_tag in tag_dict.keys():
-                        tag_dict.pop(rpliattrib_main_tag)
+                    if "rpligroupchild" in tag_dict:
+                        tag_dict.pop("rpligroupchild")
+                    for main_tag in rpli_main_tag_list:
+                        if main_tag in tag_dict.keys():
+                            if main_tag == rpligroup_main_tag:
+                                tag_dict["rpligroupchild"] = value_true_main_tag
+                            tag_dict.pop(main_tag)
 
                 # Second pass: See if inheritance disabling is present.
                 # If so, clear the dictionary before adding any tags.
@@ -739,7 +699,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         return tag_dict_list
 
 
-    def pathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list, rpli_coords_list):
+    def pathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list):
         """
         Searches for all the node to leaf paths and stores them in path_list using storePath().
         storePath() takes in the entire paths (including all the tags at this step).
@@ -797,15 +757,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 # The pathbuilding gets messed up without this subtraction on path.
                     remove_amount = len(path) - path_len # This is always either 0 or 1.
                     path = path[: len(path) - remove_amount]
-                    self.pathRecord(i, path, path_list, path_len, coords_list, rpli_path_list, rpli_coords_list)
+                    self.pathRecord(i, path, path_list, path_len, coords_list, rpli_path_list)
                     for list in rpli_list:
                         for tag in list:
                             if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
                                 temp_path = path
-                                temp_path.append(i.name())
+                                temp_path.append(layer_name)
                                 self.storePath(temp_path, rpli_path_list, path_len+1)
                                 #self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + i.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
-                                rpli_coords_list.append([coord_x, coord_y, coord_center])
+                                #rpli_coords_list.append([coord_x, coord_y, coord_center])
                                 break
 
     def checkTransformMask(self, c):
@@ -892,7 +852,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 coords_list[i][2].setY(int(center_y_new))
         return coords_list
 
-
     def getModifierBlock(self, line):
         """
         Order of Property Application in Ren'Py
@@ -948,6 +907,45 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         return modifier_block
 
+    def sortRpliData(self, rpli_data_list):
+        self.DEBUG_MESSAGE += "list before sorting:\n"
+        for d in rpli_data_list:
+            self.DEBUG_MESSAGE += str(d[1]) + "\n"
+        s_list = rpli_data_list
+        top_counter = len(s_list)-1
+        c = len(s_list)-1
+        list_sorted = False
+        while not list_sorted:
+            part_sorted = False
+            while not part_sorted:
+                curr_line = s_list[c][1]
+                comp_line = s_list[c-1][1]
+                self.DEBUG_MESSAGE += "Comparing " + curr_line + " with " + comp_line  + "\n"
+                if curr_line in comp_line and curr_line < comp_line:
+                    s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
+                    self.DEBUG_MESSAGE += "SWAP!\n"
+                else:
+                    self.DEBUG_MESSAGE += "no swap\n"
+                    c = c-1
+                    part_sorted = True
+            if c == 0:
+                list_sorted = True
+            #list_sorted = True #debugging
+
+        #while c > 0:
+        #    curr_line = s_list[c]
+        #    part_sorted = False
+        #    while not part_sorted:
+        #        if curr_line in s_list[c-1] and curr_line < s_list[c-1]:
+        #            s_list[c-1], s_list[c] = s_list[c], s_list[c-1]
+        #        else:
+        #            c = c-1
+        #            part_sorted = True
+        self.DEBUG_MESSAGE += "sorted list:\n"
+        for l in s_list:
+            self.DEBUG_MESSAGE += str(l[1]) + "\n"
+        #return s_list
+
     def getDataList(self, button_num, spacing_num):
         """
         Concept: 1) Get all the paths.
@@ -977,17 +975,16 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_path_list = []
         tag_dict_list = []
         coords_list = []
-        rpli_coords_list = []
+        #rpli_coords_list = []
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             root_node = currentDoc.rootNode()
         path = []
         path_list_with_tags = []
-        self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list, rpli_coords_list)
+        self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
         tag_dict_list = self.getTags(path_list, False)
         rpli_tag_dict_list = self.getTags(rpli_path_list, True)
         path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
-        #not sure if removeUnusedPaths() is needed for rpli yet
         path_list_with_tags = path_list
         rpli_path_list_with_tags = rpli_list
         path_list = self.removeTagsFromPaths(path_list)
@@ -1002,9 +999,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
         for i,layer in enumerate(rpli_export_layer_list):
-            rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_coords_list[i], '0', '0'])) # debug
-            #rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i], tuple[0,0,0], rpli_path_list_with_tags[0]]))
-        #experiment with tuple of empty coords
+            rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i]]))
+
+        self.sortRpliData(rpli_data_list)
+
         if button_num == 3 or button_num == 4:
             data_list = calculateAlign(data_list, spacing_num)
 
