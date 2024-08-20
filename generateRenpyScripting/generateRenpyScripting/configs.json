@@ -6,5 +6,6 @@
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedefstart" : "layeredimage {overall_image}:\n",
     "atl_zoom_decimal_places" : "3",
-    "atl_rotate_decimal_places" : "3"
+    "atl_rotate_decimal_places" : "3",
+    "directory_starter" : ""
 }

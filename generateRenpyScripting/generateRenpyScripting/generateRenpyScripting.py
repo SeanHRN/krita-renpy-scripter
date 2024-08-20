@@ -68,7 +68,8 @@ default_configs_dict = {
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedefstart" : "layeredimage {overall_image}:\n",
     "atl_zoom_decimal_places" : "3",
-    "atl_rotate_decimal_places" : "3"
+    "atl_rotate_decimal_places" : "3",
+    "directory_starter" : ""
 }
 default_button_text_dict = {
     "pos_button_text" : "pos (x, y)",
@@ -370,6 +371,8 @@ This will overwrite your customizations.")
         """
         script = ""
 
+        data_list = []
+        rpli_data_list = []
         data_list, rpli_data_list = self.getDataList(button_num, spacing_num)
         #self.DEBUG_MESSAGE += "checking the rpli_data_list:" + "\n"
         #for r in rpli_data_list:
@@ -438,6 +441,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         TODO: Make the image directories work.
         """
         script = ""
+        if len(rpli_data_list) == 0:
+            script += "No Ren'Py Layered Image elements found! Check your tags!\n"
         was_written = set()
 #        for r in rpli_data_list:
 #            script += r[1] + "\n"
@@ -495,7 +500,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Concept: Store each max-length path into the final path_list (starting with images instead of root).
         """
         #self.DEBUG_MESSAGE += "From storePath(): " + ''.join(path_list) + "\n"
-        to_insert = "images/"
+        #to_insert =
+        #to_insert = "" #Experiment with not having 'images/'
+        to_insert = self.config_data["directory_starter"]
         for i in dir[1 : path_len-1]:
             to_insert = to_insert + (i + "/")
         image_file_name = dir[path_len-1]
@@ -657,7 +664,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 # If so, clear the dictionary before adding any tags.
                 if rpli_mode == False:
                     for tag in tag_data:
+                        letter = ""
+                        #try: #experimental try/except
                         letter, value = tag.split('=', 1)
+                        #except ValueError:
+                        #    continue
                         if letter == "i":
                             if value in value_false_set:
                                 tag_dict.clear()
@@ -772,15 +783,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         coord_y = node.bounds().topLeft().y()
         coord_center = node.bounds().center()
         for c in node.childNodes():
-            #EXPERIMENTAL
-            #for list in rpli_list:
-            #   for tag in list:
-            #       if tag in c.name():
-            #           temp_path = path
-            #           temp_path.append(c.name())
-            #           self.storePath(temp_path, rpli_path_list, path_len+1) #EXPERIMENTAL
-            #           self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + c.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
-            #           rpli_coords_list.append([coord_x, coord_y, coord_center])
             if c.type() == "grouplayer" or c.type() == "paintlayer":
                 recordable_child_nodes += 1
             #elif c.type() == "transformmask": # Toggle this on
@@ -797,9 +799,14 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     letter_data = []
                     value_data = []
                     for tag in tag_data:
-                        letter, value = tag.split('=', 1)
-                        letter_data.append(letter)
-                        value_data.append(value)
+                        #experimental try except
+                        try:
+                    ##    self.DEBUG_MESSAGE += "jojo: " + tag + "\n"
+                            letter, value = tag.split('=', 1)
+                            letter_data.append(letter)
+                            value_data.append(value)
+                        except ValueError:
+                            continue
                 # Looks silly and work-aroundy but seems to work.
                 # The pathbuilding gets messed up without this subtraction on path.
                     remove_amount = len(path) - path_len # This is always either 0 or 1.
@@ -812,7 +819,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 temp_path.append(layer_name)
                                 self.storePath(temp_path, rpli_path_list, path_len+1)
                                 #self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + i.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
-                                #rpli_coords_list.append([coord_x, coord_y, coord_center])
                                 break
 
     def checkTransformMask(self, c):
@@ -1029,7 +1035,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_path_list = []
         tag_dict_list = []
         coords_list = []
-        #rpli_coords_list = []
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             root_node = currentDoc.rootNode()
@@ -1048,23 +1053,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
         export_layer_list = self.getExportLayerList(path_list)
         rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
-        #experimental: remove duplicates
-        #self.DEBUG_MESSAGE += "before removal:\n"
-        #for p in rpli_export_layer_list:
-        #    self.DEBUG_MESSAGE += str(p) + "\n"
-        #rpli_export_layer_list = list(OrderedDict.fromkeys(rpli_export_layer_list))
-        #self.DEBUG_MESSAGE += "after:\n"
-        #for p in rpli_export_layer_list:
-        #    self.DEBUG_MESSAGE += str(p) + "\n"
+
         for i,layer in enumerate(export_layer_list):
             data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
         for i,layer in enumerate(rpli_export_layer_list):
             rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
 
-        self.sortRpliData(rpli_data_list)
-
-
+        if rpli_data_list:
+            self.sortRpliData(rpli_data_list)
 
         if button_num == 3 or button_num == 4:
             data_list = calculateAlign(data_list, spacing_num)
