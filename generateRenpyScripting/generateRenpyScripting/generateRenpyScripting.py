@@ -61,7 +61,7 @@ close_notifier = KI.notifier()
 close_notifier.setActive(True)
 
 default_configs_dict = {
-    "string_xposypos" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
+    "string_posxy" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
     "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
     "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
     "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
@@ -69,7 +69,8 @@ default_configs_dict = {
     "string_layeredimagedefstart" : "layeredimage {overall_image}:\n",
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3",
-    "directory_starter" : ""
+    "directory_starter" : "",
+    "lock_windows_to_front" : "true"
 }
 default_button_text_dict = {
     "pos_button_text" : "pos (x, y)",
@@ -111,14 +112,6 @@ value_false_main_tag = "false"
 
 indent = 4
 decimal_place_count = 3
-transform_properties = {
-                        "rotate", "rotate_pad", "transform_anchor",
-                        "zoom", "xzoom", "yzoom", "nearest", "alpha",
-                        "additive", "around", "alignaround", "crop",
-                        "subpixel", "delay", "events", "xpan", "ypan",
-                        "xtile", "ytile", "matrixcolor", "blur"
-                        }
-
 
 """
 sortListByPriority(values: <list to sort>, priority: <sublist>)
@@ -204,12 +197,12 @@ class TextOutput(QWidget):
         Back:  Closes only TextOutput (this window),
                so that the user can choose a different format.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super(TextOutput, self).__init__(parent)
         close_notifier.viewClosed.connect(self.close)
 
-    def setupUi(self, MainBox):
-        self.main_box = MainBox
+    def setupUi(self, ScriptBox):
+        self.script_box = ScriptBox
         self.script = ""
         self.text_edit = QTextEdit()
         self.text_edit.setPlainText(self.script)
@@ -233,7 +226,7 @@ class TextOutput(QWidget):
         clipboard.setText(self.text_edit.toPlainText(), mode=clipboard.Clipboard)
 
     def onClose(self):
-        self.main_box.close()
+        self.script_box.close()
 
 class TextSignalEmitter(QObject):
     custom_signal = pyqtSignal(str)
@@ -244,8 +237,8 @@ class FormatMenu(QWidget):
     The configs are loaded from the external file configs.json if possible;
     if not possible, default_configs_dict is used.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super(FormatMenu, self).__init__(parent)
         self.setWindowTitle("Choose Your Format")
         self.createFormatMenuInterface()
         self.DEBUG_MESSAGE = ""
@@ -413,7 +406,7 @@ This will overwrite your customizations.")
             for line in data_list:
                 modifier_block = self.getModifierBlock(line)
                 if button_num == 1:
-                    script += self.config_data["string_xposypos"].format\
+                    script += self.config_data["string_posxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += modifier_block
@@ -1136,30 +1129,39 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         except IOError:
             pass
 
-class MainBox(QWidget):
+class ScriptBox(QWidget):
     """
     Idea: Put the pop-up windows into a single box.
     """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Choose Your Format!")
-        self.createMainBox()
+        self.config_data = default_configs_dict
+        try:
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            imported_configs = json.load(configs_file)
+            self.config_data = imported_configs
+        except IOError:
+            pass
+        if self.config_data["lock_windows_to_front"] in value_true_set:
+            self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.createScriptBox()
         self.format_menu = None
         self.outputWindow = None
         close_notifier.viewClosed.connect(self.close)
     
-    def createMainBox(self):
+    def createScriptBox(self):
         """
         The output window's close button is connected to the main box.
         """
-        self.output_window = TextOutput()
+        self.output_window = TextOutput(self)
         self.output_window.setupUi(self)
-        self.format_menu = FormatMenu()
+        self.format_menu = FormatMenu(self)
         self.format_menu.text_signal_emitter.custom_signal.connect(self.output_window.receiveText)
-        main_box_layout = QHBoxLayout()
-        main_box_layout.addWidget(self.format_menu)
-        main_box_layout.addWidget(self.output_window)
-        self.setLayout(main_box_layout)
+        script_box_layout = QHBoxLayout()
+        script_box_layout.addWidget(self.format_menu)
+        script_box_layout.addWidget(self.output_window)
+        self.setLayout(script_box_layout)
 
 class RenameWorkerThread(QThread):
     """
@@ -1205,6 +1207,15 @@ class ScaleCalculateBox(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Check Your Scale!")
+        self.config_data = default_configs_dict
+        try:
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            imported_configs = json.load(configs_file)
+            self.config_data = imported_configs
+        except IOError:
+            pass
+        if self.config_data["lock_windows_to_front"] in value_true_set:
+            self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.createScaleCalculateBox()
         close_notifier.viewClosed.connect(self.close)
         self.status_signal_emitter = TextSignalEmitter()
@@ -1327,9 +1338,6 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             if self.line_height.hasFocus() == False:
                 self.line_height.setText(str(height) + " px")
 
-    def nothing(self): # for debugging
-        pass
-
     def receiveStatus(self, value):
         self.status_bar.showMessage(value, 5000)
 
@@ -1337,7 +1345,7 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         """
         """
         if file_found == False:
-            self.status_bar.showMessage("No files to copy and rename have been found!", 5000)
+            self.status_bar.showMessage("No files to copy and rename have been found! Check your scale tag(s).", 5000)
             if os.path.exists(dir_to_check) and os.path.isdir(dir_to_check):
                 shutil.rmtree(dir_to_check)
         else:
@@ -1382,7 +1390,7 @@ class GenerateRenpyScripting(DockWidget):
         super().__init__()
         self.setWindowTitle("Generate Ren'Py Scripting")
         self.createInterface()
-        self.main_box = None
+        self.script_box = None
 
     def showErrorMessage(self, toPrint):
         msg = QMessageBox()
@@ -1391,7 +1399,7 @@ class GenerateRenpyScripting(DockWidget):
 
     def createInterface(self):
         generate_button = QPushButton("Scripting Generator")
-        generate_button.clicked.connect(self.startMainBox)
+        generate_button.clicked.connect(self.startScriptBox)
 
         calculate_button = QPushButton("Scale Calculator and Renamer")
         calculate_button.clicked.connect(self.startScaleCalculateBox)
@@ -1405,9 +1413,9 @@ class GenerateRenpyScripting(DockWidget):
         self.setWidget(mainWidget)
 
 
-    def startMainBox(self):
-        self.main_box = MainBox()
-        self.main_box.show()
+    def startScriptBox(self):
+        self.script_box = ScriptBox()
+        self.script_box.show()
     
     def startScaleCalculateBox(self):
         self.scale_calculate_box = ScaleCalculateBox()
@@ -1420,8 +1428,8 @@ class GenerateRenpyScripting(DockWidget):
         pass
 
     def closeEvent(self, event):
-        if not set.main_box is None:
-            self.main_box.close()
+        if not set.script_box is None:
+            self.script_box.close()
 
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
