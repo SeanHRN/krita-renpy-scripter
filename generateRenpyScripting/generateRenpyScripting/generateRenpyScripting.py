@@ -438,7 +438,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Pre-requisite: rpli_data_list is sorted.
         I'm skipping duplicates from the data list here because I'm not sure if something
         could break elsewhere.
-        TODO: Make the image directories work.
         """
         script = ""
         if len(rpli_data_list) == 0:
@@ -497,11 +496,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def storePath(self, dir, path_list, path_len):
         """
-        Concept: Store each max-length path into the final path_list (starting with images instead of root).
+        Store each max-length path into the final path_list (starting with images instead of root).
         """
-        #self.DEBUG_MESSAGE += "From storePath(): " + ''.join(path_list) + "\n"
-        #to_insert =
-        #to_insert = "" #Experiment with not having 'images/'
         to_insert = self.config_data["directory_starter"]
         for i in dir[1 : path_len-1]:
             to_insert = to_insert + (i + "/")
@@ -520,9 +516,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Property                                : Data Type (Not in the original XML string, but instead how it's stored)
         scaleX and scaleY (xzoom and yzoom)     : floats
 
-        transformedCenter (xoffset and yoffset) : int array of [x, y]
-            [Must]
-        
+        transformedCenter (x and y) : int array of [x, y]
+        (not offset)
+
         #basic:
         #tag_dict[p.tag] = p.attrib
         """
@@ -551,7 +547,14 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     else:
                         tag_dict["aZ"] = float(new_rot_degrees % 360)
 
-                # transformedCenter: Add to existing value.
+                # transformedCenter: Add to existing value. EXPERIMENTAL
+                if p.tag == "transformedCenter":
+                    if "transformedCenter" in tag_dict.keys():
+                        new_x = tag_dict["transformedCenter"][0] + int(float(p.attrib["x"]))
+                        new_y = tag_dict["transformedCenter"][0] + int(float(p.attrib["y"]))
+                        tag_dict["transformedCenter"] = [new_x, new_y]
+                    else:
+                        tag_dict["transformedCenter"] = [int(float(p.attrib["x"])), int(float(p.attrib["y"]))]
                 """
                 Issue: This probably isn't an accurate use of offset.
                 if p.tag == "transformedCenter":
@@ -599,11 +602,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def getMaskPropertiesStart(self, path_pieces, tag_dict):
         """
+        At this point, the paths are defined with or without the prefix directory_starter.
+        Case 1: directory_starter is non-empty, so skip over it to search the layers.
+        Case 2: directory_starter is empty, so the first part of path_pieces is where the
+                search must start.
         """
         currentDoc = KI.activeDocument()
         if currentDoc != None:
             curr_node = currentDoc.rootNode()
-        self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
+        #self.DEBUG_MESSAGE += "path pieces: \n"
+        #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
+        if self.config_data["directory_starter"]:
+            #self.DEBUG_MESSAGE += str(path_pieces[1:]) + "\n"
+            self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
+        else:
+            #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
+            self.getMaskPropertiesRecursion(path_pieces, tag_dict, curr_node)           
 
         return tag_dict
 
@@ -721,7 +735,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         elif letter == 'i': # Prevent the i=false tag from leaking down
                             continue        # the path after it's been used to block
                         else:               # the parents' tags.
-                            if letter not in rpli_set: # Don't save rpli tags if not using that mode.
+                            if not letter in rpli_set: # Don't save rpli tags if not using that mode.
                                 tag_dict[letter] = value
                     elif rpli_mode == True:
                         if letter in rpli_set:
@@ -768,9 +782,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         Reference: GeeksforGeeks solution to finding paths in a binary search tree
 
-        TODO: New concept: Record an additional list for the Ren'Py layered image tags
+        New concept: Record an additional list for the Ren'Py layered image tags
         since the required behavior for layered images isn't the same when it comes to
         inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
+
+        TODO: Make transformmask 
         """
         #layer_data = node.name().split(' ')
         if (len(path) > path_len):
@@ -799,9 +815,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     letter_data = []
                     value_data = []
                     for tag in tag_data:
-                        #experimental try except
                         try:
-                    ##    self.DEBUG_MESSAGE += "jojo: " + tag + "\n"
                             letter, value = tag.split('=', 1)
                             letter_data.append(letter)
                             value_data.append(value)
@@ -889,12 +903,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 of 4 margins (around a single layer rectange) would be of equal size.
         Step 2: Scale the coordinates with the smallest
                 given size from the 's=' layer tags
+        TODO: Implement the x and y changes that come from transform masks.
+        It should be before scaling.
         """
         for i in range(len(coords_list)):
             scale = 1.0
             if "m" in tag_dict_list[i]:
                 coords_list[i][0] -= int(min(tag_dict_list[i]["m"]))
                 coords_list[i][1] -= int(min(tag_dict_list[i]["m"]))
+
+            if "transformedCenter" in tag_dict_list[i]: # HIGHLY EXPERIMENTAL
+                #self.DEBUG_MESSAGE += "x and y before transform: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
+                difference_x = tag_dict_list[i]["transformedCenter"][0] - coords_list[i][0]
+                difference_y = tag_dict_list[i]["transformedCenter"][1] - coords_list[i][1]
+                coords_list[i][0] = coords_list[i][0] + difference_x
+                coords_list[i][1] = coords_list[i][1] + difference_y
+                #self.DEBUG_MESSAGE += "after: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
 
             if "s" in tag_dict_list[i]:
                 coords_list[i][0] = round(coords_list[i][0] * min(tag_dict_list[i]["s"]) / 100)
@@ -907,26 +931,17 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def getModifierBlock(self, line):
         """
-        Order of Property Application in Ren'Py
-        crop, corner1, corner2
-        xysize, size, maxsize
-        zoom, xzoom, yzoom
-        point_to
-        orientation
-        xrotate, yrotate, zrotate
-        rotate
-        zpos
-        matrixtransform, matrixanchor
-        zzoom
-        perspective
-        nearest, blend, alpha, additive, shader
-        matrixcolor
-        GL Properties, Uniforms
-        position properties
-        show_cancels_hide
+        Zoom and Rotate are handled here.
+        transformedCenter will instead modify xpos and ypos.
         """
         modifier_block = ""
-        # zoom
+        #debugging
+        #modifier_block += "~ ~ ~\n"
+        #for key,value in line[2].items():
+        #    modifier_block += key + " : " + str(value) + "\n"
+        #modifier_block += "~ ~ ~"
+        
+        # Zoom
         if "scaleX" in line[2] or "scaleY" in line[2]:
             xzoom = 1.0
             yzoom = 1.0
@@ -947,6 +962,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         if "aZ" in line[2]:
             rounded_rot = round(line[2]["aZ"], int(self.config_data["atl_rotate_decimal_places"]))
             modifier_block += ((' ')*indent*2) + "rotate " + str(rounded_rot) + "\n"
+        
         """
         if "transformedCenter" in line[2]:
             xoffset = line[2]["transformedCenter"][0]
