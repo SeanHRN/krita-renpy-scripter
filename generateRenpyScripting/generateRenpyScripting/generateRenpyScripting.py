@@ -70,10 +70,8 @@ default_configs_dict = {
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3",
     "directory_starter" : "",
-    "lock_windows_to_front" : "true"
-}
-default_button_text_dict = {
-    "pos_button_text" : "pos (x, y)",
+    "lock_windows_to_front" : "true",
+    "posxy_button_text" : "pos (x, y)",
     "setpos_button_text" : "at setPos(x, y)",
     "align_button_text" : "align (x, y)",
     "xalignyalign_button_text" : "xalign x yalign y"
@@ -236,11 +234,13 @@ class FormatMenu(QWidget):
     Window that should open when called from the docker.
     The configs are loaded from the external file configs.json if possible;
     if not possible, default_configs_dict is used.
+    default_configs_dict is also used for lines that aren't filled in.
+    If an incorrect value for a true/false field or a numeric field is given,
+    use the default setting.
     """
     def __init__(self, parent=None):
         super(FormatMenu, self).__init__(parent)
-        self.setWindowTitle("Choose Your Format")
-        self.createFormatMenuInterface()
+        self.setWindowTitle("Choose Your Format!")
         self.DEBUG_MESSAGE = ""
         self.text_signal_emitter = TextSignalEmitter()
         self.config_data = default_configs_dict
@@ -248,8 +248,18 @@ class FormatMenu(QWidget):
             configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
+            for key, value in default_configs_dict.items():
+                if not key in self.config_data:
+                    self.config_data[key] = value
+                elif value in value_true_set or value in value_false_set:
+                    if not self.config_data[key].lower() in value_true_set and not self.config_data[key].lower() in value_true_set:
+                        self.config_data[key] = value
+                elif value.isnumeric():
+                    if not self.config_data[key].isnumeric():
+                        self.config_data[key] = value
         except IOError:
             pass
+        self.createFormatMenuInterface()
 
     def createFormatMenuInterface(self):
         main_layout = QVBoxLayout()
@@ -260,10 +270,11 @@ class FormatMenu(QWidget):
         settings_layout = QHBoxLayout()
 
         pos_label = QLabel("pos")
-        self.pos_button_text = default_button_text_dict["pos_button_text"]
-        self.pos_button = QPushButton(self.pos_button_text, self)
-        self.pos_button.clicked.connect(lambda: self.process(1))
-        atSetPos_button = QPushButton("at setPos(x, y)")
+        #self.posxy_button_text = self.config_data["posxy_button_text"]
+        self.posxy_button = QPushButton(self.config_data["posxy_button_text"], self)
+        self.posxy_button.clicked.connect(lambda: self.process(1))
+        #atSetPos_button = QPushButton("at setPos(x, y)")
+        atSetPos_button = QPushButton(self.config_data["setpos_button_text"],self)
         atSetPos_button.clicked.connect(lambda: self.process(2))
         align_label = QLabel("align")
         self.spacing_slider = QSlider(Qt.Horizontal, self)
@@ -285,9 +296,9 @@ spaces to use for align(x, y).")
 statements to Rule of Thirds intersections.\nThis is equivalent to using 4 spaces.")
         self.rule_of_thirds_check.setChecked(False)
         self.rule_of_thirds_check.toggled.connect(self.ruleOfThirdsFlag)
-        align_button = QPushButton("align (x, y)")
+        align_button = QPushButton(self.config_data["align_button_text"],self)
         align_button.clicked.connect(lambda: self.process(3))
-        xalignyalign_button = QPushButton("xalign x yalign y")
+        xalignyalign_button = QPushButton(self.config_data["xalignyalign_button_text"],self)
         xalignyalign_button.clicked.connect(lambda: self.process(4))
         image_definition_label = QLabel("Image Definition")
         normal_image_def_button = QPushButton("Normal Images")
@@ -307,7 +318,7 @@ This will overwrite your customizations.")
         self.customize_button.setToolTip("Open configs.json in your default text editor\nto make changes to the output formats.")
         self.customize_button.clicked.connect(self.settingCustomize)
         main_layout.addWidget(pos_label)
-        pos_layout.addWidget(self.pos_button)
+        pos_layout.addWidget(self.posxy_button)
         pos_layout.addWidget(atSetPos_button)
         main_layout.addLayout(pos_layout)
         main_layout.addWidget(align_label)
@@ -1103,8 +1114,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         self.config_data = default_configs_dict
         with open(os.path.join(os.path.dirname\
 (os.path.realpath(__file__)), "configs.json"), 'w') as f:
-            json.dump(default_configs_dict, f)
-        self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!")
+            json.dump(default_configs_dict, f, indent=2)
+        self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!\n Changes to lock_windows_to_front\
+                                                    and button names require a reset!")
 
     def settingCustomize(self):
         """
@@ -1115,8 +1127,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
               It would use the setText() call below.
         """
         webbrowser.open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
-        #self.pos_button_text = "NEWBUTTONNAME"
-        #self.pos_button.setText(self.pos_button_text)
+        #self.posxy_button_text = "NEWBUTTONNAME"
+        #self.posxy_button.setText(self.posxy_button_text)
     
     def refreshConfigData(self):
         """
