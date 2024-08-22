@@ -62,27 +62,31 @@ close_notifier.setActive(True)
 
 default_configs_dict = {
     "string_posxy" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
+    "string_xposxyposy" : "{four_space_indent}show {image}:\n{eight_space_indent}xpos {xcoord} ypos {ycoord}\n",
     "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
     "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
-    "string_xalignyalign" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
+    "string_xalignxyaligny" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
-    "string_layeredimagedefstart" : "layeredimage {overall_image}:\n",
+    "string_layeredimagedef" : "Value not used, but key is.",
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3",
     "directory_starter" : "",
     "lock_windows_to_front" : "true",
     "posxy_button_text" : "pos (x, y)",
-    "setpos_button_text" : "at setPos(x, y)",
-    "align_button_text" : "align (x, y)",
-    "xalignyalign_button_text" : "xalign x yalign y"
+    "xposxyposy_button_text" : "xpos x ypos y",
+    "atsetposxy_button_text" : "at setPos(x, y)",
+    "alignxy_button_text" : "align (x, y)",
+    "xalignxyaligny_button_text" : "xalign x yalign y"
 }
 
-# For parameterizing the menu text to allow customization,
-# but it's currently not in use because the buttons aren't updatable.
-replacer_dict = {
-    "{xcoord}" : "x",
-    "{ycoord}" : "y"
-}
+button_display_set = {"string_posxy", "string_xposxyposy", \
+                      "string_atsetposxy", "string_alignxy", "string_xalignxyaligny"}
+
+button_display_align_set = {"string_alignxy", "string_xalignxyaligny"}
+
+button_define_set = {"string_normalimagedef", "string_layeredimagedef"}
+
+button_settings_set = {"default", "customize"}
 
 # Sets to serve as a tag thesaurus
 rpli_set       = {"rpli", "rli", "li"}               # layeredimage (the start)
@@ -270,12 +274,12 @@ class FormatMenu(QWidget):
         settings_layout = QHBoxLayout()
 
         pos_label = QLabel("pos")
-        #self.posxy_button_text = self.config_data["posxy_button_text"]
-        self.posxy_button = QPushButton(self.config_data["posxy_button_text"], self)
-        self.posxy_button.clicked.connect(lambda: self.process(1))
-        #atSetPos_button = QPushButton("at setPos(x, y)")
-        atSetPos_button = QPushButton(self.config_data["setpos_button_text"],self)
-        atSetPos_button.clicked.connect(lambda: self.process(2))
+        posxy_button = QPushButton(self.config_data["posxy_button_text"], self)
+        posxy_button.clicked.connect(lambda: self.process("string_posxy"))
+        xposxyposy_button = QPushButton(self.config_data["xposxyposy_button_text"], self)
+        xposxyposy_button.clicked.connect(lambda: self.process("string_xposxyposy"))
+        atsetposxy_button = QPushButton(self.config_data["atsetposxy_button_text"],self)
+        atsetposxy_button.clicked.connect(lambda: self.process("string_atsetposxy"))
         align_label = QLabel("align")
         self.spacing_slider = QSlider(Qt.Horizontal, self)
         self.spacing_slider.setGeometry(30, 40, 200, 30)
@@ -296,19 +300,19 @@ spaces to use for align(x, y).")
 statements to Rule of Thirds intersections.\nThis is equivalent to using 4 spaces.")
         self.rule_of_thirds_check.setChecked(False)
         self.rule_of_thirds_check.toggled.connect(self.ruleOfThirdsFlag)
-        align_button = QPushButton(self.config_data["align_button_text"],self)
-        align_button.clicked.connect(lambda: self.process(3))
-        xalignyalign_button = QPushButton(self.config_data["xalignyalign_button_text"],self)
-        xalignyalign_button.clicked.connect(lambda: self.process(4))
+        alignxy_button = QPushButton(self.config_data["alignxy_button_text"],self)
+        alignxy_button.clicked.connect(lambda: self.process("string_alignxy"))
+        xalignxyaligny_button = QPushButton(self.config_data["xalignxyaligny_button_text"],self)
+        xalignxyaligny_button.clicked.connect(lambda: self.process("string_xalignxyaligny"))
         image_definition_label = QLabel("Image Definition")
         normal_image_def_button = QPushButton("Normal Images")
         normal_image_def_button.setToolTip("Generate the definitions of individual images in Ren'Py\nusing \
 the Krita layer structure for the directory.")
-        normal_image_def_button.clicked.connect(lambda: self.process(5))
+        normal_image_def_button.clicked.connect(lambda: self.process("string_normalimagedef"))
         layered_image_def_button = QPushButton("Layered Image")
         layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage\nusing \
 the Krita layer structure for the directory.")
-        layered_image_def_button.clicked.connect(lambda: self.process(6))
+        layered_image_def_button.clicked.connect(lambda: self.process("string_layeredimagedef"))
         settings_label = QLabel("Output Settings")
         self.default_button = QPushButton("Default")
         self.default_button.setToolTip("Revert output text format to the default configurations.\n\
@@ -318,8 +322,9 @@ This will overwrite your customizations.")
         self.customize_button.setToolTip("Open configs.json in your default text editor\nto make changes to the output formats.")
         self.customize_button.clicked.connect(self.settingCustomize)
         main_layout.addWidget(pos_label)
-        pos_layout.addWidget(self.posxy_button)
-        pos_layout.addWidget(atSetPos_button)
+        pos_layout.addWidget(posxy_button)
+        pos_layout.addWidget(xposxyposy_button)
+        pos_layout.addWidget(atsetposxy_button)
         main_layout.addLayout(pos_layout)
         main_layout.addWidget(align_label)
         spacing_layout.setContentsMargins(0,0,0,0)
@@ -328,8 +333,8 @@ This will overwrite your customizations.")
         spacing_layout.addWidget(self.spacing_slider)
         spacing_layout.addWidget(self.rule_of_thirds_check)
         main_layout.addLayout(spacing_layout)
-        align_layout.addWidget(align_button)
-        align_layout.addWidget(xalignyalign_button)
+        align_layout.addWidget(alignxy_button)
+        align_layout.addWidget(xalignxyaligny_button)
         main_layout.addLayout(align_layout)
         main_layout.addWidget(image_definition_label)
         image_definition_layout.addWidget(normal_image_def_button)
@@ -341,17 +346,17 @@ This will overwrite your customizations.")
         main_layout.addLayout(settings_layout)
         self.setLayout(main_layout)
 
-    def process(self, button_num):
+    def process(self, button_chosen):
         """
         Gets the script and then directs it to the TextOutput window.
         A reference to the FormatMenu (the self) is passed
         so that the first window can be closed from TextOutput.
         """
         self.refreshConfigData()
-        out_script = self.writeScript(button_num, self.spacing_slider.value())
+        out_script = self.writeScript(button_chosen, self.spacing_slider.value())
         self.text_signal_emitter.custom_signal.emit(out_script)
     
-    def writeScript(self, button_num, spacing_num):
+    def writeScript(self, button_chosen, spacing_num):
         """
         Do nothing if the data_list isn't populated.
 
@@ -363,7 +368,6 @@ This will overwrite your customizations.")
             line[4] - Directory from /images/ to /layername/, with tags.
 
         Image Definition:
-            Button 5: Normal
                 - Format Priority:
                       - If both png and jpg are requested for a single image,
                         the jpg line will be written but commented out.
@@ -371,13 +375,12 @@ This will overwrite your customizations.")
                         though webp isn't actually supported by the Batch Exporter plugin;
                         it's just preferred for Ren'Py.
                       - Any unrecognized format get a commented out line.
-            Button 6: Layered Image (The Ren'Py Feature)
         """
         script = ""
 
         data_list = []
         rpli_data_list = []
-        data_list, rpli_data_list = self.getDataList(button_num, spacing_num)
+        data_list, rpli_data_list = self.getDataList(button_chosen, spacing_num)
         #self.DEBUG_MESSAGE += "checking the rpli_data_list:" + "\n"
         #for r in rpli_data_list:
         #    self.DEBUG_MESSAGE += "layer name: " + str(r[0]) + "  /////  directory: " + str(r[1]) + "\n"
@@ -390,7 +393,7 @@ This will overwrite your customizations.")
         ATL_dict = {}
         currentDoc = KI.activeDocument()
 
-        if button_num == 5: # Normal Images
+        if button_chosen == "string_normalimagedef": # Normal Images
             for line in data_list:
                 if "e" in line[2]:
                     line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
@@ -409,32 +412,44 @@ This will overwrite your customizations.")
 (image=line[0],path_to_image=line[1],file_extension=f)
                 else:
                     script += "### Error: File format not defined for layer " + line[0] + "\n"
-        elif button_num == 6: # Layered Image
+        elif button_chosen == "string_layeredimagedef": # Layered Image
             script += self.writeLayeredImage(rpli_data_list)
 
         # For image position scripting
         else:
             for line in data_list:
                 modifier_block = self.getModifierBlock(line)
-                if button_num == 1:
+                if button_chosen in button_display_set:
+                    script += self.config_data[button_chosen].format\
+(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                if not button_chosen in button_display_align_set:
+                    script += modifier_block
+                """
+                if button_chosen == 1:
                     script += self.config_data["string_posxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += modifier_block
-                elif button_num == 2:
+                ## TODO: add new format
+                elif button_chosen == 2:
+                    script += self.config_data["string_xposxyposy"].format\
+(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+xcoord=str(line[3][0]),ycoord=str(line[3][1]))
+                elif button_chosen == 3:
                     script += self.config_data["string_atsetposxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     script += modifier_block
-                elif button_num == 3:
+                elif button_chosen == 4:
                     script += self.config_data["string_alignxy"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                elif button_num == 4:
-                    script += self.config_data["string_xalignyalign"].format\
+                elif button_chosen == 5:
+                    script += self.config_data["string_xalignxyaligny"].format\
 (four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-
+                """
         return script
 
     def writeLayeredImage(self, rpli_data_list):
@@ -454,13 +469,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 was_written.add(r[1])
             else: # ignore duplicate lines
                 continue
-#            script += "\n"
-#            script += "layer     : " + r[0] + "\n"
-#            script += "directory :    " + r[1] + "\n"
-#            script += "key, value:\n"
-#            for key, value in r[2].items():
-#                script += key + " : " + value + "\n"
-#            script += "\n"
             def_add_on = ""
             image_add_on_list = []
             if "e" in r[2]:
@@ -551,7 +559,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     else:
                         tag_dict["aZ"] = float(new_rot_degrees % 360)
 
-                # transformedCenter: Add to existing value. EXPERIMENTAL
+                # transformedCenter: Add to existing value.
                 if p.tag == "transformedCenter":
                     if "transformedCenter" in tag_dict.keys():
                         new_x = tag_dict["transformedCenter"][0] + int(float(p.attrib["x"]))
@@ -683,10 +691,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 if rpli_mode == False:
                     for tag in tag_data:
                         letter = ""
-                        #try: #experimental try/except
-                        letter, value = tag.split('=', 1)
-                        #except ValueError:
-                        #    continue
+                        value = ""
+                        try:
+                            letter, value = tag.split('=', 1)
+                        except ValueError:
+                            self.DEBUG_MESSAGE += "Error: letter,value parse failed in getTags()."
+                            continue
                         if letter == "i":
                             if value in value_false_set:
                                 tag_dict.clear()
@@ -916,7 +926,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 coords_list[i][0] -= int(min(tag_dict_list[i]["m"]))
                 coords_list[i][1] -= int(min(tag_dict_list[i]["m"]))
 
-            if "transformedCenter" in tag_dict_list[i]: # HIGHLY EXPERIMENTAL
+            if "transformedCenter" in tag_dict_list[i]:
                 #self.DEBUG_MESSAGE += "x and y before transform: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
                 difference_x = tag_dict_list[i]["transformedCenter"][0] - coords_list[i][0]
                 difference_y = tag_dict_list[i]["transformedCenter"][1] - coords_list[i][1]
@@ -1020,7 +1030,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         #    self.DEBUG_MESSAGE += str(l[1]) + "\n"
         #return s_list
 
-    def getDataList(self, button_num, spacing_num):
+    def getDataList(self, button_chosen, spacing_num):
         """
         Concept: 1) Get all the paths.
                  2) Get all the tags (with inheritance).
@@ -1083,7 +1093,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         if rpli_data_list:
             self.sortRpliData(rpli_data_list)
 
-        if button_num == 3 or button_num == 4:
+        if button_chosen in button_display_align_set:
             data_list = calculateAlign(data_list, spacing_num)
 
         return data_list, rpli_data_list
@@ -1127,8 +1137,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
               It would use the setText() call below.
         """
         webbrowser.open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
-        #self.posxy_button_text = "NEWBUTTONNAME"
-        #self.posxy_button.setText(self.posxy_button_text)
     
     def refreshConfigData(self):
         """
