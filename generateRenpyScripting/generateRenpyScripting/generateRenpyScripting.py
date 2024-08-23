@@ -112,6 +112,8 @@ value_false_set = {"false", "f", "no", "n"}
 value_true_main_tag = "true"
 value_false_main_tag = "false"
 
+chain_set = {"ch", "c", "chain"}
+
 indent = 4
 decimal_place_count = 3
 
@@ -395,6 +397,10 @@ This will overwrite your customizations.")
 
         if button_chosen == "string_normalimagedef": # Normal Images
             for line in data_list:
+                name_to_print = line[0]
+                if "chain_name" in line[2]:
+                    #script += "chain name: " + line[2]["chain_name"] + "\n"
+                    name_to_print = line[2]["chain_name"]
                 if "e" in line[2]:
                     line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
                     format_set = set(line[2]["e"])
@@ -409,47 +415,26 @@ This will overwrite your customizations.")
                         if f != chosen_format:
                             script += '#'
                         script += self.config_data["string_normalimagedef"].format\
-(image=line[0],path_to_image=line[1],file_extension=f)
+(image=name_to_print,path_to_image=line[1],file_extension=f)
                 else:
-                    script += "### Error: File format not defined for layer " + line[0] + "\n"
+                    script += "### Error: File format not defined for layer " + name_to_print + "\n"
         elif button_chosen == "string_layeredimagedef": # Layered Image
             script += self.writeLayeredImage(rpli_data_list)
 
         # For image position scripting
         else:
             for line in data_list:
+                name_to_print = line[0]
+                if "chain_name" in line[2]:
+                    name_to_print = line[2]["chain_name"]
                 modifier_block = self.getModifierBlock(line)
                 if button_chosen in button_display_set:
                     script += self.config_data[button_chosen].format\
-(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
+(four_space_indent=(' '*indent),image=name_to_print,eight_space_indent=' '*(indent*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 if not button_chosen in button_display_align_set:
                     script += modifier_block
-                """
-                if button_chosen == 1:
-                    script += self.config_data["string_posxy"].format\
-(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                    script += modifier_block
-                ## TODO: add new format
-                elif button_chosen == 2:
-                    script += self.config_data["string_xposxyposy"].format\
-(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                elif button_chosen == 3:
-                    script += self.config_data["string_atsetposxy"].format\
-(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                    script += modifier_block
-                elif button_chosen == 4:
-                    script += self.config_data["string_alignxy"].format\
-(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                elif button_chosen == 5:
-                    script += self.config_data["string_xalignxyaligny"].format\
-(four_space_indent=(' '*indent),image=line[0],eight_space_indent=' '*(indent*2),\
-xcoord=str(line[3][0]),ycoord=str(line[3][1]))
-                """
+
         return script
 
     def writeLayeredImage(self, rpli_data_list):
@@ -663,6 +648,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             path_pieces = path.split('/')
             for layer in path_pieces:
                 layer = layer.lower()
+                individual_layer_name = layer.split(' ')[0]
                 tag_data = layer.split(' ')[1:]
 
                 # First pass: Filter out unusable pieces of text from the layer name.
@@ -700,6 +686,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         if letter == "i":
                             if value in value_false_set:
                                 tag_dict.clear()
+                                break
 
                 # Third pass: Add the tags.
                 # Turn true/false values into true/false (as opposed to t/f, yes/no, etc.)
@@ -748,7 +735,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 tag_dict['m'] = margin_list
                         elif letter == 'i': # Prevent the i=false tag from leaking down
                             continue        # the path after it's been used to block
-                        else:               # the parents' tags.
+                                            # the parents' tags.
+                        elif letter in chain_set and value.lower() in value_true_set:
+                            if not "chain_name" in tag_dict:
+                                tag_dict["chain_name"] = individual_layer_name
+                            else:
+                                tag_dict["chain_name"] += (" " + individual_layer_name)
+                        else:
                             if not letter in rpli_set: # Don't save rpli tags if not using that mode.
                                 tag_dict[letter] = value
                     elif rpli_mode == True:
