@@ -6,6 +6,7 @@
     "string_xalignxyaligny" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedef" : "Value not used, but key is.",
+    "align_decimal_places" : "3",
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3",
     "directory_starter" : "",
@@ -14,5 +15,8 @@
     "xposxyposy_button_text" : "xpos x ypos y",
     "atsetposxy_button_text" : "at setPos(x, y)",
     "alignxy_button_text" : "align (x, y)",
-    "xalignxyaligny_button_text" : "xalign x yalign y"
+    "xalignxyaligny_button_text" : "xalign x yalign y",
+    "customize_button_text" : "Customize",
+    "script_window_w_size_multiplier" : "1.1",
+    "script_window_h_size_multiplier" : "0.8"
 }

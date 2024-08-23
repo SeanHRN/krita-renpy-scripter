@@ -68,6 +68,7 @@ default_configs_dict = {
     "string_xalignxyaligny" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedef" : "Value not used, but key is.",
+    "align_decimal_places" : "3",
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3",
     "directory_starter" : "",
@@ -76,7 +77,10 @@ default_configs_dict = {
     "xposxyposy_button_text" : "xpos x ypos y",
     "atsetposxy_button_text" : "at setPos(x, y)",
     "alignxy_button_text" : "align (x, y)",
-    "xalignxyaligny_button_text" : "xalign x yalign y"
+    "xalignxyaligny_button_text" : "xalign x yalign y",
+    "customize_button_text" : "Customize",
+    "script_window_w_size_multiplier" : "1.1",
+    "script_window_h_size_multiplier" : "0.8"
 }
 
 button_display_set = {"string_posxy", "string_xposxyposy", \
@@ -114,8 +118,8 @@ value_false_main_tag = "false"
 
 chain_set = {"ch", "c", "chain"}
 
+hidden_set = {"gecko", "data structure", "dinuguanggal", "dinu", "d++", "manananggal"}
 indent = 4
-decimal_place_count = 3
 
 """
 sortListByPriority(values: <list to sort>, priority: <sublist>)
@@ -133,14 +137,7 @@ def truncate(number, digit_count):
     step = 10.0 ** digit_count
     return math.trunc(step * number) / step
 
-def generateSpaces(spacing_count):
-    step = 1.0 / (spacing_count - 1)
-    spacing_list = []
-    for i in range(spacing_count):
-        spacing_list.append(truncate(i*step, decimal_place_count))
-    return spacing_list
-
-def calculateAlign(data_list, spacing_num):
+def calculateAlign(data_list, spacing_num, decimal_place_count):
     """
     calculateAlign converts the pos(x,y) coordinates
     in the data list into align(x,y) coordinates
@@ -152,7 +149,10 @@ def calculateAlign(data_list, spacing_num):
     if currentDoc != None:
         width = currentDoc.width()
         height = currentDoc.height()
-    spacing_list = generateSpaces(spacing_num)
+    step = 1.0 / (spacing_num - 1)
+    spacing_list = []
+    for i in range(spacing_num):
+        spacing_list.append(truncate(i*step, decimal_place_count))
     align_modified_data_list = []
     for line in data_list:
         center = line[3][2]
@@ -209,6 +209,9 @@ class TextOutput(QWidget):
         self.script_box = ScriptBox
         self.script = ""
         self.text_edit = QTextEdit()
+        font = QFont("Monospace")
+        font.setStyleHint(QFont.TypeWriter)
+        self.text_edit.setCurrentFont(font)
         self.text_edit.setPlainText(self.script)
         self.copy_button = QPushButton("Copy To Clipboard")
         self.copy_button.clicked.connect(self.copyText)
@@ -320,7 +323,7 @@ the Krita layer structure for the directory.")
         self.default_button.setToolTip("Revert output text format to the default configurations.\n\
 This will overwrite your customizations.")
         self.default_button.clicked.connect(self.settingDefault)
-        self.customize_button = QPushButton("Customize", self)
+        self.customize_button = QPushButton(self.config_data["customize_button_text"], self)
         self.customize_button.setToolTip("Open configs.json in your default text editor\nto make changes to the output formats.")
         self.customize_button.clicked.connect(self.settingCustomize)
         main_layout.addWidget(pos_label)
@@ -495,7 +498,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         to_insert = self.config_data["directory_starter"]
         for i in dir[1 : path_len-1]:
-            to_insert = to_insert + (i + "/")
+            to_insert = to_insert + (i + os.sep)
         image_file_name = dir[path_len-1]
         to_insert = to_insert + image_file_name
         path_list.append(to_insert)
@@ -643,7 +646,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         for path in path_list:
             #self.DEBUG_MESSAGE += "path: " + str(path) + "\n"
             tag_dict = {}
-            path_pieces = path.split('/')
+            path_pieces = path.split(os.sep)
             for layer in path_pieces:
                 layer = layer.lower()
                 individual_layer_name = layer.split(' ')[0]
@@ -860,8 +863,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         smaller_coords_list = []
         smaller_tag_dict_list = []
         for index, path in enumerate(path_list):
-            if "e" in tag_dict_list[index]:
-                if not "i" in tag_dict_list[index]:
+            if "e" in tag_dict_list[index] and not "i" in tag_dict_list[index]:
                     smaller_path_list.append(path_list[index])
                     smaller_coords_list.append(coords_list[index])
                     smaller_tag_dict_list.append(tag_dict_list[index])
@@ -875,10 +877,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         cleaned_path_list = []
         for path in path_list:
-            layers = path.split('/')
+            layers = path.split(os.sep)
             cleaned_path = ""
             for layer in layers:
-                cleaned_path = cleaned_path + layer.split(' ')[0] + "/"
+                cleaned_path = cleaned_path + layer.split(' ')[0] + os.sep
             cleaned_path = cleaned_path[:-1]
             cleaned_path_list.append(cleaned_path)
         return cleaned_path_list
@@ -891,7 +893,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         export_layer_list = []
         for path in path_list:
-            layer_data = path.split('/')
+            layer_data = path.split(os.sep)
             layer_name_to_export = layer_data[-1]
             export_layer_list.append(layer_name_to_export)
         return export_layer_list
@@ -1047,6 +1049,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             [1] export_layer_list
             [2] rpli_tag_dict_list
             [3] rpli_path_list_with_tags
+
+        There is an additional configs load for align_decimal_places here because self.config_data fails out here.
+
         """
         data_list =  []
         rpli_data_list = []
@@ -1087,7 +1092,14 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             self.sortRpliData(rpli_data_list)
 
         if button_chosen in button_display_align_set:
-            data_list = calculateAlign(data_list, spacing_num)
+            align_decimal_places = 3
+            try:
+                configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+                imported_configs = json.load(configs_file)
+                align_decimal_places = int(imported_configs["align_decimal_places"])
+            except KeyError:
+                align_decimal_places = int(default_configs_dict["align_decimal_places"])
+            data_list = calculateAlign(data_list, spacing_num, align_decimal_places)
 
         return data_list, rpli_data_list
 
@@ -1126,8 +1138,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Ideally, refreshConfigData() would be called soon after webbrowser.open(),
         but I don't think there is a signal for right after the user edits the external file.
 
-        Idea: Update the buttons with the customized template text. It would likely be complicated.
-              It would use the setText() call below.
+        Idea: Update the buttons with the customized template text.
         """
         webbrowser.open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
     
@@ -1139,6 +1150,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
+            #TODO: refresh buttons
         except IOError:
             pass
 
@@ -1161,6 +1173,11 @@ class ScriptBox(QWidget):
         self.createScriptBox()
         self.format_menu = None
         self.outputWindow = None
+        self.resize(int(self.width() * \
+                        float(self.config_data["script_window_w_size_multiplier"])), \
+                            int(self.height() * float(self.config_data["script_window_h_size_multiplier"])))
+        if self.config_data["customize_button_text"].lower() in hidden_set:
+            self.dinu()
         close_notifier.viewClosed.connect(self.close)
     
     def createScriptBox(self):
@@ -1175,6 +1192,31 @@ class ScriptBox(QWidget):
         script_box_layout.addWidget(self.format_menu)
         script_box_layout.addWidget(self.output_window)
         self.setLayout(script_box_layout)
+
+    #coding=utf-8
+    def dinu(self):
+            d =r"""
+                  /\
+                  ||
+                _/||\_
+            _  // || \\  _
+            \\//  ||  \\//
+            /\/   ||   \/\
+           _-/</> || <\>\-_
+          / /</>  ||  <\>\ \
+        <==/<|>   ||   <|>\==>
+          \\ <\>  ||  </> //.
+          .\\ <\> || </> //
+          . /\   /[]\   /\
+        _ ./ /\ O || O /\ \  _
+        \\/ // \  ||  / \\ \//.
+         \\//__/\ || /\__\\//
+              .  \||/  .      .
+        .     .   \/          .
+      ERROR: SEGMENTATION FAULT
+"""
+            self.output_window.receiveText(d)
+
 
 class RenameWorkerThread(QThread):
     """
