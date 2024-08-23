@@ -80,8 +80,11 @@ default_configs_dict = {
     "xalignxyaligny_button_text" : "xalign x yalign y",
     "customize_button_text" : "Customize",
     "script_window_w_size_multiplier" : "1.1",
-    "script_window_h_size_multiplier" : "0.8"
+    "script_window_h_size_multiplier" : "0.8",
+    "script_font_size" : "10"
 }
+
+font_size = 5
 
 button_display_set = {"string_posxy", "string_xposxyposy", \
                       "string_atsetposxy", "string_alignxy", "string_xalignxyaligny"}
@@ -205,7 +208,7 @@ class TextOutput(QWidget):
         super(TextOutput, self).__init__(parent)
         close_notifier.viewClosed.connect(self.close)
 
-    def setupUi(self, ScriptBox):
+    def setupUi(self, ScriptBox, script_font_size):
         self.script_box = ScriptBox
         self.script = ""
         self.text_edit = QTextEdit()
@@ -213,6 +216,7 @@ class TextOutput(QWidget):
         font.setStyleHint(QFont.TypeWriter)
         self.text_edit.setCurrentFont(font)
         self.text_edit.setPlainText(self.script)
+        self.text_edit.setFontPointSize(script_font_size)
         self.copy_button = QPushButton("Copy To Clipboard")
         self.copy_button.clicked.connect(self.copyText)
         self.close_button = QPushButton("Close")
@@ -1185,7 +1189,7 @@ class ScriptBox(QWidget):
         The output window's close button is connected to the main box.
         """
         self.output_window = TextOutput(self)
-        self.output_window.setupUi(self)
+        self.output_window.setupUi(self, float((self.config_data["script_font_size"])))
         self.format_menu = FormatMenu(self)
         self.format_menu.text_signal_emitter.custom_signal.connect(self.output_window.receiveText)
         script_box_layout = QHBoxLayout()

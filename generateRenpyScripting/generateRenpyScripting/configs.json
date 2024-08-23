@@ -18,5 +18,6 @@
     "xalignxyaligny_button_text" : "xalign x yalign y",
     "customize_button_text" : "Customize",
     "script_window_w_size_multiplier" : "1.1",
-    "script_window_h_size_multiplier" : "0.8"
+    "script_window_h_size_multiplier" : "0.8",
+    "script_font_size" : "10"
 }
