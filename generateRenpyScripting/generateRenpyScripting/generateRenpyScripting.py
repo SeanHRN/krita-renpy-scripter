@@ -447,8 +447,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         if len(rpli_data_list) == 0:
             script += "No Ren'Py Layered Image elements found! Check your tags!\n"
         was_written = set()
-#        for r in rpli_data_list:
-#            script += r[1] + "\n"
         for r in rpli_data_list:
             if not r[1] in was_written:
                 was_written.add(r[1])
@@ -1078,10 +1076,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
 
         for i,layer in enumerate(export_layer_list):
-            data_list.append(tuple([layer, path_list[i], tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
+            data_list.append(tuple([layer.lower(), path_list[i].lower(), \
+                                    tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
         for i,layer in enumerate(rpli_export_layer_list):
-            rpli_data_list.append(tuple([layer, rpli_path_list[i], rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
+            rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
+                                         rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
 
         if rpli_data_list:
             self.sortRpliData(rpli_data_list)
