@@ -114,14 +114,15 @@ rplialways_main_tag, rpliattrib_main_tag, rpligroup_main_tag]
 
 
 # Synonyms for true and false for rpli tags
-value_true_set = {"true", "t", "yes", "y"}
-value_false_set = {"false", "f", "no", "n"}
+value_true_set = {"true", "t", "yes", "y", "1"}
+value_false_set = {"false", "f", "no", "n", "0"}
 value_true_main_tag = "true"
 value_false_main_tag = "false"
 
 chain_set = {"ch", "c", "chain"}
-
-hidden_set = {"gecko", "data structure", "dinuguanggal", "dinu", "d++", "manananggal"}
+format_set = {"png", "webp", "jpg", "jpeg"}
+format_tag_set = {"e=png", "e=webp", "e=jpg", "e=jpeg"}
+hidden_set = {"gecko", "data structure", "dinuguanggal", "dinu", "d++", "manananggal", "dinuguan", "leaf", "segfault"}
 indent = 4
 
 """
@@ -410,13 +411,13 @@ This will overwrite your customizations.")
                     name_to_print = line[2]["chain_name"]
                 if "e" in line[2]:
                     line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
-                    format_set = set(line[2]["e"])
+                    line_format_set = set(line[2]["e"])
                     chosen_format = ""
-                    if "webp" in format_set:
+                    if "webp" in line_format_set:
                         chosen_format = "webp"
-                    elif "png" in format_set:
+                    elif "png" in line_format_set:
                         chosen_format = "png"
-                    elif "jpg" in format_set or "jpeg" in format_set:
+                    elif "jpg" in line_format_set or "jpeg" in line_format_set:
                         chosen_format = "jpg"
                     for f in line[2]["e"]:
                         if f != chosen_format:
@@ -496,15 +497,47 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return script
 
-    def storePath(self, dir, path_list, path_len):
+    def storePath(self, dir, path_list):
         """
-        Store each max-length path into the final path_list (starting with images instead of root).
+        new
         """
-        to_insert = self.config_data["directory_starter"]
-        for i in dir[1 : path_len-1]:
-            to_insert = to_insert + (i + os.sep)
-        image_file_name = dir[path_len-1]
-        to_insert = to_insert + image_file_name
+        self.DEBUG_MESSAGE += "dir sent to storePath(): " + str(dir) + "\n"
+        try:
+            starter = self.config_data["directory_starter"]
+        except KeyError:
+            starter = ""
+        dir[0] = starter
+        if starter:
+            to_insert = '/'.join(dir)
+        else:
+            to_insert = '/'.join(dir[1:])
+        #self.DEBUG_MESSAGE += "to_insert: " + str(to_insert) + "\n"
+        path_list.append(to_insert)
+
+
+    def storePathOLD(self, dir, path_list, path_len):
+        """
+        Store each max-length path into the final path_list
+        (starting with the optional directory_starter instead of root)
+        """
+        self.DEBUG_MESSAGE += "dir sent to storePath(): " + str(dir) + "\n"
+        try:
+            starter = self.config_data["directory_starter"]
+        except KeyError:
+            starter = ""
+        dir[0] = starter
+        #for i in dir[1 : path_len-1]:
+        #to_insert = ""
+        #for i in dir[1:-1]:
+        #    to_insert = to_insert + i + "/"#jojo
+        #image_file_name = dir[path_len-1]
+        #to_insert += dir[-1]
+        if dir:
+            to_insert = '/'.join(dir)
+        else:
+            to_insert = '/'.join(dir[1:])
+        #to_insert = to_insert + image_file_name
+        self.DEBUG_MESSAGE += "to_insert: " + str(to_insert) + "\n"
         path_list.append(to_insert)
 
 
@@ -650,7 +683,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         for path in path_list:
             #self.DEBUG_MESSAGE += "path: " + str(path) + "\n"
             tag_dict = {}
-            path_pieces = path.split(os.sep)
+            path_pieces = path.split("/")#(os.path.sep)
             for layer in path_pieces:
                 layer = layer.lower()
                 individual_layer_name = layer.split(' ')[0]
@@ -782,9 +815,81 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             tag_dict_list.append(tag_dict)
         return tag_dict_list
 
-
     def pathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list):
         """
+        new version - buggy
+        """
+        #self.DEBUG_MESSAGE += "checking out node: " + node.name().lower() + "\n"
+        if (len(path) > path_len):
+            path[path_len] = node.name().lower()
+        else:
+            path.append(node.name().lower())
+        self.DEBUG_MESSAGE += "starting pR with this node: " + node.name() + "\n"
+        self.DEBUG_MESSAGE += "the path is: " + str(path) + "->length: " + str(path_len) + "\n"
+        self.DEBUG_MESSAGE += "It has this many children: " + str(len(node.childNodes())) +"\n"
+        recordable_child_nodes = 0
+        for c in node.childNodes():
+            self.DEBUG_MESSAGE += "Found node " + c.name() + " as a child of " + node.name() + "\n"
+            if c.type() == "grouplayer" or c.type() == "paintlayer":
+                recordable_child_nodes += 1
+                # Case: The tagged image is a group.
+                if c.type() == "grouplayer":
+                    for f in format_tag_set:
+                        if f in c.name().lower():
+                            self.storePath(path + [c.name().lower()], path_list)
+                            #TODO: Make the coords come from the actual content of the group.
+                            coords_list.append([node.bounds().topLeft().x(), \
+                                                node.bounds().topLeft().y(), \
+                                                    node.bounds().center()])
+                            break
+        self.DEBUG_MESSAGE += "Case 1 check done.\n"
+        if recordable_child_nodes == 0: # Case: End of path reached
+            self.DEBUG_MESSAGE += "End of path reached for node: " + node.name() + "\n"
+            for f in format_tag_set:
+                if f in node.name().lower():
+                    self.DEBUG_MESSAGE += "End of path reached with node: " + node.name() + ". Storing this path: " + str(path) + "\n"
+                    self.storePath(path, path_list)
+                    coords_list.append([node.bounds().topLeft().x(), \
+                                node.bounds().topLeft().y(), \
+                                    node.bounds().center()])
+                    break
+        else:
+            path_len += 1 #experiment with this here
+            self.DEBUG_MESSAGE += "--- Checking the children of " + node.name() + " ==> at length: " + str(path_len) + "\n"
+            self.DEBUG_MESSAGE += "These are the children:\n"
+            for i in node.childNodes():
+                self.DEBUG_MESSAGE += i.name() + "\n"
+            if len(node.childNodes()) == 0:
+                self.DEBUG_MESSAGE += "No child nodes found.\n"
+            for i in node.childNodes():
+                self.DEBUG_MESSAGE += "child node: " + i.name() + "\n"
+                tag_data = i.name().lower().split(' ')[1:]
+                letter_data = []
+                value_data = []
+                for tag in tag_data:
+                    try:
+                        letter, value = tag.split('=', 1)
+                        letter_data.append(letter)
+                        value_data.append(value)
+                    except ValueError:
+                        continue
+                if i.type() == "grouplayer" or i.type() == "paintlayer":
+                    self.DEBUG_MESSAGE += "now calling pathRecord this path: " + str(path+[i.name().lower()]) + "___ with length: " + str(path_len) +"\n"
+                    self.pathRecord(i, (path+[i.name().lower()]), path_list, path_len, coords_list, rpli_path_list)
+                    for list in rpli_list:
+                        for tag in list:
+                            if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
+                                #temp_path = path
+                                #temp_path.append(layer_name)
+                                #temp_path = path + [layer_name]
+                                #self.storePath(temp_path, rpli_path_list)
+                                self.storePath((path+[i.name().lower()],rpli_path_list))
+                                break
+            self.DEBUG_MESSAGE += "~ ~ ~ Instance done. ~ ~ ~\n"
+
+    def OLDpathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list):
+        """
+        TODO: Make it node to FORMATTED layer.
         Searches for all the node to leaf paths and stores them in path_list using storePath().
         storePath() takes in the entire paths (including all the tags at this step).
 
@@ -798,7 +903,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         since the required behavior for layered images isn't the same when it comes to
         inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
 
-        TODO: Make transformmask 
         """
         #layer_data = node.name().split(' ')
         if (len(path) > path_len):
@@ -816,8 +920,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             #elif c.type() == "transformmask": # Toggle this on
             #    self.checkTransformMask(c)    # to check transform mask XML
         if recordable_child_nodes == 0:
-
-            self.storePath(path, path_list, path_len)
+            #self.storePath(path, path_list, path_len)
+            self.storePath(path, path_list)
             coords_list.append([coord_x, coord_y, coord_center])
         else:
             for i in node.childNodes():
@@ -843,7 +947,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
                                 temp_path = path
                                 temp_path.append(layer_name)
-                                self.storePath(temp_path, rpli_path_list, path_len+1)
+                                #self.storePath(temp_path, rpli_path_list, path_len+1)
+                                self.storePath(temp_path, rpli_path_list)
                                 #self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + i.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
                                 break
 
@@ -881,10 +986,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         cleaned_path_list = []
         for path in path_list:
-            layers = path.split(os.sep)
+            layers = path.split("/")#(os.path.sep)
             cleaned_path = ""
             for layer in layers:
-                cleaned_path = cleaned_path + layer.split(' ')[0] + os.sep
+                cleaned_path = cleaned_path + layer.split(' ')[0] + "/"#os.path.sep
             cleaned_path = cleaned_path[:-1]
             cleaned_path_list.append(cleaned_path)
         return cleaned_path_list
@@ -897,7 +1002,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         export_layer_list = []
         for path in path_list:
-            layer_data = path.split(os.sep)
+            layer_data = path.split("/")#(os.path.sep)
             layer_name_to_export = layer_data[-1]
             export_layer_list.append(layer_name_to_export)
         return export_layer_list
@@ -1177,9 +1282,15 @@ class ScriptBox(QWidget):
         self.createScriptBox()
         self.format_menu = None
         self.outputWindow = None
-        self.resize(int(self.width() * \
-                        float(self.config_data["script_window_w_size_multiplier"])), \
-                            int(self.height() * float(self.config_data["script_window_h_size_multiplier"])))
+        try:
+            width_to_use = int(self.width() * float(self.config_data["script_window_w_size_multiplier"]))
+        except ValueError:
+            width_to_use = self.width()
+        try:
+            height_to_use = int(self.height() * float(self.config_data["script_window_h_size_multiplier"]))
+        except ValueError:
+            height_to_use = self.height()
+        self.resize(width_to_use, height_to_use)
         if self.config_data["customize_button_text"].lower() in hidden_set:
             self.dinu()
         close_notifier.viewClosed.connect(self.close)
@@ -1431,7 +1542,8 @@ format(folder=folder_name), 5000)
         scale = float(self.scale_box_percent.value() / 100.0)
         suffix = "_@" + str(scale) + "x"
         new_folder_name = "grs_x" + str(scale)
-        export_dir_name = dir_name + os.sep + new_folder_name
+        #export_dir_name = dir_name + os.path.sep + new_folder_name #TODO: change this to path join.
+        export_dir_name = os.path.join(dir_name + new_folder_name)
         Path(export_dir_name).mkdir(parents=True, exist_ok=True)
         self.worker = RenameWorkerThread(dir_name, export_dir_name, suffix, new_folder_name)
         self.worker.start()
