@@ -61,11 +61,11 @@ close_notifier = KI.notifier()
 close_notifier.setActive(True)
 
 default_configs_dict = {
-    "string_posxy" : "{four_space_indent}show {image}:\n{eight_space_indent}pos ({xcoord}, {ycoord})\n",
-    "string_xposxyposy" : "{four_space_indent}show {image}:\n{eight_space_indent}xpos {xcoord} ypos {ycoord}\n",
-    "string_atsetposxy": "{four_space_indent}show {image}:\n{eight_space_indent}at setPos({xcoord}, {ycoord})\n",
-    "string_alignxy"  : "{four_space_indent}show {image}:\n{eight_space_indent}align ({xcoord}, {ycoord})\n",
-    "string_xalignxyaligny" : "{four_space_indent}show {image}:\n{eight_space_indent}xalign {xcoord} yalign {ycoord}\n",
+    "string_posxy" : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}pos ({xcoord}, {ycoord})\n",
+    "string_xposxyposy" : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xpos {xcoord} ypos {ycoord}\n",
+    "string_atsetposxy": "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}at setPos({xcoord}, {ycoord})\n",
+    "string_alignxy"  : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}align ({xcoord}, {ycoord})\n",
+    "string_xalignxyaligny" : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xalign {xcoord} yalign {ycoord}\n",
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedef" : "Value not used, but key is.",
     "align_decimal_places" : "3",
@@ -84,8 +84,6 @@ default_configs_dict = {
     "script_font_size" : "10"
 }
 
-font_size = 5
-
 button_display_set = {"string_posxy", "string_xposxyposy", \
                       "string_atsetposxy", "string_alignxy", "string_xalignxyaligny"}
 
@@ -102,28 +100,29 @@ rplialways_set = {"rplial", "ral", "rpalways", "al"} # always
 rpliattrib_set = {"rpliatt", "rpliat", "at"}         # attribute
 rpligroup_set  = {"rpligroup", "rplig", "gr"}        # group
 rpli_list = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
-rpli_main_tag = "rpli"
-rplidef_main_tag = "rplidef"
-rplialways_main_tag = "rplial"
-rpliattrib_main_tag = "rpliatt"
-rpligroup_main_tag = "rpligroup"
-rpli_main_tag_list = [rpli_main_tag, rplidef_main_tag, \
-rplialways_main_tag, rpliattrib_main_tag, rpligroup_main_tag]
+RPLI_MAIN_TAG = "rpli"
+RPLIDEF_MAIN_TAG = "rplidef"
+RPLIALWAYS_MAIN_TAG = "rplial"
+RPLIATTRIB_MAIN_TAG = "rpliatt"
+RPLIGROUP_MAIN_TAG = "rpligroup"
+RPLI_MAIN_TAG_list = [RPLI_MAIN_TAG, RPLIDEF_MAIN_TAG, \
+RPLIALWAYS_MAIN_TAG, RPLIATTRIB_MAIN_TAG, RPLIGROUP_MAIN_TAG]
 # Additionally, rpligroupchild is a special tag to be used
-# for catching when an rpliatt should be indented in the scripting.
+# for catching when an rpliatt should be INDENTed in the scripting.
 
 
 # Synonyms for true and false for rpli tags
 value_true_set = {"true", "t", "yes", "y", "1"}
 value_false_set = {"false", "f", "no", "n", "0"}
-value_true_main_tag = "true"
-value_false_main_tag = "false"
+VALUE_TRUE_MAIN_TAG = "true"
+VALUE_FALSE_MAIN_TAG = "false"
 
 chain_set = {"ch", "c", "chain"}
 format_set = {"png", "webp", "jpg", "jpeg"}
 format_tag_set = {"e=png", "e=webp", "e=jpg", "e=jpeg"}
-hidden_set = {"gecko", "data structure", "dinuguanggal", "dinu", "d++", "manananggal", "dinuguan", "leaf", "segfault"}
-indent = 4
+hidden_set = {"gecko", "data structure", "dinuguanggal", \
+              "dinu", "d++", "manananggal", "dinuguan", "leaf", "segfault"}
+INDENT = 4
 
 """
 sortListByPriority(values: <list to sort>, priority: <sublist>)
@@ -149,10 +148,10 @@ def calculateAlign(data_list, spacing_num, decimal_place_count):
     to a finite set of values from 0.0 to 1.0.
     """
     width, height = 1, 1
-    currDoc = KI.activeDocument()
-    if currDoc != None:
-        width = currDoc.width()
-        height = currDoc.height()
+    curr_doc = KI.activeDocument()
+    if curr_doc != None:
+        width = curr_doc.width()
+        height = curr_doc.height()
     step = 1.0 / (spacing_num - 1)
     spacing_list = []
     for i in range(spacing_num):
@@ -401,7 +400,7 @@ This will overwrite your customizations.")
             return script
 
         ATL_dict = {}
-        currDoc = KI.activeDocument()
+        curr_doc = KI.activeDocument()
 
         if button_chosen == "string_normalimagedef": # Normal Images
             for line in data_list:
@@ -438,7 +437,7 @@ This will overwrite your customizations.")
                 modifier_block = self.getModifierBlock(line)
                 if button_chosen in button_display_set:
                     script += self.config_data[button_chosen].format\
-(four_space_indent=(' '*indent),image=name_to_print,eight_space_indent=' '*(indent*2),\
+(FOUR_SPACE_INDENT=(' '*INDENT),image=name_to_print,EIGHT_SPACE_INDENT=' '*(INDENT*2),\
 xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 if not button_chosen in button_display_align_set:
                     script += modifier_block
@@ -478,22 +477,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     if f != chosen_format:
                         pound = "#"
                     image_add_on_list.append(pound + "\"" + to_add + "." + f + "\"")
-            if rpli_main_tag in r[2] and r[2][rpli_main_tag] == value_true_main_tag:
+            if RPLI_MAIN_TAG in r[2] and r[2][RPLI_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                 script += "layeredimage " + r[0].split(' ')[0] + ":\n"
-            elif rplialways_main_tag in r[2] and r[2][rplialways_main_tag] == value_true_main_tag:
-                script += (" " * indent * 2) + "always:\n" + (" " * indent * 3) + r[0].split(' ')[0] + ":\n"
+            elif RPLIALWAYS_MAIN_TAG in r[2] and r[2][RPLIALWAYS_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
+                script += (" " * INDENT * 2) + "always:\n" + (" " * INDENT * 3) + r[0].split(' ')[0] + ":\n"
                 for i in image_add_on_list:
-                    script += (" " * indent * 4) + i + "\n"
-            elif rpligroup_main_tag in r[2] and r[2][rpligroup_main_tag] == value_true_main_tag:
-                script += (" " * indent * 2) + "group " + r[0].split(' ')[0] + ":\n"
-            elif rpliattrib_main_tag in r[2] and r[2][rpliattrib_main_tag] == value_true_main_tag:
-                if rplidef_main_tag in r[2] and r[2][rplidef_main_tag] == value_true_main_tag:
+                    script += (" " * INDENT * 4) + i + "\n"
+            elif RPLIGROUP_MAIN_TAG in r[2] and r[2][RPLIGROUP_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
+                script += (" " * INDENT * 2) + "group " + r[0].split(' ')[0] + ":\n"
+            elif RPLIATTRIB_MAIN_TAG in r[2] and r[2][RPLIATTRIB_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
+                if RPLIDEF_MAIN_TAG in r[2] and r[2][RPLIDEF_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                     def_add_on = " default"
-                if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == value_true_main_tag:
-                    script += (" " * indent)
-                script += (" " * indent * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
+                if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == VALUE_TRUE_MAIN_TAG:
+                    script += (" " * INDENT)
+                script += (" " * INDENT * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
                 for i in image_add_on_list:
-                    script += (" " * indent * 4) + i + "\n"
+                    script += (" " * INDENT * 4) + i + "\n"
 
         return script
 
@@ -615,9 +614,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Case 2: directory_starter is empty, so the first part of path_pieces is where the
                 search must start.
         """
-        currDoc = KI.activeDocument()
-        if currDoc != None:
-            curr_node = currDoc.rootNode()
+        curr_doc = KI.activeDocument()
+        if curr_doc != None:
+            curr_node = curr_doc.rootNode()
         #self.DEBUG_MESSAGE += "path pieces: \n"
         #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
         if self.config_data["directory_starter"]:
@@ -677,10 +676,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 if rpli_mode == True:
                     if "rpligroupchild" in tag_dict:
                         tag_dict.pop("rpligroupchild")
-                    for main_tag in rpli_main_tag_list:
+                    for main_tag in RPLI_MAIN_TAG_list:
                         if main_tag in tag_dict.keys():
-                            if main_tag == rpligroup_main_tag:
-                                tag_dict["rpligroupchild"] = value_true_main_tag
+                            if main_tag == RPLIGROUP_MAIN_TAG:
+                                tag_dict["rpligroupchild"] = VALUE_TRUE_MAIN_TAG
                             tag_dict.pop(main_tag)
 
                 # Second pass: See if inheritance disabling is present.
@@ -707,9 +706,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     #self.DEBUG_MESSAGE += "letter/value is: " + letter + " : " + value + "\n"
 
                     if value in value_true_set:
-                        value = value_true_main_tag
+                        value = VALUE_TRUE_MAIN_TAG
                     elif value in value_false_set:
-                        value = value_false_main_tag
+                        value = VALUE_FALSE_MAIN_TAG
 
                     if rpli_mode == False:
                         if letter == 's':
@@ -760,17 +759,17 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     elif rpli_mode == True:
                         if letter in rpli_set:
                             if value.lower() in value_true_set:
-                                tag_dict[rpli_main_tag] = value_true_main_tag
+                                tag_dict[RPLI_MAIN_TAG] = VALUE_TRUE_MAIN_TAG
                             else:
-                                 tag_dict[rpli_main_tag] = value_false_main_tag
+                                 tag_dict[RPLI_MAIN_TAG] = VALUE_FALSE_MAIN_TAG
                         elif letter in rplidef_set:
-                            tag_dict[rplidef_main_tag] = value
+                            tag_dict[RPLIDEF_MAIN_TAG] = value
                         elif letter in rplialways_set:
-                            tag_dict[rplialways_main_tag] = value
+                            tag_dict[RPLIALWAYS_MAIN_TAG] = value
                         elif letter in rpliattrib_set:
-                            tag_dict[rpliattrib_main_tag] = value
+                            tag_dict[RPLIATTRIB_MAIN_TAG] = value
                         elif letter in rpligroup_set:
-                            tag_dict[rpligroup_main_tag] = value
+                            tag_dict[RPLIGROUP_MAIN_TAG] = value
                         elif letter == 'e':
                             if not value:
                                 value = "png"
@@ -829,9 +828,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         coords_to_check = []#[node.bounds().bottomRight().x(),node.bounds().bottomRight().y(), 0, 0]
         center_x = 0
         center_y = 0
-        currDoc = KI.activeDocument()
-        if currDoc != None:
-            coords_to_check = [currDoc.width(),currDoc.height(),0,0]
+        curr_doc = KI.activeDocument()
+        if curr_doc != None:
+            coords_to_check = [curr_doc.width(),curr_doc.height(),0,0]
             coords_to_check = self.findGroupPositionRecursion(node, coords_to_check)
             center_x = int((coords_to_check[0] + coords_to_check[2])/2)
             center_y = int((coords_to_check[1] + coords_to_check[3])/2)
@@ -963,25 +962,21 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Modifies the coordinates
             0,1 : x,y on top left corner
               2 : QPoint of the center
-        Step 1: Remove negative values for the coordinates.
-                This is because Krita crops out material not on the canvas
-                when it's exporting the images.
-        Step 2: Apply the margin tag if necessary.
+        Step 1: Apply the margin tag if necessary.
                 The Batch Exporter uses the smallest margin
                 in the list by default, so that's what's used here.
                 The center points wouldn't change since each set
                 of 4 margins (around a single layer rectange) would be of equal size.
-        Step 3: Apply x/y changes from transform masks if necessary.
-        Step 4: TODO: Apply the t tag if necessary (meaning set the coordinates to 0).
-        Step 5: Scale the coordinates with the smallest
+        Step 2: Apply x/y changes from transform masks if necessary.
+        Step 3: TODO: Apply the t tag if necessary (meaning set the coordinates to 0).
+        Step 4: Scale the coordinates with the smallest
                 given size from the 's=' layer tags
+        Step 5: Remove negative values for the coordinates.
+                This is because Krita crops out material not on the canvas
+                when it's exporting the images.
         """
         for i in range(len(coords_list)):
             scale = 1.0
-            if coords_list[i][0] < 0:
-                coords_list[i][0] = 0
-            if coords_list[i][1] < 0:
-                coords_list[i][1] = 0
 
             if "m" in tag_dict_list[i]:
                 coords_list[i][0] -= int(min(tag_dict_list[i]["m"]))
@@ -1001,10 +996,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 coords_list[i][0] = 0
                 coords_list[i][1] = 0
                 coords_list[i][2] = QPoint(0,0)
-                currDoc = KI.activeDocument()
-                if currDoc != None:
-                    coords_list[i][2].setX(int(currDoc.width()/2))
-                    coords_list[i][2].setY(int(currDoc.height()/2))
+                curr_doc = KI.activeDocument()
+                if curr_doc != None:
+                    coords_list[i][2].setX(int(curr_doc.width()/2))
+                    coords_list[i][2].setY(int(curr_doc.height()/2))
 
             if "s" in tag_dict_list[i]:
                 #self.DEBUG_MESSAGE += "scaling x from " + str(coords_list[i][0]) + " to "
@@ -1017,6 +1012,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 center_y_new = float(coords_list[i][2].y()) * min(tag_dict_list[i]["s"]) / 100
                 coords_list[i][2].setX(int(center_x_new))
                 coords_list[i][2].setY(int(center_y_new))
+
+            if coords_list[i][0] < 0:
+                coords_list[i][0] = 0
+            if coords_list[i][1] < 0:
+                coords_list[i][1] = 0
+
         return coords_list
 
     def getModifierBlock(self, line):
@@ -1042,16 +1043,16 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 yzoom = float(line[2]["scaleY"])
                 yzoom = round(yzoom, int(self.config_data["atl_zoom_decimal_places"]))
             if xzoom == yzoom and xzoom != 1.0:
-                modifier_block += ((' ')*indent*2) + "zoom " + str(xzoom) + "\n"
+                modifier_block += ((' ')*INDENT*2) + "zoom " + str(xzoom) + "\n"
             else:
                 if xzoom != 1.0:
-                    modifier_block += ((' ')*indent*2) + "xzoom " + str(xzoom) + "\n"
+                    modifier_block += ((' ')*INDENT*2) + "xzoom " + str(xzoom) + "\n"
                 if yzoom != 1.0:
-                    modifier_block += ((' ')*indent*2) + "yzoom " + str(yzoom) + "\n"
+                    modifier_block += ((' ')*INDENT*2) + "yzoom " + str(yzoom) + "\n"
         # Rotate
         if "aZ" in line[2]:
             rounded_rot = round(line[2]["aZ"], int(self.config_data["atl_rotate_decimal_places"]))
-            modifier_block += ((' ')*indent*2) + "rotate " + str(rounded_rot) + "\n"
+            modifier_block += ((' ')*INDENT*2) + "rotate " + str(rounded_rot) + "\n"
 
         return modifier_block
 
@@ -1133,9 +1134,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_path_list = []
         tag_dict_list = []
         coords_list = []
-        currDoc = KI.activeDocument()
-        if currDoc != None:
-            root_node = currDoc.rootNode()
+        curr_doc = KI.activeDocument()
+        if curr_doc != None:
+            root_node = curr_doc.rootNode()
         path = []
         path_list_with_tags = []
         self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
@@ -1201,7 +1202,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         self.config_data = default_configs_dict
         with open(os.path.join(os.path.dirname\
 (os.path.realpath(__file__)), "configs.json"), 'w') as f:
-            json.dump(default_configs_dict, f, indent=2)
+            json.dump(default_configs_dict, f, INDENT=2)
         self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!\n Changes to lock_windows_to_front\
                                                     and button names require a reset!")
 
@@ -1366,10 +1367,10 @@ class ScaleCalculateBox(QWidget):
         self.line_width.textEdited[str].connect(lambda: self.lineEdited(self.line_width.text(), 0))
         self.line_height = QLineEdit(parent=self)
         self.line_height.textEdited[str].connect(lambda: self.lineEdited(self.line_height.text(), 1))
-        currDoc = KI.activeDocument()
-        if currDoc != None:
-            self.line_width.setText(str(float(currDoc.width()))+" px")
-            self.line_height.setText(str(float(currDoc.height()))+" px")
+        curr_doc = KI.activeDocument()
+        if curr_doc is not None:
+            self.line_width.setText(str(float(curr_doc.width()))+" px")
+            self.line_height.setText(str(float(curr_doc.height()))+" px")
         button_1280_w = QPushButton("1280")
         button_1280_w.clicked.connect(lambda: self.dimensionSet(1280,0))
         button_720_h = QPushButton("720")
@@ -1447,10 +1448,10 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         """
         d(imension): 0: width, 1: height
         """
-        currDoc = KI.activeDocument()
-        if currDoc != None:
+        curr_doc = KI.activeDocument()
+        if curr_doc is not None:
             flip_d = 1-d
-            scale = float(value/((currDoc.width()*flip_d)+(currDoc.height()*d)))
+            scale = float(value/((curr_doc.width()*flip_d)+(curr_doc.height()*d)))
             self.scale_box_percent.setValue(scale * 100.0)
 
     def calculatorScaleChanged(self):
@@ -1461,14 +1462,14 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         Only the box that is not focused is edited by this function
         since the user would be editing the focused box.
         """
-        currDoc = KI.activeDocument()
+        curr_doc = KI.activeDocument()
         scale = float(self.scale_box_percent.value() / 100.0)
-        if currDoc != None:
-            width = round((float(currDoc.width()) * scale), 1)
-            height = round((float(currDoc.height()) * scale), 1)
-            if self.line_width.hasFocus() == False:
+        if curr_doc is not None:
+            width = round((float(curr_doc.width()) * scale), 1)
+            height = round((float(curr_doc.height()) * scale), 1)
+            if not self.line_width.hasFocus():
                 self.line_width.setText(str(width) + " px")
-            if self.line_height.hasFocus() == False:
+            if not self.line_height.hasFocus():
                 self.line_height.setText(str(height) + " px")
 
     def receiveStatus(self, value):
@@ -1477,13 +1478,12 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
     def renamerFinished(self, file_found, dir_to_check, folder_name):
         """
         """
-        if file_found == False:
+        if file_found is False:
             self.status_bar.showMessage("No files to copy and rename have been found! Check your scale tag(s).", 5000)
             if os.path.exists(dir_to_check) and os.path.isdir(dir_to_check):
                 shutil.rmtree(dir_to_check)
         else:
-            self.status_bar.showMessage("Files have been copied and renamed at {folder}!".\
-format(folder=folder_name), 5000)
+            self.status_bar.showMessage(f"Files have been copied and renamed at {folder_name}!", 5000)
 
     def recursiveRenameStart(self):
         """
@@ -1515,7 +1515,7 @@ format(folder=folder_name), 5000)
         """
         TODO: Add a window that asks if this is what the user wants.
         """
-        if KI.activeDocument() != None:
+        if KI.activeDocument() is not None:
             self.recursiveRenameStart()
 
 class GenerateRenpyScripting(DockWidget):
@@ -1525,9 +1525,9 @@ class GenerateRenpyScripting(DockWidget):
         self.createInterface()
         self.script_box = None
 
-    def showErrorMessage(self, toPrint):
+    def showErrorMessage(self, to_print):
         msg = QMessageBox()
-        msg.setText(toPrint)
+        msg.setText(to_print)
         msg.exec_()
 
     def createInterface(self):
@@ -1560,9 +1560,9 @@ class GenerateRenpyScripting(DockWidget):
     def canvasChanged(self, canvas):
         pass
 
-    def closeEvent(self, event):
-        if not set.script_box is None:
-            self.script_box.close()
+    #def closeEvent(self, event):
+    #    if not set.script_box is None:
+    #        self.script_box.close()
 
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
