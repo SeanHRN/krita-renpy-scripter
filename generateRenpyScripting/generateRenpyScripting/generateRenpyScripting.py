@@ -61,11 +61,16 @@ close_notifier = KI.notifier()
 close_notifier.setActive(True)
 
 default_configs_dict = {
-    "string_posxy" : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}pos ({xcoord}, {ycoord})\n",
-    "string_xposxyposy" : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xpos {xcoord} ypos {ycoord}\n",
-    "string_atsetposxy": "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}at setPos({xcoord}, {ycoord})\n",
-    "string_alignxy"  : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}align ({xcoord}, {ycoord})\n",
-    "string_xalignxyaligny" : "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xalign {xcoord} yalign {ycoord}\n",
+    "string_posxy" : \
+        "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}pos ({xcoord}, {ycoord})\n",
+    "string_xposxyposy" : \
+        "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xpos {xcoord} ypos {ycoord}\n",
+    "string_atsetposxy": \
+        "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}at setPos({xcoord}, {ycoord})\n",
+    "string_alignxy"  : \
+        "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}align ({xcoord}, {ycoord})\n",
+    "string_xalignxyaligny" : \
+        "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xalign {xcoord} yalign {ycoord}\n",
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedef" : "Value not used, but key is.",
     "align_decimal_places" : "3",
@@ -99,13 +104,13 @@ rplidef_set    = {"rplidef", "rid", "rlid", "df"}    # default
 rplialways_set = {"rplial", "ral", "rpalways", "al"} # always
 rpliattrib_set = {"rpliatt", "rpliat", "at"}         # attribute
 rpligroup_set  = {"rpligroup", "rplig", "gr"}        # group
-rpli_list = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
+RPLI_LIST = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
 RPLI_MAIN_TAG = "rpli"
 RPLIDEF_MAIN_TAG = "rplidef"
 RPLIALWAYS_MAIN_TAG = "rplial"
 RPLIATTRIB_MAIN_TAG = "rpliatt"
 RPLIGROUP_MAIN_TAG = "rpligroup"
-RPLI_MAIN_TAG_list = [RPLI_MAIN_TAG, RPLIDEF_MAIN_TAG, \
+RPLI_MAIN_TAG_LIST = [RPLI_MAIN_TAG, RPLIDEF_MAIN_TAG, \
 RPLIALWAYS_MAIN_TAG, RPLIATTRIB_MAIN_TAG, RPLIGROUP_MAIN_TAG]
 # Additionally, rpligroupchild is a special tag to be used
 # for catching when an rpliatt should be INDENTed in the scripting.
@@ -123,20 +128,27 @@ format_tag_set = {"e=png", "e=webp", "e=jpg", "e=jpeg"}
 hidden_set = {"gecko", "data structure", "dinuguanggal", \
               "dinu", "d++", "manananggal", "dinuguan", "leaf", "segfault"}
 INDENT = 4
+MSG_TIME = 8000
+OUTER_DEFAULT_ALIGN_DECIMAL_PLACES = 3
 
-"""
-sortListByPriority(values: <list to sort>, priority: <sublist>)
-"""
+
 def sortListByPriority(values: Iterable[T], priority: List[T]) -> List[T]:
+    """
+    sortListByPriority(values: <list to sort>, priority: <sublist>)
+    """
     priority_dict = {k: i for i, k in enumerate(priority)}
     def priority_getter(value):
         return priority_dict.get(value, len(values))
     return sorted(values, key=priority_getter)
 
 def closestNum(num_list, value):
+    """
+    Find the number in the list closest to the given value.
+    """
     return num_list[min(range(len(num_list)), key = lambda i: abs(num_list[i]-value))]
 
 def truncate(number, digit_count):
+    """ Truncate a number to the digit count. """
     step = 10.0 ** digit_count
     return math.trunc(step * number) / step
 
@@ -149,7 +161,7 @@ def calculateAlign(data_list, spacing_num, decimal_place_count):
     """
     width, height = 1, 1
     curr_doc = KI.activeDocument()
-    if curr_doc != None:
+    if curr_doc is not None:
         width = curr_doc.width()
         height = curr_doc.height()
     step = 1.0 / (spacing_num - 1)
@@ -185,6 +197,7 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
         super(CustomDoubleSpinBox, self).__init__(parent)
 
     def stepBy(self, steps):
+        """Modifiers for incrementing the spinbox."""
         modifiers = QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.AltModifier:
             QDoubleSpinBox.setSingleStep(self, 0.01)
@@ -258,14 +271,16 @@ class FormatMenu(QWidget):
         self.text_signal_emitter = TextSignalEmitter()
         self.config_data = default_configs_dict
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            configs_file = open(os.path.join(\
+                os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
             for key, value in default_configs_dict.items():
                 if not key in self.config_data:
                     self.config_data[key] = value
                 elif value in value_true_set or value in value_false_set:
-                    if not self.config_data[key].lower() in value_true_set and not self.config_data[key].lower() in value_true_set:
+                    if not self.config_data[key].lower() in value_true_set \
+                        and not self.config_data[key].lower() in value_true_set:
                         self.config_data[key] = value
                 elif value.isnumeric():
                     if not self.config_data[key].isnumeric():
@@ -275,6 +290,9 @@ class FormatMenu(QWidget):
         self.createFormatMenuInterface()
 
     def createFormatMenuInterface(self):
+        """
+        Create the format menu.
+        """
         main_layout = QVBoxLayout()
         pos_layout = QHBoxLayout()
         align_layout = QHBoxLayout()
@@ -315,11 +333,13 @@ statements to Rule of Thirds intersections.\nThis is equivalent to using 4 space
         xalignxyaligny_button.clicked.connect(lambda: self.process("string_xalignxyaligny"))
         image_definition_label = QLabel("Image Definition")
         normal_image_def_button = QPushButton("Normal Images")
-        normal_image_def_button.setToolTip("Generate the definitions of individual images in Ren'Py\nusing \
+        normal_image_def_button.setToolTip(\
+            "Generate the definitions of individual images in Ren'Py\nusing \
 the Krita layer structure for the directory.")
         normal_image_def_button.clicked.connect(lambda: self.process("string_normalimagedef"))
         layered_image_def_button = QPushButton("Layered Image")
-        layered_image_def_button.setToolTip("Generate the definition of a Ren'Py layeredimage\nusing \
+        layered_image_def_button.setToolTip(\
+            "Generate the definition of a Ren'Py layeredimage\nusing \
 the Krita layer structure for the directory.")
         layered_image_def_button.clicked.connect(lambda: self.process("string_layeredimagedef"))
         settings_label = QLabel("Output Settings")
@@ -328,7 +348,8 @@ the Krita layer structure for the directory.")
 This will overwrite your customizations.")
         self.default_button.clicked.connect(self.settingDefault)
         self.customize_button = QPushButton(self.config_data["customize_button_text"], self)
-        self.customize_button.setToolTip("Open configs.json in your default text editor\nto make changes to the output formats.")
+        self.customize_button.setToolTip(\
+            "Open configs.json in your default text editor\nto make changes to the output formats.")
         self.customize_button.clicked.connect(self.settingCustomize)
         main_layout.addWidget(pos_label)
         pos_layout.addWidget(posxy_button)
@@ -396,7 +417,9 @@ This will overwrite your customizations.")
 
         script += self.DEBUG_MESSAGE
         if len(data_list) == 0:
-            script += "Cannot find layers to script. Check whether your target layers have Batch Exporter format.\n"
+            script += \
+                "Cannot find layers to script. \
+                    Check whether your target layers have Batch Exporter format.\n"
             return script
 
         ATL_dict = {}
@@ -409,7 +432,8 @@ This will overwrite your customizations.")
                     #script += "chain name: " + line[2]["chain_name"] + "\n"
                     name_to_print = line[2]["chain_name"]
                 if "e" in line[2]:
-                    line[2]["e"] = sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
+                    line[2]["e"] = \
+                        sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
                     line_format_set = set(line[2]["e"])
                     chosen_format = ""
                     if "webp" in line_format_set:
@@ -452,7 +476,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         script = ""
         if len(rpli_data_list) == 0:
-            script += "No Ren'Py Layered Image elements found! Check your tags!\n"
+            script += "No Ren'Py Layered Image elements found!\nCheck your tags!\n"
         was_written = set()
         for r in rpli_data_list:
             if not r[1] in was_written:
@@ -462,14 +486,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             def_add_on = ""
             image_add_on_list = []
             if "e" in r[2]:
-                r[2]["e"] = sortListByPriority(values=r[2]["e"], priority=["webp","png","jpg","jpeg"])
-                format_set = set(r[2]["e"])
+                r[2]["e"] = sortListByPriority(\
+                    values=r[2]["e"], priority=["webp","png","jpg","jpeg"])
+                formats = set(r[2]["e"])
                 chosen_format = ""
-                if "webp" in format_set:
+                if "webp" in formats:
                     chosen_format = "webp"
-                elif "png" in format_set:
+                elif "png" in formats:
                     chosen_format = "png"
-                elif "jpg" in format_set or "jpeg" in format_set:
+                elif "jpg" in formats or "jpeg" in formats:
                     chosen_format = "jpg"
                 for f in r[2]["e"]:
                     to_add = r[1]
@@ -480,7 +505,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             if RPLI_MAIN_TAG in r[2] and r[2][RPLI_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                 script += "layeredimage " + r[0].split(' ')[0] + ":\n"
             elif RPLIALWAYS_MAIN_TAG in r[2] and r[2][RPLIALWAYS_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += (" " * INDENT * 2) + "always:\n" + (" " * INDENT * 3) + r[0].split(' ')[0] + ":\n"
+                script += \
+                    (" " * INDENT * 2) + "always:\n" + \
+                        (" " * INDENT * 3) + r[0].split(' ')[0] + ":\n"
                 for i in image_add_on_list:
                     script += (" " * INDENT * 4) + i + "\n"
             elif RPLIGROUP_MAIN_TAG in r[2] and r[2][RPLIGROUP_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
@@ -490,7 +517,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     def_add_on = " default"
                 if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == VALUE_TRUE_MAIN_TAG:
                     script += (" " * INDENT)
-                script += (" " * INDENT * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
+                script += \
+                    (" " * INDENT * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
                 for i in image_add_on_list:
                     script += (" " * INDENT * 4) + i + "\n"
 
@@ -507,11 +535,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             starter = ""
         dir[0] = starter
         if starter:
-            to_insert = '/'.join(dir)
+            #to_insert = '/'.join(dir)
+            path_list.append('/'.join(dir))
         else:
-            to_insert = '/'.join(dir[1:])
+            #to_insert = '/'.join(dir[1:])
+            path_list.append('/'.join(dir[1:]))
         #self.DEBUG_MESSAGE += "to_insert: " + str(to_insert) + "\n"
-        path_list.append(to_insert)
+        #path_list.append(to_insert)
 
     def updateMaskPropertiesDict(self, tag_dict, tm_node):
         """
@@ -562,18 +592,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         tag_dict["transformedCenter"] = [new_x, new_y]
                     else:
                         tag_dict["transformedCenter"] = [int(float(p.attrib["x"])), int(float(p.attrib["y"]))]
-                """
-                Issue: This probably isn't an accurate use of offset.
-                if p.tag == "transformedCenter":
-                    if "transformedCenter" in tag_dict.keys():
-                        new_x = tag_dict["transformedCenter"][0] + int(float(p.attrib["x"]))
-                        new_y = tag_dict["transformedCenter"][0] + int(float(p.attrib["y"]))
-                        #self.DEBUG_MESSAGE += "new offset: " + str(p.attrib["x"]) + ", " + str(p.attrib["y"]) + "\n"
-                        tag_dict["transformedCenter"] = [new_x, new_y]
-                    else:
-                        #self.DEBUG_MESSAGE += "entering offset initially: " + str(p.attrib["x"]) + ", " + str(p.attrib["y"]) + "\n"
-                        tag_dict["transformedCenter"] = [int(float(p.attrib["x"])), int(float(p.attrib["y"]))]
-                """
 
         return tag_dict
 
@@ -615,7 +633,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 search must start.
         """
         curr_doc = KI.activeDocument()
-        if curr_doc != None:
+        if curr_doc is not None:
             curr_node = curr_doc.rootNode()
         #self.DEBUG_MESSAGE += "path pieces: \n"
         #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
@@ -653,7 +671,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         tag_dict_list = []
         for path in path_list:
-            #self.DEBUG_MESSAGE += "path: " + str(path) + "\n"
             tag_dict = {}
             path_pieces = path.split("/")#(os.path.sep)
             for layer in path_pieces:
@@ -673,10 +690,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
                 # Experimental pass: remove rpli tags so they wouldn't be inherited.
                  # HIGHLY EXPERIMENTAL FOR ATTRIBUTE INDENTATION
-                if rpli_mode == True:
+                if rpli_mode:
                     if "rpligroupchild" in tag_dict:
                         tag_dict.pop("rpligroupchild")
-                    for main_tag in RPLI_MAIN_TAG_list:
+                    for main_tag in RPLI_MAIN_TAG_LIST:
                         if main_tag in tag_dict.keys():
                             if main_tag == RPLIGROUP_MAIN_TAG:
                                 tag_dict["rpligroupchild"] = VALUE_TRUE_MAIN_TAG
@@ -684,7 +701,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
                 # Second pass: See if inheritance disabling is present.
                 # If so, clear the dictionary before adding any tags.
-                if rpli_mode == False:
+                if not rpli_mode:
                     for tag in tag_data:
                         letter = ""
                         value = ""
@@ -710,7 +727,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     elif value in value_false_set:
                         value = VALUE_FALSE_MAIN_TAG
 
-                    if rpli_mode == False:
+                    if not rpli_mode:
                         if letter == 's':
                             scale_tag_found = True
                             scale_list = [100.0]
@@ -756,7 +773,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         else:
                             if not letter in rpli_set: # Don't save rpli tags if not using that mode.
                                 tag_dict[letter] = value
-                    elif rpli_mode == True:
+                    elif rpli_mode:
                         if letter in rpli_set:
                             if value.lower() in value_true_set:
                                 tag_dict[RPLI_MAIN_TAG] = VALUE_TRUE_MAIN_TAG
@@ -895,9 +912,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     except ValueError:
                         continue
                 if i.type() == "grouplayer" or i.type() == "paintlayer":
-                    self.pathRecord(i, (path+[i.name().lower()]), path_list, path_len, coords_list, rpli_path_list)
-                    for list in rpli_list:
-                        for tag in list:
+                    self.pathRecord(i, (path+[i.name().lower()]), \
+                                    path_list, path_len, coords_list, rpli_path_list)
+                    for rl in RPLI_LIST:
+                        for tag in rl:
                             if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
                                 self.storePath((path+[i.name().lower()]),rpli_path_list)
                                 break
@@ -1135,7 +1153,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         tag_dict_list = []
         coords_list = []
         curr_doc = KI.activeDocument()
-        if curr_doc != None:
+        if curr_doc is not None:
             root_node = curr_doc.rootNode()
         path = []
         path_list_with_tags = []
@@ -1165,9 +1183,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             self.sortRpliData(rpli_data_list)
 
         if button_chosen in button_display_align_set:
-            align_decimal_places = 3
+            align_decimal_places = OUTER_DEFAULT_ALIGN_DECIMAL_PLACES
             try:
-                configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+                configs_file = open(\
+                    os.path.join(os.path.dirname(\
+                        os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
                 imported_configs = json.load(configs_file)
                 align_decimal_places = int(imported_configs["align_decimal_places"])
             except KeyError:
@@ -1189,6 +1209,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
 
     def updateSpacingValue(self):
+        """
+        Maintains the rule of thirds checkbox.
+        """
         self.spacing_number_label.setText(str(self.spacing_slider.value()))
         if self.spacing_slider.value() == 4:
             self.rule_of_thirds_check.setChecked(True)
@@ -1202,9 +1225,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         self.config_data = default_configs_dict
         with open(os.path.join(os.path.dirname\
 (os.path.realpath(__file__)), "configs.json"), 'w', encoding="utf-8") as f:
-            json.dump(default_configs_dict, f, INDENT=2)
-        self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!\n Changes to lock_windows_to_front\
-                                                    and button names require a reset!")
+            json.dump(default_configs_dict, f, indent=2)
+        self.text_signal_emitter.custom_signal.emit(\
+            "Configurations reverted to default!\nChanges to lock_windows_to_front \
+                and button names require a reset to this window!")
 
     def settingCustomize(self):
         """
@@ -1220,10 +1244,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Function to reload the config dict after it has been customized.
         """
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
+            configs_file = open(os.path.join(os.path.dirname(\
+                os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
             #TODO: refresh buttons
+            self.update()
         except IOError:
             pass
 
@@ -1236,29 +1262,33 @@ class ScriptBox(QWidget):
         self.setWindowTitle("Choose Your Format!")
         self.config_data = default_configs_dict
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
+            configs_file = open(os.path.join(\
+                os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
         except IOError:
             pass
         if self.config_data["lock_windows_to_front"] in value_true_set:
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        self.createScriptBox()
         self.format_menu = None
         self.output_window = None
+        self.createScriptBox()
         try:
-            width_to_use = int(self.width() * float(self.config_data["script_window_w_size_multiplier"]))
+            width_to_use = int(self.width() * float(\
+                self.config_data["script_window_w_size_multiplier"]))
         except ValueError:
             width_to_use = self.width()
         try:
-            height_to_use = int(self.height() * float(self.config_data["script_window_h_size_multiplier"]))
+            height_to_use = int(self.height() * float(\
+                self.config_data["script_window_h_size_multiplier"]))
         except ValueError:
             height_to_use = self.height()
         self.resize(width_to_use, height_to_use)
-        if self.config_data["customize_button_text"].lower() in hidden_set:
+        if self.config_data["customize_button_text"].lower() in hidden_set\
+              and not self.format_menu is None:
             self.dinu()
         close_notifier.viewClosed.connect(self.close)
-    
+
     def createScriptBox(self):
         """
         The output window's close button is connected to the main box.
@@ -1274,7 +1304,10 @@ class ScriptBox(QWidget):
 
     #coding=utf-8
     def dinu(self):
-            d =r"""
+        """
+        Dinu has taken over this plugin.
+        """
+        d =r"""
                   /\
                   ||
                 _/||\_
@@ -1293,12 +1326,13 @@ class ScriptBox(QWidget):
               .  \||/  .      .
         .     .   \/          .
       ERROR: SEGMENTATION FAULT
-"""
-            self.output_window.receiveText(d)
+                                """
+        self.output_window.receiveText(d)
 
 
 class RenameWorkerThread(QThread):
     """
+    Class to handle the rename recursion process in its own thread.
     """
     def __init__(self, dir_name, export_dir_name, suffix, new_folder_name):
         self.dir_name = dir_name
@@ -1308,11 +1342,11 @@ class RenameWorkerThread(QThread):
         self.file_found = False
         super().__init__()
 
-    def run(self):
-        self.renameRecursion(self.dir_name, self.export_dir_name, self.suffix, self.new_folder_name)
-
     def renameRecursion(self, dir_name, export_dir_name, suffix, folder_name):
-      for filename in os.listdir(dir_name):
+        """
+        Performs the file copies with renaming.
+        """
+        for filename in os.listdir(dir_name):
             f = os.path.join(dir_name, filename)
             if filename.find(suffix) != -1:
                 if os.path.isfile(f):
@@ -1343,7 +1377,8 @@ class ScaleCalculateBox(QWidget):
         self.setWindowTitle("Check Your Scale!")
         self.config_data = default_configs_dict
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
+            configs_file = open(os.path.join(\
+                os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
         except IOError:
@@ -1357,6 +1392,9 @@ class ScaleCalculateBox(QWidget):
 
 
     def createScaleCalculateBox(self):
+        """
+        Creates the Scale Calculator menu.
+        """
         preset_label_layout = QHBoxLayout()
         preset_width_label = QLabel("Width")
         preset_height_label = QLabel("Height")
@@ -1366,7 +1404,8 @@ class ScaleCalculateBox(QWidget):
         self.line_width = QLineEdit(parent=self)
         self.line_width.textEdited[str].connect(lambda: self.lineEdited(self.line_width.text(), 0))
         self.line_height = QLineEdit(parent=self)
-        self.line_height.textEdited[str].connect(lambda: self.lineEdited(self.line_height.text(), 1))
+        self.line_height.textEdited[str].connect(\
+            lambda: self.lineEdited(self.line_height.text(), 1))
         curr_doc = KI.activeDocument()
         if curr_doc is not None:
             self.line_width.setText(str(float(curr_doc.width()))+" px")
@@ -1393,9 +1432,9 @@ the suffix '_@[scale]x'.\nThis button will make GRS copy over the batch-exported
 images of the currently selected scale to a new folder in which they don't have that suffix,\n\
 so that those images may be transferred to your Ren'Py project without having to \
 rename them manually.")
-        rename_button.clicked.connect(lambda: self.renameClicked())
+        rename_button.clicked.connect(self.renameClicked)
         close_button = QPushButton("Close")
-        close_button.clicked.connect(lambda: self.onClose())
+        close_button.clicked.connect(self.onClose)
         size_layout.addWidget(preset_width_label,0,0)
         size_layout.addWidget(self.line_width,0,1)
         size_layout.addWidget(button_1280_w,0,2)
@@ -1473,17 +1512,23 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
                 self.line_height.setText(str(height) + " px")
 
     def receiveStatus(self, value):
-        self.status_bar.showMessage(value, 5000)
+        """
+        Receives the signal for the status message.
+        """
+        self.status_bar.showMessage(value, MSG_TIME)
 
     def renamerFinished(self, file_found, dir_to_check, folder_name):
         """
+        Displays the status bar message in the scale calculator + file renamer window.
         """
         if file_found is False:
-            self.status_bar.showMessage("No files to copy and rename have been found! Check your scale tag(s).", 5000)
+            self.status_bar.showMessage("No files to copy and rename have been found! \
+                                        Check your scale tag(s) and file directory.", MSG_TIME)
             if os.path.exists(dir_to_check) and os.path.isdir(dir_to_check):
                 shutil.rmtree(dir_to_check)
         else:
-            self.status_bar.showMessage(f"Files have been copied and renamed at export{folder_name}!", 5000)
+            self.status_bar.showMessage(f"Files have been copied \
+                                        and renamed at export{folder_name}!", MSG_TIME)
 
     def recursiveRenameStart(self):
         """
@@ -1503,13 +1548,18 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         dir_name = os.path.dirname(KI.activeDocument().fileName())
         dir_name = os.path.join(dir_name, "export")
         scale = float(self.scale_box_percent.value() / 100.0)
-        suffix = "_@" + str(scale) + "x"
-        new_folder_name = "_grs_x" + str(scale)
-        export_dir_name = os.path.join(dir_name + new_folder_name)
-        Path(export_dir_name).mkdir(parents=True, exist_ok=True)
-        self.worker = RenameWorkerThread(dir_name, export_dir_name, suffix, new_folder_name)
-        self.worker.start()
-        self.worker.finished.connect(lambda: self.renamerFinished(self.worker.file_found, export_dir_name, new_folder_name))
+        if scale != 1.0:
+            suffix = "_@" + str(scale) + "x"
+            new_folder_name = "_grs_x" + str(scale)
+            export_dir_name = os.path.join(dir_name + new_folder_name)
+            Path(export_dir_name).mkdir(parents=True, exist_ok=True)
+            self.worker = RenameWorkerThread(dir_name, export_dir_name, suffix, new_folder_name)
+            self.worker.start()
+            self.worker.finished.connect(lambda: \
+                                         self.renamerFinished(self.worker.file_found, \
+                                                              export_dir_name, new_folder_name))
+        else:
+            self.status_bar.showMessage("Requested scale is 100%; no need to rename the images!")
 
     def renameClicked(self):
         """
@@ -1519,6 +1569,9 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             self.recursiveRenameStart()
 
 class GenerateRenpyScripting(DockWidget):
+    """
+    Class for the dock widget. The windows are called from here.
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Generate Ren'Py Scripting")
@@ -1549,7 +1602,7 @@ class GenerateRenpyScripting(DockWidget):
     def startScriptBox(self):
         self.script_box = ScriptBox()
         self.script_box.show()
-    
+
     def startScaleCalculateBox(self):
         self.scale_calculate_box = ScaleCalculateBox()
         self.scale_calculate_box.show()
