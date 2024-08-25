@@ -1182,7 +1182,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         by directly clicking it (which would be while the slider is at 4),
         which shouldn't have an effect since the slider bar would be in the same position.
         """
-        if self.rule_of_thirds_check.isChecked() == True:
+        if self.rule_of_thirds_check.isChecked():
             self.spacing_slider.setSliderPosition(4)
         elif self.spacing_slider.value() == 4:
             self.rule_of_thirds_check.setChecked(True)
@@ -1201,7 +1201,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         self.config_data = default_configs_dict
         with open(os.path.join(os.path.dirname\
-(os.path.realpath(__file__)), "configs.json"), 'w') as f:
+(os.path.realpath(__file__)), "configs.json"), 'w', encoding="utf-8") as f:
             json.dump(default_configs_dict, f, INDENT=2)
         self.text_signal_emitter.custom_signal.emit("Configurations reverted to default!\n Changes to lock_windows_to_front\
                                                     and button names require a reset!")
@@ -1220,7 +1220,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Function to reload the config dict after it has been customized.
         """
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
             #TODO: refresh buttons
@@ -1236,7 +1236,7 @@ class ScriptBox(QWidget):
         self.setWindowTitle("Choose Your Format!")
         self.config_data = default_configs_dict
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
         except IOError:
@@ -1245,7 +1245,7 @@ class ScriptBox(QWidget):
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.createScriptBox()
         self.format_menu = None
-        self.outputWindow = None
+        self.output_window = None
         try:
             width_to_use = int(self.width() * float(self.config_data["script_window_w_size_multiplier"]))
         except ValueError:
@@ -1343,7 +1343,7 @@ class ScaleCalculateBox(QWidget):
         self.setWindowTitle("Check Your Scale!")
         self.config_data = default_configs_dict
         try:
-            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
+            configs_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
         except IOError:
@@ -1483,7 +1483,7 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             if os.path.exists(dir_to_check) and os.path.isdir(dir_to_check):
                 shutil.rmtree(dir_to_check)
         else:
-            self.status_bar.showMessage(f"Files have been copied and renamed at {folder_name}!", 5000)
+            self.status_bar.showMessage(f"Files have been copied and renamed at export{folder_name}!", 5000)
 
     def recursiveRenameStart(self):
         """
