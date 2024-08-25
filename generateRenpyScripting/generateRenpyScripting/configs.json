@@ -19,5 +19,6 @@
     "customize_button_text" : "Customize",
     "script_window_w_size_multiplier" : "1.1",
     "script_window_h_size_multiplier" : "0.8",
-    "script_font_size" : "10"
+    "script_font_size" : "10",
+    "preferred_output_font" : "Monospace"
 }

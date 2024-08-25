@@ -86,7 +86,8 @@ default_configs_dict = {
     "customize_button_text" : "Customize",
     "script_window_w_size_multiplier" : "1.1",
     "script_window_h_size_multiplier" : "0.8",
-    "script_font_size" : "10"
+    "script_font_size" : "10",
+    "preferred_output_font" : "Monospace"
 }
 
 button_display_set = {"string_posxy", "string_xposxyposy", \
@@ -221,12 +222,15 @@ class TextOutput(QWidget):
         super(TextOutput, self).__init__(parent)
         close_notifier.viewClosed.connect(self.close)
 
-    def setupUi(self, ScriptBox, script_font_size):
+    def setupUi(self, ScriptBox, script_font_size, script_preferred_font):
+        """
+        If the preferred font can't be accessed, let Qt find a monospace font.
+        """
         self.script_box = ScriptBox
         self.script = ""
         self.text_edit = QTextEdit()
-        font = QFont("Monospace")
-        font.setStyleHint(QFont.TypeWriter)
+        font = QFont(script_preferred_font)
+        font.setStyleHint(QFont.Monospace)
         self.text_edit.setCurrentFont(font)
         self.text_edit.setPlainText(self.script)
         self.text_edit.setFontPointSize(script_font_size)
@@ -524,7 +528,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return script
 
-    def storePath(self, dir, path_list):
+    def storePath(self, direc, path_list):
         """
         Store given path into the final path_list
         (starting with the optional directory_starter instead of root)
@@ -533,15 +537,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             starter = self.config_data["directory_starter"]
         except KeyError:
             starter = ""
-        dir[0] = starter
+        direc[0] = starter
         if starter:
-            #to_insert = '/'.join(dir)
-            path_list.append('/'.join(dir))
+            path_list.append('/'.join(direc))
         else:
-            #to_insert = '/'.join(dir[1:])
-            path_list.append('/'.join(dir[1:]))
-        #self.DEBUG_MESSAGE += "to_insert: " + str(to_insert) + "\n"
-        #path_list.append(to_insert)
+            path_list.append('/'.join(direc[1:]))
 
     def updateMaskPropertiesDict(self, tag_dict, tm_node):
         """
@@ -1287,6 +1287,8 @@ class ScriptBox(QWidget):
         if self.config_data["customize_button_text"].lower() in hidden_set\
               and not self.format_menu is None:
             self.dinu()
+        if "comic sans" in self.config_data["preferred_output_font"].lower():
+            self.jokeFont()
         close_notifier.viewClosed.connect(self.close)
 
     def createScriptBox(self):
@@ -1294,7 +1296,9 @@ class ScriptBox(QWidget):
         The output window's close button is connected to the main box.
         """
         self.output_window = TextOutput(self)
-        self.output_window.setupUi(self, float((self.config_data["script_font_size"])))
+        self.output_window.setupUi(self, \
+                                   float((self.config_data["script_font_size"])), \
+                                    self.config_data["preferred_output_font"])
         self.format_menu = FormatMenu(self)
         self.format_menu.text_signal_emitter.custom_signal.connect(self.output_window.receiveText)
         script_box_layout = QHBoxLayout()
@@ -1329,6 +1333,11 @@ class ScriptBox(QWidget):
                                 """
         self.output_window.receiveText(d)
 
+    def jokeFont(self):
+        """
+        Maybe it's the way you're dressed.
+        """
+        self.output_window.receiveText("Okay, funny person.")
 
 class RenameWorkerThread(QThread):
     """
