@@ -149,10 +149,10 @@ def calculateAlign(data_list, spacing_num, decimal_place_count):
     to a finite set of values from 0.0 to 1.0.
     """
     width, height = 1, 1
-    currentDoc = KI.activeDocument()
-    if currentDoc != None:
-        width = currentDoc.width()
-        height = currentDoc.height()
+    currDoc = KI.activeDocument()
+    if currDoc != None:
+        width = currDoc.width()
+        height = currDoc.height()
     step = 1.0 / (spacing_num - 1)
     spacing_list = []
     for i in range(spacing_num):
@@ -401,7 +401,7 @@ This will overwrite your customizations.")
             return script
 
         ATL_dict = {}
-        currentDoc = KI.activeDocument()
+        currDoc = KI.activeDocument()
 
         if button_chosen == "string_normalimagedef": # Normal Images
             for line in data_list:
@@ -499,9 +499,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def storePath(self, dir, path_list):
         """
-        new
+        Store given path into the final path_list
+        (starting with the optional directory_starter instead of root)
         """
-        self.DEBUG_MESSAGE += "dir sent to storePath(): " + str(dir) + "\n"
         try:
             starter = self.config_data["directory_starter"]
         except KeyError:
@@ -513,33 +513,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             to_insert = '/'.join(dir[1:])
         #self.DEBUG_MESSAGE += "to_insert: " + str(to_insert) + "\n"
         path_list.append(to_insert)
-
-
-    def storePathOLD(self, dir, path_list, path_len):
-        """
-        Store each max-length path into the final path_list
-        (starting with the optional directory_starter instead of root)
-        """
-        self.DEBUG_MESSAGE += "dir sent to storePath(): " + str(dir) + "\n"
-        try:
-            starter = self.config_data["directory_starter"]
-        except KeyError:
-            starter = ""
-        dir[0] = starter
-        #for i in dir[1 : path_len-1]:
-        #to_insert = ""
-        #for i in dir[1:-1]:
-        #    to_insert = to_insert + i + "/"#jojo
-        #image_file_name = dir[path_len-1]
-        #to_insert += dir[-1]
-        if dir:
-            to_insert = '/'.join(dir)
-        else:
-            to_insert = '/'.join(dir[1:])
-        #to_insert = to_insert + image_file_name
-        self.DEBUG_MESSAGE += "to_insert: " + str(to_insert) + "\n"
-        path_list.append(to_insert)
-
 
     def updateMaskPropertiesDict(self, tag_dict, tm_node):
         """
@@ -642,9 +615,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Case 2: directory_starter is empty, so the first part of path_pieces is where the
                 search must start.
         """
-        currentDoc = KI.activeDocument()
-        if currentDoc != None:
-            curr_node = currentDoc.rootNode()
+        currDoc = KI.activeDocument()
+        if currDoc != None:
+            curr_node = currDoc.rootNode()
         #self.DEBUG_MESSAGE += "path pieces: \n"
         #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
         if self.config_data["directory_starter"]:
@@ -728,6 +701,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
                 # Third pass: Add the tags.
                 # Turn true/false values into true/false (as opposed to t/f, yes/no, etc.)
+                scale_tag_found = False
                 for tag in tag_data:
                     letter, value = tag.split('=', 1)
                     #self.DEBUG_MESSAGE += "letter/value is: " + letter + " : " + value + "\n"
@@ -739,6 +713,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
                     if rpli_mode == False:
                         if letter == 's':
+                            scale_tag_found = True
                             scale_list = [100.0]
                             for v in value.split(','):
                                 if v.replace(".", "").isnumeric():
@@ -807,7 +782,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 tag_dict['e'] = format_list
                         else:
                             continue
-                    
+                if scale_tag_found == False: # Just in case, ensure that the default scale of 100
+                    tag_dict['s'] = [100.0]  # exists if nothing is specified.
 
             # Next, check for changes from transform masks.
             tag_dict = self.getMaskPropertiesStart(path_pieces, tag_dict)
@@ -815,81 +791,57 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             tag_dict_list.append(tag_dict)
         return tag_dict_list
 
+    def findGroupPositionRecursion(self, node, curr_coords):
+        """
+        Layers that are using alpha inheritance (like overlays) shouldn't affect coordinates.
+        """
+        check_coords = curr_coords
+        #self.DEBUG_MESSAGE += "node is: " + node.name() + " and coords are: " + str(check_coords[0]) + ", " + str(check_coords[1]) + "\n"
+        if node.type() == "grouplayer":
+            for i in node.childNodes():
+                check_coords = self.findGroupPositionRecursion(i, check_coords)
+        elif node.type() == "paintlayer" and not node.inheritAlpha():
+            if node.bounds().topLeft().x() < check_coords[0]:
+                #self.DEBUG_MESSAGE += str(node.bounds().topLeft().x()) + " x is less than " + str(check_coords[0]) + "\n"
+                check_coords[0] = node.bounds().topLeft().x()
+            if node.bounds().topLeft().y() < check_coords[1]:
+                #self.DEBUG_MESSAGE += str(node.bounds().topLeft().y()) + " y is less than " + str(check_coords[1]) + "\n"
+                check_coords[1] = node.bounds().topLeft().y()
+            if node.bounds().bottomRight().x() > check_coords[2]:
+                #self.DEBUG_MESSAGE += str(node.bounds().bottomRight().x()) + " x is more than " + str(check_coords[2]) + "\n"
+                check_coords[2] = node.bounds().bottomRight().x()
+            if node.bounds().bottomRight().y() > check_coords[3]:
+                #self.DEBUG_MESSAGE += str(node.bounds().bottomRight().y()) + " y is more than " + str(check_coords[3]) + "\n"
+                check_coords[3] = node.bounds().bottomRight().y()
+        return check_coords
+
+
+    def findGroupPositionStart(self, node):
+        """
+        Starts with the canvas's dimensions as the large values to beat (by being lesser than).
+         x,y: The coordinates of the top left corner of the composite group
+         center: A QPoint for the coordinates of the center of the composite group,
+                 calculated as the average of the top left corner and the bottom right corner.
+                 Hopefully the rounding is accurate.
+        coords_to_check: [topLeftX, topLeftY, bottomRightX, bottomRightY]
+        coords_to_return: [topLeftX, topLeftY, QPoint of center]
+        """
+        coords_to_check = []#[node.bounds().bottomRight().x(),node.bounds().bottomRight().y(), 0, 0]
+        center_x = 0
+        center_y = 0
+        currDoc = KI.activeDocument()
+        if currDoc != None:
+            coords_to_check = [currDoc.width(),currDoc.height(),0,0]
+            coords_to_check = self.findGroupPositionRecursion(node, coords_to_check)
+            center_x = int((coords_to_check[0] + coords_to_check[2])/2)
+            center_y = int((coords_to_check[1] + coords_to_check[3])/2)
+        coords_to_return = [coords_to_check[0], coords_to_check[1], QPoint(center_x, center_y)]
+        #self.DEBUG_MESSAGE += "returning these coords: \n"
+        #self.DEBUG_MESSAGE += str(coords_to_return[0]) + ", " + str(coords_to_return[1]) + "\n"
+        return coords_to_return
+
     def pathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list):
         """
-        new version - buggy
-        """
-        #self.DEBUG_MESSAGE += "checking out node: " + node.name().lower() + "\n"
-        if (len(path) > path_len):
-            path[path_len] = node.name().lower()
-        else:
-            path.append(node.name().lower())
-        self.DEBUG_MESSAGE += "starting pR with this node: " + node.name() + "\n"
-        self.DEBUG_MESSAGE += "the path is: " + str(path) + "->length: " + str(path_len) + "\n"
-        self.DEBUG_MESSAGE += "It has this many children: " + str(len(node.childNodes())) +"\n"
-        recordable_child_nodes = 0
-        for c in node.childNodes():
-            self.DEBUG_MESSAGE += "Found node " + c.name() + " as a child of " + node.name() + "\n"
-            if c.type() == "grouplayer" or c.type() == "paintlayer":
-                recordable_child_nodes += 1
-                # Case: The tagged image is a group.
-                if c.type() == "grouplayer":
-                    for f in format_tag_set:
-                        if f in c.name().lower():
-                            self.storePath(path + [c.name().lower()], path_list)
-                            #TODO: Make the coords come from the actual content of the group.
-                            coords_list.append([node.bounds().topLeft().x(), \
-                                                node.bounds().topLeft().y(), \
-                                                    node.bounds().center()])
-                            break
-        self.DEBUG_MESSAGE += "Case 1 check done.\n"
-        if recordable_child_nodes == 0: # Case: End of path reached
-            self.DEBUG_MESSAGE += "End of path reached for node: " + node.name() + "\n"
-            for f in format_tag_set:
-                if f in node.name().lower():
-                    self.DEBUG_MESSAGE += "End of path reached with node: " + node.name() + ". Storing this path: " + str(path) + "\n"
-                    self.storePath(path, path_list)
-                    coords_list.append([node.bounds().topLeft().x(), \
-                                node.bounds().topLeft().y(), \
-                                    node.bounds().center()])
-                    break
-        else:
-            path_len += 1 #experiment with this here
-            self.DEBUG_MESSAGE += "--- Checking the children of " + node.name() + " ==> at length: " + str(path_len) + "\n"
-            self.DEBUG_MESSAGE += "These are the children:\n"
-            for i in node.childNodes():
-                self.DEBUG_MESSAGE += i.name() + "\n"
-            if len(node.childNodes()) == 0:
-                self.DEBUG_MESSAGE += "No child nodes found.\n"
-            for i in node.childNodes():
-                self.DEBUG_MESSAGE += "child node: " + i.name() + "\n"
-                tag_data = i.name().lower().split(' ')[1:]
-                letter_data = []
-                value_data = []
-                for tag in tag_data:
-                    try:
-                        letter, value = tag.split('=', 1)
-                        letter_data.append(letter)
-                        value_data.append(value)
-                    except ValueError:
-                        continue
-                if i.type() == "grouplayer" or i.type() == "paintlayer":
-                    self.DEBUG_MESSAGE += "now calling pathRecord this path: " + str(path+[i.name().lower()]) + "___ with length: " + str(path_len) +"\n"
-                    self.pathRecord(i, (path+[i.name().lower()]), path_list, path_len, coords_list, rpli_path_list)
-                    for list in rpli_list:
-                        for tag in list:
-                            if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
-                                #temp_path = path
-                                #temp_path.append(layer_name)
-                                #temp_path = path + [layer_name]
-                                #self.storePath(temp_path, rpli_path_list)
-                                self.storePath((path+[i.name().lower()],rpli_path_list))
-                                break
-            self.DEBUG_MESSAGE += "~ ~ ~ Instance done. ~ ~ ~\n"
-
-    def OLDpathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list):
-        """
-        TODO: Make it node to FORMATTED layer.
         Searches for all the node to leaf paths and stores them in path_list using storePath().
         storePath() takes in the entire paths (including all the tags at this step).
 
@@ -902,54 +854,53 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         New concept: Record an additional list for the Ren'Py layered image tags
         since the required behavior for layered images isn't the same when it comes to
         inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
-
         """
-        #layer_data = node.name().split(' ')
         if (len(path) > path_len):
-            path[path_len] = node.name()
+            path[path_len] = node.name().lower()
         else:
-            path.append(node.name())
-        path_len += 1
+            path.append(node.name().lower())
         recordable_child_nodes = 0
-        coord_x = node.bounds().topLeft().x()
-        coord_y = node.bounds().topLeft().y()
-        coord_center = node.bounds().center()
         for c in node.childNodes():
             if c.type() == "grouplayer" or c.type() == "paintlayer":
                 recordable_child_nodes += 1
-            #elif c.type() == "transformmask": # Toggle this on
-            #    self.checkTransformMask(c)    # to check transform mask XML
-        if recordable_child_nodes == 0:
-            #self.storePath(path, path_list, path_len)
-            self.storePath(path, path_list)
-            coords_list.append([coord_x, coord_y, coord_center])
+                if c.type() == "grouplayer":   # Case: The tagged image is a group.
+                    for f in format_tag_set:
+                        if f in c.name().lower():
+                            self.storePath(path + [c.name().lower()], path_list)
+                            new_coords = self.findGroupPositionStart(c) # Get coords from the group's content
+                            coords_list.append([new_coords[0],new_coords[1],new_coords[2]])
+                            break
+        if recordable_child_nodes == 0: # Case: End of path reached
+            for f in format_tag_set:
+                if f in node.name().lower():
+                    self.storePath(path, path_list)
+                    coords_list.append([node.bounds().topLeft().x(), \
+                                node.bounds().topLeft().y(), \
+                                    node.bounds().center()])
+                    break
         else:
+            path_len += 1
+            #self.DEBUG_MESSAGE += "--- Checking the children of " + node.name() + " ==> at length: " + str(path_len) + "\n"
+            #self.DEBUG_MESSAGE += "These are the children:\n"
+            #for i in node.childNodes():
+            #    self.DEBUG_MESSAGE += i.name() + "\n"
             for i in node.childNodes():
+                tag_data = i.name().lower().split(' ')[1:]
+                letter_data = []
+                value_data = []
+                for tag in tag_data:
+                    try:
+                        letter, value = tag.split('=', 1)
+                        letter_data.append(letter)
+                        value_data.append(value)
+                    except ValueError:
+                        continue
                 if i.type() == "grouplayer" or i.type() == "paintlayer":
-                    layer_name = i.name().lower()
-                    tag_data = layer_name.split(' ')[1:]
-                    letter_data = []
-                    value_data = []
-                    for tag in tag_data:
-                        try:
-                            letter, value = tag.split('=', 1)
-                            letter_data.append(letter)
-                            value_data.append(value)
-                        except ValueError:
-                            continue
-                # Looks silly and work-aroundy but seems to work.
-                # The pathbuilding gets messed up without this subtraction on path.
-                    remove_amount = len(path) - path_len # This is always either 0 or 1.
-                    path = path[: len(path) - remove_amount]
-                    self.pathRecord(i, path, path_list, path_len, coords_list, rpli_path_list)
+                    self.pathRecord(i, (path+[i.name().lower()]), path_list, path_len, coords_list, rpli_path_list)
                     for list in rpli_list:
                         for tag in list:
                             if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
-                                temp_path = path
-                                temp_path.append(layer_name)
-                                #self.storePath(temp_path, rpli_path_list, path_len+1)
-                                self.storePath(temp_path, rpli_path_list)
-                                #self.DEBUG_MESSAGE += "tag is: " + tag + " in the layer " + i.name() + " so adding rpli: " + '~'.join(temp_path) + "\n"
+                                self.storePath((path+[i.name().lower()]),rpli_path_list)
                                 break
 
     def checkTransformMask(self, c):
@@ -986,10 +937,10 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         cleaned_path_list = []
         for path in path_list:
-            layers = path.split("/")#(os.path.sep)
+            layers = path.split("/")
             cleaned_path = ""
             for layer in layers:
-                cleaned_path = cleaned_path + layer.split(' ')[0] + "/"#os.path.sep
+                cleaned_path = cleaned_path + layer.split(' ')[0] + "/"
             cleaned_path = cleaned_path[:-1]
             cleaned_path_list.append(cleaned_path)
         return cleaned_path_list
@@ -1002,7 +953,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         """
         export_layer_list = []
         for path in path_list:
-            layer_data = path.split("/")#(os.path.sep)
+            layer_data = path.split("/")
             layer_name_to_export = layer_data[-1]
             export_layer_list.append(layer_name_to_export)
         return export_layer_list
@@ -1012,21 +963,30 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Modifies the coordinates
             0,1 : x,y on top left corner
               2 : QPoint of the center
-        Step 1: Apply the margin tag if necessary.
+        Step 1: Remove negative values for the coordinates.
+                This is because Krita crops out material not on the canvas
+                when it's exporting the images.
+        Step 2: Apply the margin tag if necessary.
                 The Batch Exporter uses the smallest margin
                 in the list by default, so that's what's used here.
                 The center points wouldn't change since each set
                 of 4 margins (around a single layer rectange) would be of equal size.
-        Step 2: Scale the coordinates with the smallest
+        Step 3: Apply x/y changes from transform masks if necessary.
+        Step 4: TODO: Apply the t tag if necessary (meaning set the coordinates to 0).
+        Step 5: Scale the coordinates with the smallest
                 given size from the 's=' layer tags
-        TODO: Implement the x and y changes that come from transform masks.
-        It should be before scaling.
         """
         for i in range(len(coords_list)):
             scale = 1.0
+            if coords_list[i][0] < 0:
+                coords_list[i][0] = 0
+            if coords_list[i][1] < 0:
+                coords_list[i][1] = 0
+
             if "m" in tag_dict_list[i]:
                 coords_list[i][0] -= int(min(tag_dict_list[i]["m"]))
                 coords_list[i][1] -= int(min(tag_dict_list[i]["m"]))
+                #TODO: Add update to center point
 
             if "transformedCenter" in tag_dict_list[i]:
                 #self.DEBUG_MESSAGE += "x and y before transform: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
@@ -1035,10 +995,24 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 coords_list[i][0] = coords_list[i][0] + difference_x
                 coords_list[i][1] = coords_list[i][1] + difference_y
                 #self.DEBUG_MESSAGE += "after: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
+                #TODO: Add update to center point
+
+            if "t" in tag_dict_list[i] and tag_dict_list[i]["t"] in value_false_set:
+                coords_list[i][0] = 0
+                coords_list[i][1] = 0
+                coords_list[i][2] = QPoint(0,0)
+                currDoc = KI.activeDocument()
+                if currDoc != None:
+                    coords_list[i][2].setX(int(currDoc.width()/2))
+                    coords_list[i][2].setY(int(currDoc.height()/2))
 
             if "s" in tag_dict_list[i]:
-                coords_list[i][0] = round(coords_list[i][0] * min(tag_dict_list[i]["s"]) / 100)
-                coords_list[i][1] = round(coords_list[i][1] * min(tag_dict_list[i]["s"]) / 100)
+                #self.DEBUG_MESSAGE += "scaling x from " + str(coords_list[i][0]) + " to "
+                coords_list[i][0] = round((coords_list[i][0] * min(tag_dict_list[i]["s"])) / 100)
+                #self.DEBUG_MESSAGE += str(coords_list[i][0]) + "\n"
+                #self.DEBUG_MESSAGE += "scaling y from " + str(coords_list[i][1]) + " to "
+                coords_list[i][1] = round((coords_list[i][1] * min(tag_dict_list[i]["s"])) / 100)
+                #self.DEBUG_MESSAGE += str(coords_list[i][1]) + "\n"
                 center_x_new = float(coords_list[i][2].x()) * min(tag_dict_list[i]["s"]) / 100
                 center_y_new = float(coords_list[i][2].y()) * min(tag_dict_list[i]["s"]) / 100
                 coords_list[i][2].setX(int(center_x_new))
@@ -1078,18 +1052,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         if "aZ" in line[2]:
             rounded_rot = round(line[2]["aZ"], int(self.config_data["atl_rotate_decimal_places"]))
             modifier_block += ((' ')*indent*2) + "rotate " + str(rounded_rot) + "\n"
-        
-        """
-        if "transformedCenter" in line[2]:
-            xoffset = line[2]["transformedCenter"][0]
-            yoffset = line[2]["transformedCenter"][1]
-            if xoffset == 0 and yoffset != 0:
-                modifier_block += ((' ')*indent*2) + "yoffset " + str(yoffset) + "\n"
-            elif yoffset == 0 and xoffset != 0:
-                modifier_block += ((' ')*indent*2) + "xoffset " + str(xoffset) + "\n"
-            elif xoffset != 0 and yoffset != 0:
-                modifier_block += ((' ')*indent*2) + "offset (" + str(xoffset) + ", " + str(yoffset) + ")\n"
-        """
+
         return modifier_block
 
     def sortRpliData(self, rpli_data_list):
@@ -1170,9 +1133,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_path_list = []
         tag_dict_list = []
         coords_list = []
-        currentDoc = KI.activeDocument()
-        if currentDoc != None:
-            root_node = currentDoc.rootNode()
+        currDoc = KI.activeDocument()
+        if currDoc != None:
+            root_node = currDoc.rootNode()
         path = []
         path_list_with_tags = []
         self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
@@ -1403,10 +1366,10 @@ class ScaleCalculateBox(QWidget):
         self.line_width.textEdited[str].connect(lambda: self.lineEdited(self.line_width.text(), 0))
         self.line_height = QLineEdit(parent=self)
         self.line_height.textEdited[str].connect(lambda: self.lineEdited(self.line_height.text(), 1))
-        currentDoc = KI.activeDocument()
-        if currentDoc != None:
-            self.line_width.setText(str(float(currentDoc.width()))+" px")
-            self.line_height.setText(str(float(currentDoc.height()))+" px")
+        currDoc = KI.activeDocument()
+        if currDoc != None:
+            self.line_width.setText(str(float(currDoc.width()))+" px")
+            self.line_height.setText(str(float(currDoc.height()))+" px")
         button_1280_w = QPushButton("1280")
         button_1280_w.clicked.connect(lambda: self.dimensionSet(1280,0))
         button_720_h = QPushButton("720")
@@ -1484,10 +1447,10 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         """
         d(imension): 0: width, 1: height
         """
-        currentDoc = KI.activeDocument()
-        if currentDoc != None:
+        currDoc = KI.activeDocument()
+        if currDoc != None:
             flip_d = 1-d
-            scale = float(value/((currentDoc.width()*flip_d)+(currentDoc.height()*d)))
+            scale = float(value/((currDoc.width()*flip_d)+(currDoc.height()*d)))
             self.scale_box_percent.setValue(scale * 100.0)
 
     def calculatorScaleChanged(self):
@@ -1498,11 +1461,11 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
         Only the box that is not focused is edited by this function
         since the user would be editing the focused box.
         """
-        currentDoc = KI.activeDocument()
+        currDoc = KI.activeDocument()
         scale = float(self.scale_box_percent.value() / 100.0)
-        if currentDoc != None:
-            width = round((float(currentDoc.width()) * scale), 1)
-            height = round((float(currentDoc.height()) * scale), 1)
+        if currDoc != None:
+            width = round((float(currDoc.width()) * scale), 1)
+            height = round((float(currDoc.height()) * scale), 1)
             if self.line_width.hasFocus() == False:
                 self.line_width.setText(str(width) + " px")
             if self.line_height.hasFocus() == False:
@@ -1541,8 +1504,7 @@ format(folder=folder_name), 5000)
         dir_name = os.path.join(dir_name, "export")
         scale = float(self.scale_box_percent.value() / 100.0)
         suffix = "_@" + str(scale) + "x"
-        new_folder_name = "grs_x" + str(scale)
-        #export_dir_name = dir_name + os.path.sep + new_folder_name #TODO: change this to path join.
+        new_folder_name = "_grs_x" + str(scale)
         export_dir_name = os.path.join(dir_name + new_folder_name)
         Path(export_dir_name).mkdir(parents=True, exist_ok=True)
         self.worker = RenameWorkerThread(dir_name, export_dir_name, suffix, new_folder_name)
