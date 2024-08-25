@@ -1351,6 +1351,12 @@ class RenameWorkerThread(QThread):
         self.file_found = False
         super().__init__()
 
+    def run(self):
+        """
+        Define and call run() because QThreads call it.
+        """
+        self.renameRecursion(self.dir_name, self.export_dir_name, self.suffix, self.new_folder_name)
+
     def renameRecursion(self, dir_name, export_dir_name, suffix, folder_name):
         """
         Performs the file copies with renaming.
@@ -1369,10 +1375,9 @@ class RenameWorkerThread(QThread):
             elif os.path.isdir(f):
                 if filename == folder_name:
                     continue
-                else:
-                    sub_export_dir_name = os.path.join(export_dir_name, filename)
-                    Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
-                    self.renameRecursion(f, sub_export_dir_name, suffix, folder_name)
+                sub_export_dir_name = os.path.join(export_dir_name, filename)
+                Path(sub_export_dir_name).mkdir(parents=True, exist_ok=False)
+                self.renameRecursion(f, sub_export_dir_name, suffix, folder_name)
 
 class ScaleCalculateBox(QWidget):
     """
@@ -1537,7 +1542,7 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
                 shutil.rmtree(dir_to_check)
         else:
             self.status_bar.showMessage(f"Files have been copied \
-                                        and renamed at export{folder_name}!", MSG_TIME)
+and renamed at {folder_name}!", MSG_TIME)
 
     def recursiveRenameStart(self):
         """
@@ -1566,7 +1571,7 @@ by 0.1%.\nHold Ctrl to edit by 10%.")
             self.worker.start()
             self.worker.finished.connect(lambda: \
                                          self.renamerFinished(self.worker.file_found, \
-                                                              export_dir_name, new_folder_name))
+export_dir_name, ("export"+new_folder_name)))
         else:
             self.status_bar.showMessage("Requested scale is 100%; no need to rename the images!")
 
