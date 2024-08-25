@@ -437,7 +437,8 @@ This will overwrite your customizations.")
                     name_to_print = line[2]["chain_name"]
                 if "e" in line[2]:
                     line[2]["e"] = \
-                        sortListByPriority(values=line[2]["e"], priority=["webp","png","jpg","jpeg"])
+                        sortListByPriority(values=line[2]["e"], \
+                                           priority=["webp","png","jpg","jpeg"])
                     line_format_set = set(line[2]["e"])
                     chosen_format = ""
                     if "webp" in line_format_set:
@@ -550,20 +551,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         The node passed in must be a transform mask.
 
-        Property                                : Data Type (Not in the original XML string, but instead how it's stored)
-        scaleX and scaleY (xzoom and yzoom)     : floats
+        Property                            : Data Type
+                                              (Not in the original XML string,
+                                               but instead how it's stored)
+        scaleX and scaleY (xzoom and yzoom) : floats
 
         transformedCenter (x and y) : int array of [x, y]
         (not offset)
 
-        #basic:
+        scaleX and scaleY: Multiply the new scale by the existing scale.
+        basic:
         #tag_dict[p.tag] = p.attrib
         """
         xml_root = ET.fromstring(tm_node.toXML())
         for ft in xml_root.iter("free_transform"):
             for p in ft:
-                #self.DEBUG_MESSAGE += p.tag + "   :  " + str(p.attrib) + "\n" # Keep this for checking the data.
-                # scaleX and scaleY: Multiply the new scale by the existing scale.
+                #self.DEBUG_MESSAGE += p.tag + "   :  " + str(p.attrib) + "\n"
                 if p.tag == "scaleX":
                     if "scaleX" in tag_dict.keys():
                         tag_dict["scaleX"] = float(tag_dict["scaleX"]) * float(p.attrib["value"])
@@ -602,11 +605,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Case 1: The mask is a sibling layer, so it applies to all its siblings.
         Case 2: The mask is a child layer, so it applies only to its parent.
 
-        Check for case 1 before descending. At the end of the path, case 2 will be seen if it's there.
+        Check for case 1 before descending.
+        At the end of the path, case 2 will be seen if it's there.
         
         For now, all the XML info under "free_transform" is added to the dictionary.
 
-        The recursion halts because the list of layers in the path to explore decreases with each call.
+        The recursion halts because the list of layers
+        in the path to explore decreases with each call.
         """
         # path is empty, so the leaf is reached, so check for child transform layers
         if not search_path_pieces:
@@ -619,8 +624,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     tag_dict = self.updateMaskPropertiesDict(tag_dict, check_layer)
             for check_layer in curr_node.childNodes():
                 if search_path_pieces:
-                    if check_layer.name() == search_path_pieces[0]: # Implicitly, this should only ever be a group or a paint layer.
-        #            #if check_layer.type() == "grouplayer" or check_layer.type() == "paintlayer":
+                    if check_layer.name() == search_path_pieces[0]:
+                    # Implicitly, this should only ever be a group or a paint layer.
+                    #if check_layer.type() == "grouplayer" or check_layer.type() == "paintlayer":
                         curr_node = check_layer
                         self.getMaskPropertiesRecursion(search_path_pieces[1:], tag_dict, curr_node)
 
@@ -756,7 +762,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             if not value:
                                 margin_list.append("0")
                             else:
-                               margin_list = value.split(',')
+                                margin_list = value.split(',')
                             if 'm' in tag_dict:
                                 tag_dict['m'].extend(margin_list)
                                 tag_dict['m'] = list(set(tag_dict['m']))
@@ -766,19 +772,19 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             continue        # the path after it's been used to block
                                             # the parents' tags.
                         elif letter in chain_set and value.lower() in value_true_set:
-                            if not "chain_name" in tag_dict:
+                            if "chain_name" not in tag_dict:
                                 tag_dict["chain_name"] = individual_layer_name
                             else:
                                 tag_dict["chain_name"] += (" " + individual_layer_name)
-                        else:
-                            if not letter in rpli_set: # Don't save rpli tags if not using that mode.
+                        else:  # Don't save rpli tags if not using that mode.
+                            if not letter in rpli_set:
                                 tag_dict[letter] = value
                     elif rpli_mode:
                         if letter in rpli_set:
                             if value.lower() in value_true_set:
                                 tag_dict[RPLI_MAIN_TAG] = VALUE_TRUE_MAIN_TAG
                             else:
-                                 tag_dict[RPLI_MAIN_TAG] = VALUE_FALSE_MAIN_TAG
+                                tag_dict[RPLI_MAIN_TAG] = VALUE_FALSE_MAIN_TAG
                         elif letter in rplidef_set:
                             tag_dict[RPLIDEF_MAIN_TAG] = value
                         elif letter in rplialways_set:
@@ -798,7 +804,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 tag_dict['e'] = format_list
                         else:
                             continue
-                if scale_tag_found == False: # Just in case, ensure that the default scale of 100
+                if not scale_tag_found:      # Ensure that the default scale of 100
                     tag_dict['s'] = [100.0]  # exists if nothing is specified.
 
             # Next, check for changes from transform masks.
@@ -812,22 +818,17 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Layers that are using alpha inheritance (like overlays) shouldn't affect coordinates.
         """
         check_coords = curr_coords
-        #self.DEBUG_MESSAGE += "node is: " + node.name() + " and coords are: " + str(check_coords[0]) + ", " + str(check_coords[1]) + "\n"
         if node.type() == "grouplayer":
             for i in node.childNodes():
                 check_coords = self.findGroupPositionRecursion(i, check_coords)
         elif node.type() == "paintlayer" and not node.inheritAlpha():
             if node.bounds().topLeft().x() < check_coords[0]:
-                #self.DEBUG_MESSAGE += str(node.bounds().topLeft().x()) + " x is less than " + str(check_coords[0]) + "\n"
                 check_coords[0] = node.bounds().topLeft().x()
             if node.bounds().topLeft().y() < check_coords[1]:
-                #self.DEBUG_MESSAGE += str(node.bounds().topLeft().y()) + " y is less than " + str(check_coords[1]) + "\n"
                 check_coords[1] = node.bounds().topLeft().y()
             if node.bounds().bottomRight().x() > check_coords[2]:
-                #self.DEBUG_MESSAGE += str(node.bounds().bottomRight().x()) + " x is more than " + str(check_coords[2]) + "\n"
                 check_coords[2] = node.bounds().bottomRight().x()
             if node.bounds().bottomRight().y() > check_coords[3]:
-                #self.DEBUG_MESSAGE += str(node.bounds().bottomRight().y()) + " y is more than " + str(check_coords[3]) + "\n"
                 check_coords[3] = node.bounds().bottomRight().y()
         return check_coords
 
@@ -842,18 +843,16 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         coords_to_check: [topLeftX, topLeftY, bottomRightX, bottomRightY]
         coords_to_return: [topLeftX, topLeftY, QPoint of center]
         """
-        coords_to_check = []#[node.bounds().bottomRight().x(),node.bounds().bottomRight().y(), 0, 0]
+        coords_to_check = []
         center_x = 0
         center_y = 0
         curr_doc = KI.activeDocument()
-        if curr_doc != None:
+        if curr_doc is not None:
             coords_to_check = [curr_doc.width(),curr_doc.height(),0,0]
             coords_to_check = self.findGroupPositionRecursion(node, coords_to_check)
             center_x = int((coords_to_check[0] + coords_to_check[2])/2)
             center_y = int((coords_to_check[1] + coords_to_check[3])/2)
         coords_to_return = [coords_to_check[0], coords_to_check[1], QPoint(center_x, center_y)]
-        #self.DEBUG_MESSAGE += "returning these coords: \n"
-        #self.DEBUG_MESSAGE += str(coords_to_return[0]) + ", " + str(coords_to_return[1]) + "\n"
         return coords_to_return
 
     def pathRecord(self, node, path, path_list, path_len, coords_list, rpli_path_list):
@@ -871,7 +870,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         since the required behavior for layered images isn't the same when it comes to
         inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
         """
-        if (len(path) > path_len):
+        if len(path) > path_len:
             path[path_len] = node.name().lower()
         else:
             path.append(node.name().lower())
@@ -880,11 +879,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             if c.type() == "grouplayer" or c.type() == "paintlayer":
                 recordable_child_nodes += 1
                 if c.type() == "grouplayer":   # Case: The tagged image is a group.
-                    for f in format_tag_set:
+                    for f in format_tag_set:   # Get coords from the group's content
                         if f in c.name().lower():
                             self.storePath(path + [c.name().lower()], path_list)
-                            new_coords = self.findGroupPositionStart(c) # Get coords from the group's content
-                            coords_list.append([new_coords[0],new_coords[1],new_coords[2]])
+                            new_coords = self.findGroupPositionStart(c)
+                            if not new_coords:
+                                self.DEBUG_MESSAGE += \
+                            "Error: Cannot get the coordinates for group layer [" + c.name() + "]\n"
+                            else:
+                                coords_list.append([new_coords[0],new_coords[1],new_coords[2]])
                             break
         if recordable_child_nodes == 0: # Case: End of path reached
             for f in format_tag_set:
@@ -896,11 +899,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     break
         else:
             path_len += 1
-            #self.DEBUG_MESSAGE += "--- Checking the children of " + node.name() + " ==> at length: " + str(path_len) + "\n"
-            #self.DEBUG_MESSAGE += "These are the children:\n"
-            #for i in node.childNodes():
-            #    self.DEBUG_MESSAGE += i.name() + "\n"
-            for i in node.childNodes():
+            for i in node.childNodes(): # Case: Send the child nodes through the recursion.
                 tag_data = i.name().lower().split(' ')[1:]
                 letter_data = []
                 value_data = []
@@ -916,7 +915,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                     path_list, path_len, coords_list, rpli_path_list)
                     for rl in RPLI_LIST:
                         for tag in rl:
-                            if tag in letter_data and value_data[letter_data.index(tag)] in value_true_set:
+                            if tag in letter_data and \
+                                    value_data[letter_data.index(tag)] in value_true_set:
                                 self.storePath((path+[i.name().lower()]),rpli_path_list)
                                 break
 
@@ -939,11 +939,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         smaller_path_list = []
         smaller_coords_list = []
         smaller_tag_dict_list = []
-        for index, path in enumerate(path_list):
+        for index in range(len(path_list)):
             if "e" in tag_dict_list[index] and not "i" in tag_dict_list[index]:
-                    smaller_path_list.append(path_list[index])
-                    smaller_coords_list.append(coords_list[index])
-                    smaller_tag_dict_list.append(tag_dict_list[index])
+                smaller_path_list.append(path_list[index])
+                smaller_coords_list.append(coords_list[index])
+                smaller_tag_dict_list.append(tag_dict_list[index])
         return smaller_path_list, smaller_coords_list, smaller_tag_dict_list
 
     def removeTagsFromPaths(self, path_list):
@@ -980,61 +980,56 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Modifies the coordinates
             0,1 : x,y on top left corner
               2 : QPoint of the center
-        Step 1: Apply the margin tag if necessary.
+        Step 1: Check for changes from adding margins.
                 The Batch Exporter uses the smallest margin
                 in the list by default, so that's what's used here.
                 The center points wouldn't change since each set
                 of 4 margins (around a single layer rectange) would be of equal size.
-        Step 2: Apply x/y changes from transform masks if necessary.
-        Step 3: TODO: Apply the t tag if necessary (meaning set the coordinates to 0).
+        Step 2: Check for changes from transform masks.
+        Step 3: Check for the t tag (meaning set the coordinates to 0 if it's True).
         Step 4: Scale the coordinates with the smallest
                 given size from the 's=' layer tags
         Step 5: Remove negative values for the coordinates.
-                This is because Krita crops out material not on the canvas
-                when it's exporting the images.
-        """
-        for i in range(len(coords_list)):
-            scale = 1.0
+                This is because Krita crops out material
+                not on the canvas when it's exporting the images.
 
+        New, simplified version - C0200
+        """
+        for i, coords in enumerate(coords_list):
             if "m" in tag_dict_list[i]:
-                coords_list[i][0] -= int(min(tag_dict_list[i]["m"]))
-                coords_list[i][1] -= int(min(tag_dict_list[i]["m"]))
-                #TODO: Add update to center point
+                pixel_subtract_amount = int(min(tag_dict_list[i]["m"]))
+                coords[0] -= pixel_subtract_amount
+                coords[1] -= pixel_subtract_amount
 
             if "transformedCenter" in tag_dict_list[i]:
-                #self.DEBUG_MESSAGE += "x and y before transform: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
-                difference_x = tag_dict_list[i]["transformedCenter"][0] - coords_list[i][0]
-                difference_y = tag_dict_list[i]["transformedCenter"][1] - coords_list[i][1]
-                coords_list[i][0] = coords_list[i][0] + difference_x
-                coords_list[i][1] = coords_list[i][1] + difference_y
-                #self.DEBUG_MESSAGE += "after: " + str(coords_list[i][0]) + ", " + str(coords_list[i][1]) + "\n"
-                #TODO: Add update to center point
+                diff_x = tag_dict_list[i]["transformedCenter"][0] - coords[0]
+                diff_y = tag_dict_list[i]["transformedCenter"][1] - coords[1]
+                coords[0] += diff_x
+                coords[1] += diff_y
+                coords[2].setX(coords[2].x() + diff_x)
+                coords[2].setY(coords[2].y() + diff_y)
 
             if "t" in tag_dict_list[i] and tag_dict_list[i]["t"] in value_false_set:
-                coords_list[i][0] = 0
-                coords_list[i][1] = 0
-                coords_list[i][2] = QPoint(0,0)
+                coords[0] = 0
+                coords[1] = 0
+                coords[2] = QPoint(0,0)
                 curr_doc = KI.activeDocument()
-                if curr_doc != None:
-                    coords_list[i][2].setX(int(curr_doc.width()/2))
-                    coords_list[i][2].setY(int(curr_doc.height()/2))
+                if curr_doc is not None:
+                    coords[2].setX(int(curr_doc.width()/2))
+                    coords[2].setY(int(curr_doc.height()/2))
 
             if "s" in tag_dict_list[i]:
-                #self.DEBUG_MESSAGE += "scaling x from " + str(coords_list[i][0]) + " to "
-                coords_list[i][0] = round((coords_list[i][0] * min(tag_dict_list[i]["s"])) / 100)
-                #self.DEBUG_MESSAGE += str(coords_list[i][0]) + "\n"
-                #self.DEBUG_MESSAGE += "scaling y from " + str(coords_list[i][1]) + " to "
-                coords_list[i][1] = round((coords_list[i][1] * min(tag_dict_list[i]["s"])) / 100)
-                #self.DEBUG_MESSAGE += str(coords_list[i][1]) + "\n"
-                center_x_new = float(coords_list[i][2].x()) * min(tag_dict_list[i]["s"]) / 100
-                center_y_new = float(coords_list[i][2].y()) * min(tag_dict_list[i]["s"]) / 100
-                coords_list[i][2].setX(int(center_x_new))
-                coords_list[i][2].setY(int(center_y_new))
+                coords[0] = round((coords[0] * min(tag_dict_list[i]["s"])) / 100)
+                coords[1] = round((coords[1] * min(tag_dict_list[i]["s"])) / 100)
+                center_x_new = float(coords[2].x()) * min(tag_dict_list[i]["s"]) / 100
+                center_y_new = float(coords[2].y()) * min(tag_dict_list[i]["s"]) / 100
+                coords[2].setX(int(center_x_new))
+                coords[2].setY(int(center_y_new))
 
-            if coords_list[i][0] < 0:
-                coords_list[i][0] = 0
-            if coords_list[i][1] < 0:
-                coords_list[i][1] = 0
+            if coords[0] < 0:
+                coords[0] = 0
+            if coords[1] < 0:
+                coords[1] = 0
 
         return coords_list
 
@@ -1044,12 +1039,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         transformedCenter will instead modify xpos and ypos.
         """
         modifier_block = ""
-        #debugging
+        # For checking the contents
         #modifier_block += "~ ~ ~\n"
         #for key,value in line[2].items():
         #    modifier_block += key + " : " + str(value) + "\n"
         #modifier_block += "~ ~ ~"
-        
+    
         # Zoom
         if "scaleX" in line[2] or "scaleY" in line[2]:
             xzoom = 1.0
@@ -1141,7 +1136,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             [2] rpli_tag_dict_list
             [3] rpli_path_list_with_tags
 
-        There is an additional configs load for align_decimal_places here because self.config_data fails out here.
+        There is an additional configs load for align_decimal_places here
+        because self.config_data fails out here.
 
         """
         data_list =  []
@@ -1160,7 +1156,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
         tag_dict_list = self.getTags(path_list, False)
         rpli_tag_dict_list = self.getTags(rpli_path_list, True)
-        path_list, coords_list, tag_dict_list = self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
+        path_list, coords_list, tag_dict_list = \
+            self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
         path_list_with_tags = path_list
         rpli_path_list_with_tags = rpli_path_list
         path_list = self.removeTagsFromPaths(path_list)
