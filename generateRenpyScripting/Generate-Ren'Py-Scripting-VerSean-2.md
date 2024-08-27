@@ -42,72 +42,63 @@ With all those features, using this plugin goes something like this:
 
 ---
 
-# Contents
-[[#The Features In Detail]]
+# The Features In Detail
 - [[#Scripting Generator]]
-- [[#Chain System]]
-- [[#Settings]]
-- [[#Tag System]]
-	- [[#Tags Originally From Krita Batch Exporter]]
-	- [[#Additional Tags For Generate Ren'Py Scripting]]
+	- [[#`zoom`, `rotate`, And Additional `pos` Via Transformation Mask]]
+	- [[#Texture Overlay Compatibility Feature]]
+	- [[#Chain System]]
+	- [[#Exclude System]]
+	- [[#File Format Priority System]]
+	- [[#Settings]]
+	- [[#Tag System]]
+		- [[#Tags Originally From Krita Batch Exporter]]
+		- [[#Additional Tags For Generate Ren'Py Scripting]]
 - [[#Scale Calculator]]
 - [[#Renamer]]
 - [[#Features To Consider / Were Considered]]
 - [[#Gone From VerSean 1]]
 - [[#Credits]]
+- [[#License]]
 
-# The Features In Detail
 ## Scripting Generator
-
+---
 - **ATL Display Scripting**
-	- `pos` Output
+	- `pos` **Output**
 		- To display images at the given x, y coordinates.
 		- Three formats: `pos (x, y)` `xpos x ypos y` `at setPos(x, y)`
-	- `align` Output
+	- `align` **Output**
 		- To display images aligned to divisions on the canvas space. The divisions are picked with the "Spacing Count" slider.
 			- For example, 4 spacings would be across `[0.0, 0.333, 0.666, 1.0]` both horizontally and vertically, which would be "rule of thirds" alignment.
 				- There is also a dedicated Rule of Thirds toggle, which sets the count to 4.
 		- Two formats: `align (x, y)` and `xalign x yalign y`
-	- `zoom`, `rotate`, And Additional `pos` Via Transformation mask
-		- Krita's non-destructive editing feature, transformation masks, can be used to declare ATL statements for `zoom` and `rotate`. You can also move an image through the transformation mask to override the `xpos` and `ypos` coordinates used for scripting.
-			- Example: If you use a transformation mask to rotate an image clockwise by 30 degrees, the script for that image gets the statement `rotate 30.0`.
-				- Note that a direct rotation on the actual image layer as a destructive edit will not yield this piece of output.
-	- Texture Overlay Compatibility Feature
-		- When a group is tagged as scriptable with `e=`, the coordinates are calculated from all the contents. An issue would arise if a layer being used for a texture overlay were to distort the perceived coordinates; if the texture layer is as big as the canvas, the coordinates would always be retrieved as (0, 0)! To prevent that issue, GRS excludes layers that have [Alpha Inheritance](https://docs.krita.org/en/tutorials/clipping_masks_and_alpha_inheritance.html) toggled on, since that is what a texture overlay would be using.
 - **Image Definition**
 	- GRS uses Krita's layer stack to determine the directory paths for the image files.
-	- File Format Priority System: If more than one file format is requested, scripting for both is written, with all but the highest priority commented out:
-		- webp > png > jpg/jpeg
-			- However, webp (a popular pick for Ren'Py projects) is exported by Krita but not by KBE; I'll see if I can contribute webp support.
-	- Two Formats
-		- Normal Images
+	- **Two Formats**
+		- **Normal Images**
 			- This is the basic `image exampleguy = "characters/exampleguy.png"` syntax.
-		- Layered Images
+		- **Layered Images**
 			- This is for Ren'Py's layered image system. Since it works using tags, see [[#Additional Tags For Generate Ren'Py Scripting]] to see how to use it.
-- **[[#Chain System]]**
-	- Allows Ren'Py's image state syntax for both Display Scripting and Image Definition.
-- **[[#Settings]]**
-	- Customize
-		- Opens the settings file `configs.json` in your system's default editor.
-		- Aside from the script output template settings, changes will first be applied when you open a new window scripting.
-	- Default
-		- Revert all the settings to the default settings.
-	- See [[#Settings]] for a full list of the settings.
+
+## `zoom`, `rotate`, And Additional `pos` Via Transformation Mask
+---
+Krita's non-destructive editing feature, transformation masks, can be used to declare ATL statements for `zoom` and `rotate`. You can also move an image through the transformation mask to override the `xpos` and `ypos` coordinates used for scripting.
+
+Example: If you use a transformation mask to rotate an image clockwise by 30 degrees, the script for that image gets the statement `rotate 30.0`.
+- Note that a direct rotation on the actual image layer as a destructive edit will not yield this piece of output.
+
+## Texture Overlay Compatibility Feature
+---
+ When a group is tagged as scriptable with `e=`, the coordinates are calculated from all the contents. An issue would arise if a layer being used for a texture overlay were to distort the perceived coordinates; if the texture layer is as big as the canvas, the coordinates would always be retrieved as `(0, 0)`! To prevent that issue, GRS excludes layers that have [Alpha Inheritance](https://docs.krita.org/en/tutorials/clipping_masks_and_alpha_inheritance.html) toggled on, since that is what a texture overlay would be using.
 
 ## Chain System
 ---
-Ren'Py supports show statements such as
-`show exampleguy happy`
-and image definition states such as
-`image exampleguy happy = "exampleguy/expression/happy.png"`.
+Ren'Py supports show statements such as `show exampleguy happy` and image definition states such as `image exampleguy happy = "exampleguy/expression/happy.png"`. I call that "chain naming" or "state naming" since I don't know of an official term.
 
 In order to script that way, GRS uses a special tag: `chain=true`/`ch=t`/`c=t`.
 Rules within a path in the layer stack:
 - Each layer with the tag set to true will be included in the "chain".
 - Each layer without the tag will be excluded from the name of the image, but not the path of the image file.
-- Each layer with the `chain` tag set to `false` like so: `chain=false`/`ch=f`/`c=f`, or with the `exclude` tag set to `true`: `exclude=true`/`ex=t`/`x=t` will be excluded from both the name of the image and the path of the image file.
-	- `chain=false` is synonymous with `exclude=true` everywhere in this program.
-
+- Each layer with the `chain` tag set to `false` like so: `chain=false`/`ch=f`/`c=f` will be excluded from both the name of the image and the path of the image file.
 #### Example
 Suppose the layer stack is this:
 `Mark c=t`
@@ -120,12 +111,33 @@ The display scripting would have:
 The image definition scripting would have:
 `image mark angry = "mark/expression/angry.png"`
 
-Suppose you meant to use `expression` just for group organization in Krita, and you don't want it to be in your directory definition. Exclude it by using the tag: `expression c=f`
+If you meant to use `expression`as a layer group just for organization in Krita, and you don't want it to be in your directory definition. Exclude it by using the tag: `expression c=f`
 Now the image definition scripting would be:
 `image mark angry = "mark/angry.png"`
+
+## Exclude System
+---
+If you wish to exclude layer names from the scripting for any reason, this is an option. Maybe, like in the Chain example, you have a group meant solely to organize within the Krita file. The `chain=false` tag can be used that way, but the `exclude=true` tag will give the same result while being easier to understand in some situations, since it's not flavored to chain names.
+
+To be clear, `exclude=true` has the same effect as `chain=false` wherever it is used.
+
+`exclude=true` $\equiv$ `ex=t` $\equiv$ `x=t` $\equiv$ `c=f` $\equiv$ `ch=f` $\equiv$ `chain=false`
+
+## File Format Priority System
+---
+File Format Priority System: If more than one file format is requested, scripting for both is written, with all but the highest priority commented out:
+
+`webp` > `png` > `jpg/jpeg`
+
+However, `webp` (a popular pick for Ren'Py projects) is exported by Krita but not by KBE; I'll see if I can contribute `webp` support.
+
 ## Settings
 ---
-Access to the settings file `configs.json` is provided in the Scripting Generator window.
+Access to the settings file `configs.json` is provided in the Scripting Generator window. The button will open it in your default editor. Aside from the script output template settings, changes will first be applied when you open a new window scripting.
+
+The `Default` button reverts all settings to their default values.
+
+`configs.json` includes:
 
 | Setting                         | Default Value                                                       | What It Does                                                                                                                                                                                                                                                                                                      |
 | ------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -147,9 +159,9 @@ Access to the settings file `configs.json` is provided in the Scripting Generato
 | alignxy_button_text             | align (x, y)                                                        | text for align type 1 button                                                                                                                                                                                                                                                                                      |
 | xalignxyaligny_button_text      | xalign x yalign y                                                   | text for align type 2 button                                                                                                                                                                                                                                                                                      |
 | customize_button_text           | Customize                                                           | Text for the Customize button                                                                                                                                                                                                                                                                                     |
-| script_window_w_size_multiplier | 1.1                                                                 | Initial window width = default width * this value                                                                                                                                                                                                                                                                 |
-| script_window_h_size_multiplier | 0.8                                                                 | Initial window height = default height * this value                                                                                                                                                                                                                                                               |
-| script_font_size                | 10                                                                  | Output font size                                                                                                                                                                                                                                                                                                  |
+| script_window_w_size_multiplier | 1.3                                                                 | Initial window width = default width * this value                                                                                                                                                                                                                                                                 |
+| script_window_h_size_multiplier | 0.7                                                                 | Initial window height = default height * this value                                                                                                                                                                                                                                                               |
+| script_font_size                | 11                                                                  | Output font size                                                                                                                                                                                                                                                                                                  |
 | script_preferred_font           | Monospace                                                           | Specific output font Qt will try to find before searching for the system's available monospace font.                                                                                                                                                                                                              |
 
 # Tag System
