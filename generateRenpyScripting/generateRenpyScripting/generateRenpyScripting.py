@@ -480,25 +480,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return script
 
-    def writeLayeredImage(self, rpli_data_list): #jojo
+    def writeLayeredImage(self, rpli_data_list):
         """
         Pre-requisite: rpli_data_list is sorted.
-        I'm skipping duplicates from the data list here because I'm not sure if something
-        could break elsewhere.
+        Ignore duplicate lines.
         """
         script = ""
         if len(rpli_data_list) == 0:
             script += "No Ren'Py Layered Image elements found!\nCheck your tags!\n"
         was_written = set()
         for r in rpli_data_list:
-            script += "r[0]: " + r[0] + "\n"
-        for r in rpli_data_list:
-            dir_to_print = r[0]
+            #script += "r[0]: " + str(r[0]) + "\n"
+            #script += "r[1]: " + str(r[1]) + "\n"
+            dir_to_print = r[1]
             if "layers_to_exclude_dir" in r[2]:
                 for layer in r[2]["layers_to_exclude_dir"]:
-                    script += "to exclude: " + layer + " and dir_to_print is: " + dir_to_print + "\n"
-                    if layer in r[0]:
-                        #script += "found the layer\n"
+                    if layer in r[1]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
             if not r[1] in was_written:
@@ -519,28 +516,28 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 elif "jpg" in formats or "jpeg" in formats:
                     chosen_format = "jpg"
                 for f in r[2]["e"]:
-                    to_add = r[1]
+                    to_add = dir_to_print
                     pound = ""
                     if f != chosen_format:
                         pound = "#"
                     image_add_on_list.append(pound + "\"" + to_add + "." + f + "\"")
             if RPLI_MAIN_TAG in r[2] and r[2][RPLI_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += "layeredimage " + dir_to_print.split(' ')[0] + ":\n"
+                script += "layeredimage " + r[0] + ":\n"
             elif RPLIALWAYS_MAIN_TAG in r[2] and r[2][RPLIALWAYS_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                 script += \
                     (" " * INDENT * 2) + "always:\n" + \
-                        (" " * INDENT * 3) + dir_to_print.split(' ')[0] + ":\n"
+                        (" " * INDENT * 3) + r[0] + ":\n"
                 for i in image_add_on_list:
                     script += (" " * INDENT * 4) + i + "\n"
             elif RPLIGROUP_MAIN_TAG in r[2] and r[2][RPLIGROUP_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += (" " * INDENT * 2) + "group " + dir_to_print.split(' ')[0] + ":\n"
+                script += (" " * INDENT * 2) + "group " + r[0] + ":\n"
             elif RPLIATTRIB_MAIN_TAG in r[2] and r[2][RPLIATTRIB_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                 if RPLIDEF_MAIN_TAG in r[2] and r[2][RPLIDEF_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                     def_add_on = " default"
                 if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == VALUE_TRUE_MAIN_TAG:
                     script += (" " * INDENT)
                 script += \
-                    (" " * INDENT * 2) + "attribute " + dir_to_print.split(' ')[0] + def_add_on + ":\n"
+                    (" " * INDENT * 2) + "attribute " + r[0] + def_add_on + ":\n"
                 for i in image_add_on_list:
                     script += (" " * INDENT * 4) + i + "\n"
 
@@ -1152,9 +1149,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                  6) Modify the coordinates for margins and scale.
                  7) If 'align' type output is selected, swap out the xy pixel coordinates with align coordinates.
 
-        data_list:
-            [0] path_list            (Unused paths and tags are filtered out.)
-            [1] export_layer_list    (List of the names of the layers to be exported; no tags.)
+        data_list: #TODO: This information seems to be outdated.
+            [0] name of layer
+            [1] directory
             [2] tag_dict_list        (List where each index corresponds to the index of its path,
                                       and the content is a dictionary with the tags applicable to
                                       the final layer of that path, adjusted for Batch Exporter
@@ -1165,7 +1162,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                       but tags (at the layers they are declared) are not.)
         rpli_data_list:
             [0] name of layer
-            [1] export_layer_list
+            [1] directory
             [2] rpli_tag_dict_list
             [3] rpli_path_list_with_tags
 
