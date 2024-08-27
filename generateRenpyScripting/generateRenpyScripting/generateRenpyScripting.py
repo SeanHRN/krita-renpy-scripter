@@ -87,7 +87,7 @@ default_configs_dict = {
     "script_window_w_size_multiplier" : "1.1",
     "script_window_h_size_multiplier" : "0.8",
     "script_font_size" : "10",
-    "preferred_output_font" : "Monospace"
+    "script_preferred_font" : "Monospace"
 }
 
 button_display_set = {"string_posxy", "string_xposxyposy", \
@@ -124,6 +124,8 @@ VALUE_TRUE_MAIN_TAG = "true"
 VALUE_FALSE_MAIN_TAG = "false"
 
 chain_set = {"ch", "c", "chain"}
+layer_exclude_set = {"exclude", "x", "ex",}
+LAYER_EXCLUDE_MAIN_TAG = "exclude"
 format_set = {"png", "webp", "jpg", "jpeg"}
 format_tag_set = {"e=png", "e=webp", "e=jpg", "e=jpeg"}
 hidden_set = {"gecko", "data structure", "dinuguanggal", \
@@ -346,7 +348,7 @@ the Krita layer structure for the directory.")
             "Generate the definition of a Ren'Py layeredimage\nusing \
 the Krita layer structure for the directory.")
         layered_image_def_button.clicked.connect(lambda: self.process("string_layeredimagedef"))
-        settings_label = QLabel("Output Settings")
+        settings_label = QLabel("Settings")
         self.default_button = QPushButton("Default")
         self.default_button.setToolTip("Revert output text format to the default configurations.\n\
 This will overwrite your customizations.")
@@ -432,9 +434,14 @@ This will overwrite your customizations.")
         if button_chosen == "string_normalimagedef": # Normal Images
             for line in data_list:
                 name_to_print = line[0]
+                dir_to_print = line[1]
                 if "chain_name" in line[2]:
                     #script += "chain name: " + line[2]["chain_name"] + "\n"
                     name_to_print = line[2]["chain_name"]
+                if "layers_to_exclude_dir" in line[2]:
+                    for layer in line[2]["layers_to_exclude_dir"]:
+                        dir_to_print = dir_to_print.replace(layer, "", 1)
+                        dir_to_print = dir_to_print.replace("//", "/", 1)
                 if "e" in line[2]:
                     line[2]["e"] = \
                         sortListByPriority(values=line[2]["e"], \
@@ -451,7 +458,7 @@ This will overwrite your customizations.")
                         if f != chosen_format:
                             script += '#'
                         script += self.config_data["string_normalimagedef"].format\
-(image=name_to_print,path_to_image=line[1],file_extension=f)
+(image=name_to_print,path_to_image=dir_to_print,file_extension=f)
                 else:
                     script += "### Error: File format not defined for layer " + name_to_print + "\n"
         elif button_chosen == "string_layeredimagedef": # Layered Image
@@ -473,7 +480,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return script
 
-    def writeLayeredImage(self, rpli_data_list):
+    def writeLayeredImage(self, rpli_data_list): #jojo
         """
         Pre-requisite: rpli_data_list is sorted.
         I'm skipping duplicates from the data list here because I'm not sure if something
@@ -484,6 +491,16 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             script += "No Ren'Py Layered Image elements found!\nCheck your tags!\n"
         was_written = set()
         for r in rpli_data_list:
+            script += "r[0]: " + r[0] + "\n"
+        for r in rpli_data_list:
+            dir_to_print = r[0]
+            if "layers_to_exclude_dir" in r[2]:
+                for layer in r[2]["layers_to_exclude_dir"]:
+                    script += "to exclude: " + layer + " and dir_to_print is: " + dir_to_print + "\n"
+                    if layer in r[0]:
+                        #script += "found the layer\n"
+                        dir_to_print = dir_to_print.replace(layer, "", 1)
+                        dir_to_print = dir_to_print.replace("//", "/", 1)
             if not r[1] in was_written:
                 was_written.add(r[1])
             else: # ignore duplicate lines
@@ -508,22 +525,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         pound = "#"
                     image_add_on_list.append(pound + "\"" + to_add + "." + f + "\"")
             if RPLI_MAIN_TAG in r[2] and r[2][RPLI_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += "layeredimage " + r[0].split(' ')[0] + ":\n"
+                script += "layeredimage " + dir_to_print.split(' ')[0] + ":\n"
             elif RPLIALWAYS_MAIN_TAG in r[2] and r[2][RPLIALWAYS_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                 script += \
                     (" " * INDENT * 2) + "always:\n" + \
-                        (" " * INDENT * 3) + r[0].split(' ')[0] + ":\n"
+                        (" " * INDENT * 3) + dir_to_print.split(' ')[0] + ":\n"
                 for i in image_add_on_list:
                     script += (" " * INDENT * 4) + i + "\n"
             elif RPLIGROUP_MAIN_TAG in r[2] and r[2][RPLIGROUP_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += (" " * INDENT * 2) + "group " + r[0].split(' ')[0] + ":\n"
+                script += (" " * INDENT * 2) + "group " + dir_to_print.split(' ')[0] + ":\n"
             elif RPLIATTRIB_MAIN_TAG in r[2] and r[2][RPLIATTRIB_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                 if RPLIDEF_MAIN_TAG in r[2] and r[2][RPLIDEF_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
                     def_add_on = " default"
                 if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == VALUE_TRUE_MAIN_TAG:
                     script += (" " * INDENT)
                 script += \
-                    (" " * INDENT * 2) + "attribute " + r[0].split(' ')[0] + def_add_on + ":\n"
+                    (" " * INDENT * 2) + "attribute " + dir_to_print.split(' ')[0] + def_add_on + ":\n"
                 for i in image_add_on_list:
                     script += (" " * INDENT * 4) + i + "\n"
 
@@ -673,6 +690,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Boolean rpli_mode
                     True: Get tags for Ren'Py Layered Images and image file formats.
                     False - Get the tags for everything except Ren'Py Layered Images.
+        
+        Value of 'True' for excluding a layer from a directory should have the
+        same effect as a value of 'False' for including the layer in a name chain.
 
         """
         tag_dict_list = []
@@ -728,9 +748,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     letter, value = tag.split('=', 1)
                     #self.DEBUG_MESSAGE += "letter/value is: " + letter + " : " + value + "\n"
 
-                    if value in value_true_set:
+                    if value.lower() in value_true_set:
                         value = VALUE_TRUE_MAIN_TAG
-                    elif value in value_false_set:
+                    elif value.lower() in value_false_set:
                         value = VALUE_FALSE_MAIN_TAG
 
                     if not rpli_mode:
@@ -741,7 +761,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 if v.replace(".", "").isnumeric():
                                     scale_list.append(float(v))
                                 else:
-                                    self.DEBUG_MESSAGE += "#Error: Non-numeric value given as scale: " + str(v)
+                                    self.DEBUG_MESSAGE += \
+                                        "#Error: Non-numeric value given as scale: " + str(v)
                                     self.DEBUG_MESSAGE += " on layer: " + layer + "\n"
                             if 's' in tag_dict:
                                 tag_dict['s'].extend(scale_list)
@@ -771,17 +792,23 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         elif letter == 'i': # Prevent the i=false tag from leaking down
                             continue        # the path after it's been used to block
                                             # the parents' tags.
-                        elif letter in chain_set and value.lower() in value_true_set:
+                        elif letter in chain_set and value in value_true_set:
                             if "chain_name" not in tag_dict:
                                 tag_dict["chain_name"] = individual_layer_name
                             else:
                                 tag_dict["chain_name"] += (" " + individual_layer_name)
+                        elif (letter in chain_set and value in value_false_set) \
+                            or (letter in layer_exclude_set and value in value_true_set):
+                            if "layers_to_exclude_dir" not in tag_dict:
+                                tag_dict["layers_to_exclude_dir"] = [individual_layer_name]
+                            else:
+                                tag_dict["layers_to_exclude_dir"].append(individual_layer_name)
                         else:  # Don't save rpli tags if not using that mode.
                             if not letter in rpli_set:
                                 tag_dict[letter] = value
                     elif rpli_mode:
                         if letter in rpli_set:
-                            if value.lower() in value_true_set:
+                            if value in value_true_set:
                                 tag_dict[RPLI_MAIN_TAG] = VALUE_TRUE_MAIN_TAG
                             else:
                                 tag_dict[RPLI_MAIN_TAG] = VALUE_FALSE_MAIN_TAG
@@ -802,6 +829,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 tag_dict['e'] = list(set(tag_dict['e']))
                             else:
                                 tag_dict['e'] = format_list
+                        elif (letter in layer_exclude_set and value in value_true_set) \
+                            or (letter in chain_set and value in value_false_set):
+                            if "layers_to_exclude_dir" not in tag_dict:
+                                tag_dict["layers_to_exclude_dir"] = [individual_layer_name]
+                            else:
+                                tag_dict["layers_to_exclude_dir"].append(individual_layer_name)
                         else:
                             continue
                 if not scale_tag_found:      # Ensure that the default scale of 100
@@ -1131,7 +1164,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             [4] path_list_with_tags  (Unused paths are filtered out,
                                       but tags (at the layers they are declared) are not.)
         rpli_data_list:
-            [0] path_list
+            [0] name of layer
             [1] export_layer_list
             [2] rpli_tag_dict_list
             [3] rpli_path_list_with_tags
@@ -1284,7 +1317,7 @@ class ScriptBox(QWidget):
         if self.config_data["customize_button_text"].lower() in hidden_set\
               and not self.format_menu is None:
             self.dinu()
-        if "comic sans" in self.config_data["preferred_output_font"].lower():
+        if "comic sans" in self.config_data["script_preferred_font"].lower():
             self.jokeFont()
         close_notifier.viewClosed.connect(self.close)
 
@@ -1295,7 +1328,7 @@ class ScriptBox(QWidget):
         self.output_window = TextOutput(self)
         self.output_window.setupUi(self, \
                                    float((self.config_data["script_font_size"])), \
-                                    self.config_data["preferred_output_font"])
+                                    self.config_data["script_preferred_font"])
         self.format_menu = FormatMenu(self)
         self.format_menu.text_signal_emitter.custom_signal.connect(self.output_window.receiveText)
         script_box_layout = QHBoxLayout()
