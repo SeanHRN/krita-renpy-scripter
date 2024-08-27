@@ -123,8 +123,8 @@ value_false_set = {"false", "f", "no", "n", "0"}
 VALUE_TRUE_MAIN_TAG = "true"
 VALUE_FALSE_MAIN_TAG = "false"
 
-chain_set = {"ch", "c", "chain"}
-layer_exclude_set = {"exclude", "x", "ex",}
+chain_set = {"chain", "ch", "c"}
+layer_exclude_set = {"exclude", "ex", "x",}
 LAYER_EXCLUDE_MAIN_TAG = "exclude"
 format_set = {"png", "webp", "jpg", "jpeg"}
 format_tag_set = {"e=png", "e=webp", "e=jpg", "e=jpeg"}

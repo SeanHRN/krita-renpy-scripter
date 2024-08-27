@@ -1,6 +1,6 @@
 
 
-Generate Ren’Py Scripting is a [Krita](https://krita.org/en/) plugin that creates text of two different formats:
+**Generate Ren’Py Scripting** is a [Krita](https://krita.org/en/) plugin that creates text of two different formats:
 - Scripting to display images in a Ren’Py project just as they positionally appear as individual layers in a Krita document, calculated to the correct coordinates at whichever scale you specify. Advanced ATL display behavior, such as motions, must still be written manually.
 - Scripting to define the images for a Ren’Py project by using the Krita document’s layer stack as the name of the file directory.
 
@@ -11,7 +11,6 @@ Additionally, GRS has a calculator to help you determine which scale to use to f
 While this plugin was made initially for my motion graphics comic (composite image panels primarily with `pos` statements), I've expanded it with features that creators of the more standard "visual novel" format Ren'Py projects may find useful too!
 
 VerSean 2 has been fully-reworked to be far more efficient to use, to take sharply reduced space on Krita's docker, to be more feature-packed, and to be highly customizable.
-
 ## Batch Exporter Synergy
 ---
 GRS is designed to work in tandem with the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) plugin by[ GDQuest](https://www.gdquest.com/), for these reasons:
@@ -21,13 +20,16 @@ GRS is designed to work in tandem with the [Krita Batch Exporter](https://github
 
 ## The Two Components
 ---
-#### Scripting Generator
+**Scripting Generator**
+
 The window for outputting Ren'Py scripting. Access to its settings is also provided there.
-#### Scale Calculator and Renamer
-Calculator
-- Use this to check the dimensions of the canvas at different scales.
-Renamer
-- Use this to create copies of the images batch exported by KBE, with KBE's scale syntax removed. Those copies would then be ready to transfer to your Ren'Py project directory.
+
+**Scale Calculator and Renamer**
+
+- Calculator
+	- Use this to check the dimensions of the canvas at different scales.
+- Renamer
+	- Use this to create copies of the images batch exported by KBE, with KBE's scale syntax removed. Those copies would then be ready to transfer to your Ren'Py project directory.
 
 ## The Flow
 ---
@@ -39,10 +41,25 @@ With all those features, using this plugin goes something like this:
 5. Use GRS's scripting generator to write the display text and/or image definitions. Copy and paste the output into your Ren'Py text files, wherever you need it.
 
 ---
+
+# Contents
+[[#The Features In Detail]]
+- [[#Scripting Generator]]
+- [[#Chain System]]
+- [[#Settings]]
+- [[#Tag System]]
+	- [[#Tags Originally From Krita Batch Exporter]]
+	- [[#Additional Tags For Generate Ren'Py Scripting]]
+- [[#Scale Calculator]]
+- [[#Renamer]]
+- [[#Features To Consider / Were Considered]]
+- [[#Gone From VerSean 1]]
+- [[#Credits]]
+
 # The Features In Detail
 ## Scripting Generator
 
-- ATL Display Scripting
+- **ATL Display Scripting**
 	- `pos` Output
 		- To display images at the given x, y coordinates.
 		- Three formats: `pos (x, y)` `xpos x ypos y` `at setPos(x, y)`
@@ -57,7 +74,7 @@ With all those features, using this plugin goes something like this:
 				- Note that a direct rotation on the actual image layer as a destructive edit will not yield this piece of output.
 	- Texture Overlay Compatibility Feature
 		- When a group is tagged as scriptable with `e=`, the coordinates are calculated from all the contents. An issue would arise if a layer being used for a texture overlay were to distort the perceived coordinates; if the texture layer is as big as the canvas, the coordinates would always be retrieved as (0, 0)! To prevent that issue, GRS excludes layers that have [Alpha Inheritance](https://docs.krita.org/en/tutorials/clipping_masks_and_alpha_inheritance.html) toggled on, since that is what a texture overlay would be using.
-- Image Definition
+- **Image Definition**
 	- GRS uses Krita's layer stack to determine the directory paths for the image files.
 	- File Format Priority System: If more than one file format is requested, scripting for both is written, with all but the highest priority commented out:
 		- webp > png > jpg/jpeg
@@ -67,15 +84,15 @@ With all those features, using this plugin goes something like this:
 			- This is the basic `image exampleguy = "characters/exampleguy.png"` syntax.
 		- Layered Images
 			- This is for Ren'Py's layered image system. Since it works using tags, see [[#Additional Tags For Generate Ren'Py Scripting]] to see how to use it.
-- Chain System
-	- Allows Ren'Py's image state syntax for both Display Scripting and Image Definition. See [[#Chain System]] to see how to use it.
-- Settings
+- **[[#Chain System]]**
+	- Allows Ren'Py's image state syntax for both Display Scripting and Image Definition.
+- **[[#Settings]]**
 	- Customize
 		- Opens the settings file `configs.json` in your system's default editor.
 		- Aside from the script output template settings, changes will first be applied when you open a new window scripting.
 	- Default
 		- Revert all the settings to the default settings.
-	- See [[#The Settings File: configs.json]] for the full list of settings.
+	- See [[#Settings]] for a full list of the settings.
 
 ## Chain System
 ---
@@ -85,10 +102,11 @@ and image definition states such as
 `image exampleguy happy = "exampleguy/expression/happy.png"`.
 
 In order to script that way, GRS uses a special tag: `chain=true`/`ch=t`/`c=t`.
-Within a path in the layer stack:
+Rules within a path in the layer stack:
 - Each layer with the tag set to true will be included in the "chain".
-- Each layer without the tag will be excluded from the name of the image, but not the path of the image.
-- TODO TO IMPLEMENT: Each layer with the tag set to false will be excluded from both the name of the image and the path of the image.
+- Each layer without the tag will be excluded from the name of the image, but not the path of the image file.
+- Each layer with the `chain` tag set to `false` like so: `chain=false`/`ch=f`/`c=f`, or with the `exclude` tag set to `true`: `exclude=true`/`ex=t`/`x=t` will be excluded from both the name of the image and the path of the image file.
+	- `chain=false` is synonymous with `exclude=true` everywhere in this program.
 
 #### Example
 Suppose the layer stack is this:
@@ -102,8 +120,12 @@ The display scripting would have:
 The image definition scripting would have:
 `image mark angry = "mark/expression/angry.png"`
 
-## The Settings File: configs.json
+Suppose you meant to use `expression` just for group organization in Krita, and you don't want it to be in your directory definition. Exclude it by using the tag: `expression c=f`
+Now the image definition scripting would be:
+`image mark angry = "mark/angry.png"`
+## Settings
 ---
+Access to the settings file `configs.json` is provided in the Scripting Generator window.
 
 | Setting                         | Default Value                                                       | What It Does                                                                                                                                                                                                                                                                                                      |
 | ------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -146,23 +168,24 @@ These may be added to the Krita layer names.
 
 ## Additional Tags For Generate Ren'Py Scripting
 ---
-Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so I made a thesaurus system that accepts numerous names for the same tasks. This allows you to choose your preferred balance between clear and compact. 
+Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so GRS uses a thesaurus system to accept numerous names for the same tasks. This allows you to choose your preferred balance between clear and compact. All of these take `true`/`false` values.
 
-| **Tags**                      | **Generate Ren'Py Scripting Application**                       |
-| ----------------------------- | --------------------------------------------------------------- |
-| **rpli**, rli, li             | layered image (this layer group is the start of the definition) |
-| **rplidef**, rid, rlid, df    | default                                                         |
-| **rplial**, ral, rpalways, al | always                                                          |
-| **rpliatt**, rpliat, at       | attribute                                                       |
-| **rpligroup**, rplig, gr      | group                                                           |
-| **chain**, ch, c              | Marks the layer for the chain system                            |
+| **Tags**                    | **Generate Ren'Py Scripting Application**                                                                                               |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `rpli`, `rli`, `li`         | layered image (this layer group is the start of the definition)                                                                         |
+| `rplidef, rid, rlid, df`    | default                                                                                                                                 |
+| `rplial, ral, rpalways, al` | always                                                                                                                                  |
+| `rpliatt, rpliat, at`       | attribute                                                                                                                               |
+| `rpligroup, rplig, gr`      | group                                                                                                                                   |
+| `chain, ch, c`              | Marks the layer's name for the chain system                                                                                             |
+| `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `chain` tag. `exclude=true`$\equiv$`chain=false`. |
 Internally, any of these tags you use would be converted to the leftmost tag on the list.
-This feature has also been used for true/false values:
+This feature has also been used for the `true`/`false` values themselves:
 
 | **Value** | **Can Also Be Named** |
 | --------- | --------------------- |
-| true      | t, yes, y, 1          |
-| false     | f, no, n, 0           |
+| `true`    | `t`, `yes`, `y`, `1`  |
+| `false`   | `f`, `no`, `n`, `0`   |
 #### Example
 These layer names
 `Exampleguy e=png rpli=true`
@@ -171,7 +194,7 @@ These layer names
 are functionally identical.
 
 ## Scale Calculator
-
+---
 Since images as game/novel assets are often drawn at resolutions greater than the target resolution of the project, GRS has a scale calculator to check the pixel dimensions of the canvas at different scales.
 - Between `Width`, `Height`, and `Scale Percentage`: edit one box, and the other two will be updated instantly.
 - You may either type in the values or use the buttons for common Ren'Py project dimensions.
@@ -183,12 +206,13 @@ Since images as game/novel assets are often drawn at resolutions greater than th
 	- Hold Ctrl: Increment by 10%
 
 ## Renamer
-
+---
 Krita Batch Exporter saves the images with a tag that indicates the scale.
 Example: `exampleguy_@0.3x.png`  for the layer `exampleguy e=png s=30`.
 GRS's Renamer creates copies of the images with the `_@0.3x` portion of the name removed, so that the files are named how you probably want them to be, and ready to transfer to your Ren'Py project. The images are saved in a folder named, in this example, `export_grs_x0.3`. The targeted scale is the one in the Scale Calculator's `Scale Percentage` box. 
 
 ### Features To Consider / Were Considered
+---
 - Add webp support to KBE.
 - Ability to modify a Krita document so that a corresponding Ren'Py file is automatically updated, or can be updated at a button press
 	- That would be even quicker than the current copy/paste method, and it seems plausible with something like the configs file to hold the file paths, but I think the copy/paste method is a lot safer since it's intrinsically a verification system. On top of that, I think it's likely that most users would have their whole project's images spread across many Krita documents, all to be defined in a single or few Ren'Py file(s).
@@ -204,6 +228,7 @@ GRS's Renamer creates copies of the images with the `_@0.3x` portion of the name
 	- That's probably not necessary since the copy system makes the Renamer non-destructive, and by having to manually type in the scale, the user is already verifying.
 
 ### Gone From VerSean 1
+---
 - The ability to write additional ATL statements as invisible layers. It's less work and cleaner on the Krita document to just write those manually into the scripting. While now the only additional ATL statements are `zoom` and `rotate` via transform mask, those are the two that I was able to fit in a way that meshes with how Krita is used.
 
 ## Credits
