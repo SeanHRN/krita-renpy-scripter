@@ -1,5 +1,5 @@
 """
-Generate Ren'Py Scripting V2
+Krita Ren'Py Scripter V2
 
 @author Sean Castillo
 
@@ -340,12 +340,12 @@ statements to Rule of Thirds intersections.\nThis is equivalent to using 4 space
         image_definition_label = QLabel("Image Definition")
         normal_image_def_button = QPushButton("Normal Images")
         normal_image_def_button.setToolTip(\
-            "Generate the definitions of individual images in Ren'Py\nusing \
+            "Script the definitions of individual images in Ren'Py\nusing \
 the Krita layer structure for the directory.")
         normal_image_def_button.clicked.connect(lambda: self.process("string_normalimagedef"))
         layered_image_def_button = QPushButton("Layered Image")
         layered_image_def_button.setToolTip(\
-            "Generate the definition of a Ren'Py layeredimage\nusing \
+            "Script the definition of a Ren'Py layeredimage\nusing \
 the Krita layer structure for the directory.")
         layered_image_def_button.clicked.connect(lambda: self.process("string_layeredimagedef"))
         settings_label = QLabel("Settings")
@@ -1609,13 +1609,13 @@ export_dir_name, ("export"+new_folder_name)))
         if KI.activeDocument() is not None:
             self.recursiveRenameStart()
 
-class GenerateRenpyScripting(DockWidget):
+class KritaRenpyScripter(DockWidget):
     """
     Class for the dock widget. The windows are called from here.
     """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Generate Ren'Py Scripting")
+        self.setWindowTitle("Krita Ren'Py Scripter")
         self.createInterface()
         self.script_box = None
 
@@ -1625,14 +1625,14 @@ class GenerateRenpyScripting(DockWidget):
         msg.exec_()
 
     def createInterface(self):
-        generate_button = QPushButton("Scripting Generator")
-        generate_button.clicked.connect(self.startScriptBox)
+        scripter_button = QPushButton("Scripter")
+        scripter_button.clicked.connect(self.startScriptBox)
 
         calculate_button = QPushButton("Scale Calculator and Renamer")
         calculate_button.clicked.connect(self.startScaleCalculateBox)
 
         main_layout = QVBoxLayout()
-        main_layout.addWidget(generate_button)
+        main_layout.addWidget(scripter_button)
         main_layout.addWidget(calculate_button)
 
         mainWidget = QWidget(self)
@@ -1660,5 +1660,5 @@ class GenerateRenpyScripting(DockWidget):
 
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
-("generateRenpyScripting", DockWidgetFactoryBase.DockRight\
- , GenerateRenpyScripting))
+("kritaRenpyScripter", DockWidgetFactoryBase.DockRight\
+ , KritaRenpyScripter))
