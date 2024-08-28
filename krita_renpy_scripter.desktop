@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=krita_renpy_scripter
+X-Krita-Manual=krs_manual.html
+X-Python-2-Compatible=false
+Name=Krita Ren'Py Scripter
+Comment=Generate scripts to display and define image files for Ren'Py projects.

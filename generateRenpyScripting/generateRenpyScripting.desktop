@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Service
-ServiceTypes=Krita/PythonPlugin
-X-KDE-Library=generateRenpyScripting
-X-Krita-Manual=grs_manual.html
-X-Python-2-Compatible=false
-Name=Generate Ren'Py Scripting
-Comment=Uses syntax from krita-batch-exporter by GDQuest to generate Ren'Py scripting.
