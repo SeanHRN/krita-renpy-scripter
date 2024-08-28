@@ -1660,5 +1660,5 @@ class KritaRenpyScripter(DockWidget):
 
 def registerDocker():
     Krita.instance().addDockWidgetFactory(DockWidgetFactory\
-("kritaRenpyScripter", DockWidgetFactoryBase.DockRight\
+("krita_renpy_scripter", DockWidgetFactoryBase.DockRight\
  , KritaRenpyScripter))

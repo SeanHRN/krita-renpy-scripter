@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Service
 ServiceTypes=Krita/PythonPlugin
-X-KDE-Library=kritaRenpyScripter
+X-KDE-Library=krita_renpy_scripter
 X-Krita-Manual=krs_manual.html
 X-Python-2-Compatible=false
 Name=Krita Ren'Py Scripter
