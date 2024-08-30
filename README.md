@@ -179,6 +179,7 @@ Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/la
 | `rpligroup, rplig, gr`      | Layered Image - group                                                                                                                   |
 | `chain, ch, c`              | Marks the layer's name for the chain name system                                                                                        |
 | `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `chain` tag. `exclude=true`$\equiv$`chain=false`. |
+
 Internally, any of these tags you use would be converted to the leftmost tag on the list.
 This feature has also been used for the `true`/`false` values themselves:
 
