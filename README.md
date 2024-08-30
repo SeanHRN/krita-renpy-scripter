@@ -1,5 +1,5 @@
 
-**Krita [Ren’Py](https://www.renpy.org/) Scripter** is a [Krita](https://krita.org/en/) plugin that creates text of two different formats:
+**Krita [Ren’Py](https://www.renpy.org/) Scripter** is a [Krita](https://krita.org/en/) docker plugin that creates text of two different formats:
 - Scripting to display images in a Ren’Py project just as they positionally appear as individual layers in a Krita document, calculated to the correct coordinates at whichever scale you specify. Advanced [ATL](https://www.renpy.org/doc/html/transforms.html#atl) display behavior, such as motions, must still be written manually.
 - Scripting to define the images for a Ren’Py project by using the Krita document’s layer stack as the name of the file directory.
 
@@ -15,7 +15,8 @@ VerSean 2 has been fully-reworked to be far more efficient to use, to take sharp
 KRS is designed to work in tandem with the [Krita Batch Exporter](https://github.com/GDQuest/krita-batch-exporter) plugin by[ GDQuest](https://www.gdquest.com/), for these reasons:
 - That plugin is officially included in Krita.
 - Batch exporting is a perfect fit for Ren'Py projects.
-- The metadata tag system has several applications that are useful for KRS's needs, detailed below in the [[#Tag System]] section.
+- The metadata tag system has several applications that are useful for KRS's needs, detailed below in the [Tag System](#tag-system) section.
+Optionally, you can have the two docker plugins grouped together as tabs, minimizing the space usage.
 
 ## The Two Components
 **Scripter**
@@ -37,13 +38,11 @@ With all those features, using this plugin goes something like this:
 4. Use KRS's renamer to make copies of those exported images with the scales removed from the names. Transfer the copies to your Ren'Py project directory.
 5. Use KRS's scripter to write the display text and/or image definitions. Copy and paste the output into your Ren'Py text files, wherever you need it.
 
----
-
-# The Features In Detail
+# Contents
 - [Scripter](#scripter)
 	- [`zoom`, `rotate`, And Additional `pos` Via Transform Mask](#zoom-rotate-pos)
 	- [Texture Overlay Compatibility Feature](#texture-overlay-compatibility-feature)
-	- [Chain System](#chain-system)
+	- [Chain Name System](#chain-name-system)
 	- [Exclude System](#exclude-system)
 	- [File Format Priority System](#file-format-priority-system)
 	- [Settings](#settings)
@@ -52,9 +51,9 @@ With all those features, using this plugin goes something like this:
 		- [Additional Tags For Krita Ren'Py Scripter](#tags-kbs)
 - [Scale Calculator](#scale-calculator)
 - [Renamer](#renamer)
+- [How To Install and Compatibility](#how-to-install-and-compatibility)
 - [Features To Consider / Were Considered](#features-considered)
 - [Gone From VerSean 1](#gone-features)
-- [Compatibility](#compatibility)
 - [Credits](#credits)
 - [License](#license)
 
@@ -85,7 +84,7 @@ Example: If you use a transform mask to rotate an image clockwise by 30 degrees,
 ## Texture Overlay Compatibility Feature<a id=texture-overlay-compatibility-feature></a>
  When a group is tagged as scriptable with `e=`, the coordinates are calculated from all the contents. An issue would arise if a layer being used for a texture overlay were to distort the perceived coordinates to whatever that layer's top left corner is; if the texture layer is as big as the canvas, the coordinates would always be retrieved as `(0, 0)`! To prevent that issue, KRS excludes from group coordinate calculation layers that have [Alpha Inheritance](https://docs.krita.org/en/tutorials/clipping_masks_and_alpha_inheritance.html) toggled on, since that is what a texture overlay would be using.
 
-## Chain System<a id="chain-system"></a>
+## Chain Name System<a id="chain-name-system"></a>
 Ren'Py supports show statements such as `show exampleguy happy` and image definition states such as `image exampleguy happy = "exampleguy/expression/happy.png"`. I call that "chain naming" or "state naming" since I don't know of an official term.
 
 In order to script that way, KRS uses a special tag: `chain=true`/`ch=t`/`c=t`.
@@ -155,11 +154,10 @@ The `Default` button reverts all settings to their default values.
 | script_font_size                | 11                                                                  | Output font size                                                                                                                                                                                                                                                                                                  |
 | script_preferred_font           | Monospace                                                           | Specific output font Qt will try to find before searching for the system's available monospace font.                                                                                                                                                                                                              |
 
-# Tag System<a id="tag-system"></a>
----
+## Tag System<a id="tag-system"></a>
 These may be added to the Krita layer names.
 
-## Tags Originally From Krita Batch Exporter<a id="tags-kbe"></a>
+### Tags Originally From Krita Batch Exporter<a id="tags-kbe"></a>
 
 | **Tag**                                                           | **Krita Batch Exporter Application**                                                                                                                         | **Krita Ren'Py Scripter Application**                                                         |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
@@ -169,7 +167,7 @@ These may be added to the Krita layer names.
 | `t=false` or `t=no`                                               | Disable trimming the exported layer to the bounding box of the content.                                                                                      | Sets the output coordinates to 0 because the entire canvas size is used for the image output. |
 | `i=false` or `i=no`                                               | Disable parent metadata inheritance for a layer.                                                                                                             | Compatible.                                                                                   |
 
-## Additional Tags For Krita Ren'Py Scripter<a id="tags-krs"></a>
+### Additional Tags For Krita Ren'Py Scripter<a id="tags-krs"></a>
 Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so KRS uses a thesaurus system to accept numerous names for the same tasks. This allows you to choose your preferred balance between clarity and compactness. All of these take `true`/`false` values.
 
 | **Tags**                    | **Krita Ren'Py Scripter Application**                                                                                                   |
@@ -179,7 +177,7 @@ Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/la
 | `rplial, ral, rpalways, al` | Layered Image - always                                                                                                                  |
 | `rpliatt, rpliat, at`       | Layered Image - attribute                                                                                                               |
 | `rpligroup, rplig, gr`      | Layered Image - group                                                                                                                   |
-| `chain, ch, c`              | Marks the layer's name for the chain system                                                                                             |
+| `chain, ch, c`              | Marks the layer's name for the chain name system                                                                                        |
 | `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `chain` tag. `exclude=true`$\equiv$`chain=false`. |
 Internally, any of these tags you use would be converted to the leftmost tag on the list.
 This feature has also been used for the `true`/`false` values themselves:
@@ -205,13 +203,41 @@ Since images as game/novel assets are often drawn at resolutions greater than th
 	- Hold Shift: Increment by 0.1%
 	- Mouse Click/Arrow Key Only: Increment by 1%
 	- Hold Ctrl: Increment by 10%
-
 ## Renamer<a id="renamer"></a>
 Krita Batch Exporter saves the images with a tag that indicates the scale.
 Example: `exampleguy_@0.3x.png`  for the layer `exampleguy e=png s=30`.
 KRS's Renamer creates copies of the images with the `_@0.3x` portion of the name removed, so that the files are named how you probably want them to be, and ready to transfer to your Ren'Py project. The images are saved in a folder named, in this example, `export_KRS_x0.3`. The targeted scale is the one in the Scale Calculator's `Scale Percentage` box. 
+## How To Install and Compatibility<a id="how-to-install-and-compatibility"></a>
 
-### Features To Consider / Were Considered<a id="features-considered"></a>
+#### Method 1: Import Plugin From Web- Simplest and Recommended
+1. Open Krita.
+2. Go to:
+	`Tools->Scripts->Import Python Plugin from Web`
+    and enter this URL to the repository: https://github.com/SeanHRN/krita-renpy-scripter/tree/master
+
+#### Method 2: Import Plugin From File
+1. Download the KRS .zip file from here using the "Download raw file" button: https://github.com/SeanHRN/krita-renpy-scripter/blob/master/krita-renpy-scripter.zip
+2. Open Krita.
+3. Use Krita's script to import plugin from file:
+	`Krita->Tools->Scripts->Import Python Plugin from File`
+4. When prompted to open a file, use the downloaded krita-renpy-scripter.zip.
+
+#### Method 3: Manual Installation
+1. Download the .zip file in the latest release.
+2. Open Krita.
+3. Go to `Settings->Manage Resources`.
+4. Click `Open Resource Folder`. This opens the Krita resources directory in the file explorer.
+5. Unzip the .zip and copy and paste both the folder `krita_renpy_scripter` and the individual file `krita_renpy_scripter.desktop` to the folder `pykrita`.
+
+#### Next Steps For Any Method
+1. Restart Krita.
+2. Mark the checkbox for
+Settings->Dockers->Krita Ren'Py Scripting
+to enable the plugin.
+
+
+Tested and developed on Krita version 5.2.3 and 5.2.4.
+## Features To Consider / Were Considered<a id="features-considered"></a>
 - Add webp support to KBE.
 - Ability to modify a Krita document so that a corresponding Ren'Py file is automatically updated, or can be updated at a button press
 	- That would be even quicker than the current copy/paste method, and it seems plausible with something like the configs file to hold the file paths, but I think the copy/paste method is a lot safer since it's intrinsically a verification system. On top of that, I think it's likely that most users would have their whole project's images spread across many Krita documents, all to be defined in a single or few Ren'Py file(s).
@@ -228,12 +254,11 @@ KRS's Renamer creates copies of the images with the `_@0.3x` portion of the name
 - Tweak all the rounding behavior for accuracy.
 	- However, for composite images, pixel-perfection isn't feasible in Ren'Py due to varying window sizes anyway; it is often the case that a thin line of the background is visible between two pixel-adjacent but different images. The best solution is to give your composite images margins of error larger than one pixel.
 
-### Gone From VerSean 1<a id="gone-features"></a>
-- The ability to write additional ATL statements as invisible layers. It's less work and cleaner on the Krita document to just write those manually into the scripting. While now the only additional ATL statements are `zoom` and `rotate` via transform mask, those are the two that I was able to fit in a way that meshes with how Krita is used.
+## Gone From VerSean 1<a id="gone-features"></a>
+- Not that anyone used it: The ability to write additional ATL statements as invisible layers. It's less work and cleaner on the Krita document to just write those manually into the scripting. While now the only additional ATL statements are `zoom` and `rotate` via transform mask, those are the two that I was able to fit in a way that meshes with how Krita is used.
 - VerSean 1 is named Generate Ren'Py Scripting. I've changed the name to sound more uniform with other plugins and also better describe what it does (since Krita to Ren'Py is the point A to point B).
 
-## Compatibility<a id="compatibility"></a>
-Tested on Krita version 5.2.4.
+
 
 ## Credits<a id="credits"></a>
 [SeanHRN](https://krita-artists.org/u/seanhrn/activity/portfolio)
