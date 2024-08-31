@@ -1,13 +1,13 @@
 
 **Krita [Ren’Py](https://www.renpy.org/) Scripter** is a [Krita](https://krita.org/en/) docker plugin that creates text of two different formats:
 - Scripting to display images in a Ren’Py project just as they positionally appear as individual layers in a Krita document, calculated to the correct coordinates at whichever scale you specify. Advanced [ATL](https://www.renpy.org/doc/html/transforms.html#atl) display behavior, such as motions, must still be written manually.
-- Scripting to define the images for a Ren’Py project by using the Krita document’s layer stack as the name of the file directory.
+- Scripting to [define](https://www.renpy.org/doc/html/displaying_images.html) the images for a Ren’Py project by using the Krita document’s layer stack as the name of the file directory.
 
 For both formats, the resulting text is written onto the plugin’s window, ready to copy and paste into your Ren’Py file!
 
 Additionally, KRS has a calculator to help you determine which scale to use to fit the dimensions of your project.
 
-While this plugin was made initially for my motion graphics comic (composite image panels primarily with `pos` statements), I've expanded it with features that creators of the more standard "visual novel" format Ren'Py projects may find useful too!
+While this plugin was made initially for my motion graphics comic (composite image panels primarily with `pos` statements), I've expanded it with features that creators of the more standard visual novel format Ren'Py projects may find useful too!
 
 VerSean 2 has been fully-reworked to be far more efficient to use, to take sharply reduced space on Krita's docker, to be more feature-packed, and to be highly customizable.
 
@@ -21,7 +21,7 @@ Optionally, you can have the two docker plugins grouped together as tabs, minimi
 ## The Two Components
 **Scripter**
 
-The window for outputting Ren'Py scripting. Access to its settings is also provided there.
+- The window for outputting Ren'Py scripting. Access to its settings is also provided there.
 
 **Scale Calculator and Renamer**
 
@@ -35,14 +35,14 @@ With all those features, using this plugin goes something like this:
 1. Use KRS's calculator to determine which image scale you want to use.
 2. Update your layers' scale tags.
 3. Use KBE to export the images.
-4. Use KRS's renamer to make copies of those exported images with the scales removed from the names. Transfer the copies to your Ren'Py project directory.
-5. Use KRS's scripter to write the display text and/or image definitions. Copy and paste the output into your Ren'Py text files, wherever you need it.
+4. Use KRS's Renamer to make copies of those exported images with the scales removed from the names. Transfer the copies to your Ren'Py project directory.
+5. Use KRS's Scripter to write the display text and/or image definitions. Copy and paste the output into your Ren'Py text files, wherever you need it.
 
 # Contents
 - [Scripter](#scripter)
 	- [`zoom`, `rotate`, And Additional `pos` Via Transform Mask](#zoom-rotate-pos)
 	- [Texture Overlay Compatibility Feature](#texture-overlay-compatibility-feature)
-	- [Chain Name System](#chain-name-system)
+	- [Attribute Chain Name System](#attribute-chain-name-system)
 	- [Exclude System](#exclude-system)
 	- [File Format Priority System](#file-format-priority-system)
 	- [Settings](#settings)
@@ -84,14 +84,14 @@ Example: If you use a transform mask to rotate an image clockwise by 30 degrees,
 ## Texture Overlay Compatibility Feature<a id=texture-overlay-compatibility-feature></a>
  When a group is tagged as scriptable with `e=`, the coordinates are calculated from all the contents. An issue would arise if a layer being used for a texture overlay were to distort the perceived coordinates to whatever that layer's top left corner is; if the texture layer is as big as the canvas, the coordinates would always be retrieved as `(0, 0)`! To prevent that issue, KRS excludes from group coordinate calculation layers that have [Alpha Inheritance](https://docs.krita.org/en/tutorials/clipping_masks_and_alpha_inheritance.html) toggled on, since that is what a texture overlay would be using.
 
-## Chain Name System<a id="chain-name-system"></a>
-Ren'Py supports show statements such as `show exampleguy happy` and image definition states such as `image exampleguy happy = "exampleguy/expression/happy.png"`. I call that "chain naming" or "state naming" since I don't know of an official term.
+## Attribute Chain Name System<a id="attribute-chain-name-system"></a>
+Ren'Py supports [image name](https://www.renpy.org/doc/html/displaying_images.html#image) statements such as `image exampleguy happy = "exampleguy/expression/happy.png"`, which can be displayed with this syntax: `show image exampleguy happy`. If `exampleguy` is the image tag, `happy` is the image attribute.
 
-In order to script that way, KRS uses a special tag: `chain=true`/`ch=t`/`c=t`.
+In order to script that way, KRS uses a special tag: `attr=true/at=true/chain=true`/`ch=t`/`c=t`.
 Rules within a path in the layer stack:
-- Each layer with the tag set to true will be included in the "chain".
+- Each layer with the tag set to true will be included in the "attribute chain".
 - Each layer without the tag will be excluded from the name of the image, but not the path of the image file.
-- Each layer with the `chain` tag set to `false` like so: `chain=false`/`ch=f`/`c=f` will be excluded from both the name of the image and the path of the image file.
+- Each layer with the `attr/chain` tag set to `false` like so: `attr=false/at=false/chain=false`/`ch=f`/`c=f` will be excluded from both the name of the image and the path of the image file.
 #### Example
 Suppose the layer stack is this:
 `Mark c=t`
@@ -109,11 +109,11 @@ Now the image definition scripting would be:
 `image mark angry = "mark/angry.png"`
 
 ## Exclude System<a id="exclude-system"></a>
-If you wish to exclude layer names from the scripting for any reason, this is an option. Maybe, like in the Chain example, you have a group meant solely to organize within the Krita file. The `chain=false` tag can be used that way, but the `exclude=true` tag will give the same result while being easier to understand in some situations, since it's not flavored to chain names.
+If you wish to exclude layer names from the scripting for any reason, this is an option. Maybe, like in the Attribute Chain example, you have a group meant solely to organize within the Krita file. The `attr/chain=false` tag can be used that way, but the `exclude=true` tag will give the same result while being easier to understand in some situations, since it's not flavored for image attribute names.
 
-To be clear, `exclude=true` has the same effect as `chain=false` wherever it is used.
+To be clear, `exclude=true` has the same effect as `attr/chain=false` wherever it is used.
 
-`exclude=true` $\equiv$ `ex=t` $\equiv$ `x=t` $\equiv$ `c=f` $\equiv$ `ch=f` $\equiv$ `chain=false`
+`exclude=true` $\equiv$ `ex=t` $\equiv$ `x=t` $\equiv$ `c=f` $\equiv$ `ch=f` $\equiv$ `attr=false`
 
 ## File Format Priority System<a id="file-format-priority-system"></a>
 File Format Priority System: If more than one file format is requested, scripting for both is written, with all but the highest priority commented out:
@@ -170,15 +170,15 @@ These may be added to the Krita layer names.
 ### Additional Tags For Krita Ren'Py Scripter<a id="tags-krs"></a>
 Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so KRS uses a thesaurus system to accept numerous names for the same tasks. This allows you to choose your preferred balance between clarity and compactness. All of these take `true`/`false` values.
 
-| **Tags**                    | **Krita Ren'Py Scripter Application**                                                                                                   |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `rpli`, `rli`, `li`         | Layered Image (this layer group is the start of the definition)                                                                         |
-| `rplidef, rid, rlid, df`    | Layered Image - default                                                                                                                 |
-| `rplial, ral, rpalways, al` | Layered Image - always                                                                                                                  |
-| `rpliatt, rpliat, at`       | Layered Image - attribute                                                                                                               |
-| `rpligroup, rplig, gr`      | Layered Image - group                                                                                                                   |
-| `chain, ch, c`              | Marks the layer's name for the chain name system                                                                                        |
-| `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `chain` tag. `exclude=true`$\equiv$`chain=false`. |
+| **Tags**                    | **Krita Ren'Py Scripter Application**                                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rpli`, `rli`, `li`         | Layered Image (this layer group is the start of the definition)                                                                              |
+| `rplidef, rid, rlid, df`    | Layered Image - default                                                                                                                      |
+| `rplial, ral, rpalways, al` | Layered Image - always                                                                                                                       |
+| `rpliatt, rpliat, rat, rt`  | Layered Image - attribute                                                                                                                    |
+| `rpligroup, rplig, rig, gr` | Layered Image - group                                                                                                                        |
+| `chain, ch, c, at, attr`    | Marks the layer's name for the attribute chain name system                                                                                   |
+| `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `attr/chain` tag. `exclude=true`$\equiv$`chain=false`. |
 
 Internally, any of these tags you use would be converted to the leftmost tag on the list.
 This feature has also been used for the `true`/`false` values themselves:
@@ -240,6 +240,7 @@ to enable the plugin.
 Tested and developed on Krita version 5.2.3 and 5.2.4.
 ## Features To Consider / Were Considered<a id="features-considered"></a>
 - Add webp support to KBE.
+- Search the layer stack for scales to add as buttons for the Renamer
 - Ability to modify a Krita document so that a corresponding Ren'Py file is automatically updated, or can be updated at a button press
 	- That would be even quicker than the current copy/paste method, and it seems plausible with something like the configs file to hold the file paths, but I think the copy/paste method is a lot safer since it's intrinsically a verification system. On top of that, I think it's likely that most users would have their whole project's images spread across many Krita documents, all to be defined in a single or few Ren'Py file(s).
 - `alpha` (Opacity) ATL feature, like how there currently is `zoom` and `rotate`

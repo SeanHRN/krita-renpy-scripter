@@ -103,8 +103,8 @@ button_settings_set = {"default", "customize"}
 rpli_set       = {"rpli", "rli", "li"}               # layeredimage (the start)
 rplidef_set    = {"rplidef", "rid", "rlid", "df"}    # default
 rplialways_set = {"rplial", "ral", "rpalways", "al"} # always
-rpliattrib_set = {"rpliatt", "rpliat", "at"}         # attribute
-rpligroup_set  = {"rpligroup", "rplig", "gr"}        # group
+rpliattrib_set = {"rpliatt", "rpliat", "rat", "rt"}  # attribute
+rpligroup_set  = {"rpligroup", "rplig", "rig", "gr"} # group
 RPLI_LIST = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
 RPLI_MAIN_TAG = "rpli"
 RPLIDEF_MAIN_TAG = "rplidef"
@@ -123,7 +123,7 @@ value_false_set = {"false", "f", "no", "n", "0"}
 VALUE_TRUE_MAIN_TAG = "true"
 VALUE_FALSE_MAIN_TAG = "false"
 
-chain_set = {"chain", "ch", "c"}
+attribute_chain_set = {"chain", "ch", "c", "at", "attr"}
 layer_exclude_set = {"exclude", "ex", "x",}
 LAYER_EXCLUDE_MAIN_TAG = "exclude"
 format_set = {"png", "webp", "jpg", "jpeg"}
@@ -435,9 +435,8 @@ This will overwrite your customizations.")
             for line in data_list:
                 name_to_print = line[0]
                 dir_to_print = line[1]
-                if "chain_name" in line[2]:
-                    #script += "chain name: " + line[2]["chain_name"] + "\n"
-                    name_to_print = line[2]["chain_name"]
+                if "attribute_chain_name" in line[2]:
+                    name_to_print = line[2]["attribute_chain_name"]
                 if "layers_to_exclude_dir" in line[2]:
                     for layer in line[2]["layers_to_exclude_dir"]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
@@ -468,8 +467,8 @@ This will overwrite your customizations.")
         else:
             for line in data_list:
                 name_to_print = line[0]
-                if "chain_name" in line[2]:
-                    name_to_print = line[2]["chain_name"]
+                if "attribute_chain_name" in line[2]:
+                    name_to_print = line[2]["attribute_chain_name"]
                 modifier_block = self.getModifierBlock(line)
                 if button_chosen in button_display_set:
                     script += self.config_data[button_chosen].format\
@@ -789,12 +788,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         elif letter == 'i': # Prevent the i=false tag from leaking down
                             continue        # the path after it's been used to block
                                             # the parents' tags.
-                        elif letter in chain_set and value in value_true_set:
-                            if "chain_name" not in tag_dict:
-                                tag_dict["chain_name"] = individual_layer_name
+                        elif letter in attribute_chain_set and value in value_true_set:
+                            if "attribute_chain_name" not in tag_dict:
+                                tag_dict["attribute_chain_name"] = individual_layer_name
                             else:
-                                tag_dict["chain_name"] += (" " + individual_layer_name)
-                        elif (letter in chain_set and value in value_false_set) \
+                                tag_dict["attribute_chain_name"] += (" " + individual_layer_name)
+                        elif (letter in attribute_chain_set and value in value_false_set) \
                             or (letter in layer_exclude_set and value in value_true_set):
                             if "layers_to_exclude_dir" not in tag_dict:
                                 tag_dict["layers_to_exclude_dir"] = [individual_layer_name]
@@ -827,7 +826,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             else:
                                 tag_dict['e'] = format_list
                         elif (letter in layer_exclude_set and value in value_true_set) \
-                            or (letter in chain_set and value in value_false_set):
+                            or (letter in attribute_chain_set and value in value_false_set):
                             if "layers_to_exclude_dir" not in tag_dict:
                                 tag_dict["layers_to_exclude_dir"] = [individual_layer_name]
                             else:
