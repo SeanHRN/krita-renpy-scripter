@@ -233,10 +233,11 @@ KRS's Renamer creates copies of the images with the `_@0.3x` portion of the name
 5. Unzip the .zip and copy and paste both the folder `krita_renpy_scripter` and the individual file `krita_renpy_scripter.desktop` to the folder `pykrita`.
 
 #### Next Steps For Any Method
-1. Restart Krita.
-2. Mark the checkbox for
-Settings->Dockers->Krita Ren'Py Scripting
-to enable the plugin.
+1. A window will pop up, asking if you wish to enable the plugin. Say Yes.
+2. Restart Krita.
+3. Mark the checkbox for
+`Settings->Dockers->Krita Ren'Py Scripting`
+to make sure the KRS appears on your docker.
 
 
 Tested and developed on Krita version 5.2.3 and 5.2.4.
