@@ -441,7 +441,6 @@ This will overwrite your customizations.")
                     for layer in line[2]["layers_to_exclude_dir"]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
-                dir_to_print = dir_to_print.replace("/ ", "", 1)
                 if "e" in line[2]:
                     line[2]["e"] = \
                         sortListByPriority(values=line[2]["e"], \
@@ -457,9 +456,11 @@ This will overwrite your customizations.")
                     for f in line[2]["e"]:
                         if f != chosen_format:
                             script += '#'
-                        script += self.config_data["string_normalimagedef"].format\
-(image=name_to_print,path_to_image=dir_to_print,file_extension=f)
-                else:
+                        text_to_add = self.config_data["string_normalimagedef"].format\
+                            (image=name_to_print,path_to_image=dir_to_print,file_extension=f)
+                        text_to_add = text_to_add.replace("/.", ".", 1) # To handle edge case:
+                        script += text_to_add                           # The leaf node is excluded
+                else:                                                   # from an attribute chain.
                     script += "### Error: File format not defined for layer " + name_to_print + "\n"
         elif button_chosen == "string_layeredimagedef": # Layered Image
             script += self.writeLayeredImage(rpli_data_list)
@@ -498,7 +499,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     if layer in r[1]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
-            dir_to_print = dir_to_print.replace("/ ", "", 1)
             if not r[1] in was_written:
                 was_written.add(r[1])
             else: # ignore duplicate lines
@@ -540,6 +540,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 script += \
                     (" " * INDENT * 2) + "attribute " + r[0] + def_add_on + ":\n"
                 for i in image_add_on_list:
+                    i = i.replace("/.", ".", 1) # To handle edge case: The leaf node is excluded.
                     script += (" " * INDENT * 4) + i + "\n"
 
         return script
