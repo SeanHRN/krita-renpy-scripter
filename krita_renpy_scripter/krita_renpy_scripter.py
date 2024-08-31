@@ -1471,7 +1471,7 @@ class ScaleCalculateBox(QWidget):
         button_2160_h.clicked.connect(lambda: self.dimensionSet(2160,1))
         rename_button = QPushButton("Rename Batch-Exported Files Of That Scale Percentage")
         rename_button.setToolTip("The Batch Exporter labels exported files with \
-the suffix '_@[scale]x'.\nThis button will make GRS copy over the batch-exported \
+the suffix '_@[scale]x'.\nThis button will make KRS copy over the batch-exported \
 images of the currently selected scale to a new folder in which they don't have that suffix,\n\
 so that those images may be transferred to your Ren'Py project without having to \
 rename them manually.")
@@ -1593,7 +1593,7 @@ and renamed at {folder_name}!", MSG_TIME)
         scale = float(self.scale_box_percent.value() / 100.0)
         if scale != 1.0:
             suffix = "_@" + str(scale) + "x"
-            new_folder_name = "_grs_x" + str(scale)
+            new_folder_name = "_krs_x" + str(scale)
             export_dir_name = os.path.join(dir_name + new_folder_name)
             Path(export_dir_name).mkdir(parents=True, exist_ok=True)
             self.worker = RenameWorkerThread(dir_name, export_dir_name, suffix, new_folder_name)
