@@ -441,7 +441,8 @@ This will overwrite your customizations.")
                     for layer in line[2]["layers_to_exclude_dir"]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
-                if "e" in line[2]:
+                        dir_to_print = dir_to_print.replace("/ ", "", 1) # if leaf excluded
+                if "e" in line[2]:                                       # from attr-chain
                     line[2]["e"] = \
                         sortListByPriority(values=line[2]["e"], \
                                            priority=["webp","png","jpg","jpeg"])
@@ -497,7 +498,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     if layer in r[1]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
-            if not r[1] in was_written:
+                        dir_to_print = dir_to_print.replace("/ ", "", 1) # if leaf excluded
+            if not r[1] in was_written:                                  # from attr-chain
                 was_written.add(r[1])
             else: # ignore duplicate lines
                 continue
