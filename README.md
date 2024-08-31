@@ -71,7 +71,7 @@ With all those features, using this plugin goes something like this:
 	- KRS uses Krita's layer stack to determine the directory paths for the image files.
 	- **Two Formats**
 		- **Normal Images**
-			- This is the basic `image exampleguy = "characters/exampleguy.png"` syntax.
+			- This is the basic `image johnny = "characters/johnny.png"` syntax.
 		- **Layered Images**
 			- This is for Ren'Py's layered image system. Since it works using tags, see [[#Additional Tags For Krita Ren'Py Scripter]] to see how to use it.
 
@@ -85,7 +85,7 @@ Example: If you use a transform mask to rotate an image clockwise by 30 degrees,
  When a group is tagged as scriptable with `e=`, the coordinates are calculated from all the contents. An issue would arise if a layer being used for a texture overlay were to distort the perceived coordinates to whatever that layer's top left corner is; if the texture layer is as big as the canvas, the coordinates would always be retrieved as `(0, 0)`! To prevent that issue, KRS excludes from group coordinate calculation layers that have [Alpha Inheritance](https://docs.krita.org/en/tutorials/clipping_masks_and_alpha_inheritance.html) toggled on, since that is what a texture overlay would be using.
 
 ## Attribute Chain Name System<a id="attribute-chain-name-system"></a>
-Ren'Py supports [image name](https://www.renpy.org/doc/html/displaying_images.html#image) statements such as `image exampleguy happy = "exampleguy/expression/happy.png"`, which can be displayed with this syntax: `show image exampleguy happy`. If `exampleguy` is the image tag, `happy` is the image attribute.
+Ren'Py supports [image name](https://www.renpy.org/doc/html/displaying_images.html#image) statements such as `image denny happy = "denny/expression/happy.png"`, which can be displayed with this syntax: `show image denny happy`. If `denny` is the image tag, `happy` is the image attribute.
 
 In order to script that way, KRS uses a special tag: `attr=true/at=true/chain=true`/`ch=t`/`c=t`.
 Rules within a path in the layer stack:
@@ -94,19 +94,21 @@ Rules within a path in the layer stack:
 - Each layer with the `attr/chain` tag set to `false` like so: `attr=false/at=false/chain=false`/`ch=f`/`c=f` will be excluded from both the name of the image and the path of the image file.
 #### Example
 Suppose the layer stack is this:
-`Mark c=t`
-`+-- expression`
-    `+-- angry e=png c=t`
+```
+ChrisR c=t
++-- expression
+    +-- angry e=png c=t
+```
 
 The display scripting would have:
-`show mark angry:`
+`show chrisr angry:`
 
 The image definition scripting would have:
-`image mark angry = "mark/expression/angry.png"`
+`image chrisr angry = "chrisr/expression/angry.png"`
 
 If you meant to use `expression`as a layer group just for organization in Krita, and you don't want it to be in your directory definition. Exclude it by using the tag: `expression c=f`
 Now the image definition scripting would be:
-`image mark angry = "mark/angry.png"`
+`image chrisr angry = "chrisr/angry.png"`
 
 ## Exclude System<a id="exclude-system"></a>
 If you wish to exclude layer names from the scripting for any reason, this is an option. Maybe, like in the Attribute Chain example, you have a group meant solely to organize within the Krita file. The `attr/chain=false` tag can be used that way, but the `exclude=true` tag will give the same result while being easier to understand in some situations, since it's not flavored for image attribute names.
@@ -189,9 +191,9 @@ This feature has also been used for the `true`/`false` values themselves:
 | `false`   | `f`, `no`, `n`, `0`   |
 #### Example
 These layer names
-`Exampleguy e=png rpli=true`
-`Exampleguy e=png rli=y`
-`Exampleguy e=png li=t`
+`Johnny e=png rpli=true`
+`Johnny e=png rli=y`
+`Johnny e=png li=t`
 are functionally identical.
 
 ## Scale Calculator<a id="scale-calculator"></a>
@@ -206,7 +208,7 @@ Since images as game/novel assets are often drawn at resolutions greater than th
 	- Hold Ctrl: Increment by 10%
 ## Renamer<a id="renamer"></a>
 Krita Batch Exporter saves the images with a tag that indicates the scale.
-Example: `exampleguy_@0.3x.png`  for the layer `exampleguy e=png s=30`.
+Example: `mark_@0.3x.png`  for the layer `mark e=png s=30`.
 KRS's Renamer creates copies of the images with the `_@0.3x` portion of the name removed, so that the files are named how you probably want them to be, and ready to transfer to your Ren'Py project. The images are saved in a folder named, in this example, `export_KRS_x0.3`. The targeted scale is the one in the Scale Calculator's `Scale Percentage` box. 
 ## How To Install and Compatibility<a id="how-to-install-and-compatibility"></a>
 
