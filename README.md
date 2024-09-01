@@ -73,7 +73,7 @@ With all those features, using this plugin goes something like this:
 		- **Normal Images**
 			- This is the basic `image johnny = "characters/johnny.png"` syntax.
 		- **Layered Images**
-			- This is for Ren'Py's layered image system. Since it works using tags, see [[#Additional Tags For Krita Ren'Py Scripter]] to see how to use it.
+			- This is for Ren'Py's layered image system. Since it works using tags, see [Additional Tags For Krita Ren'Py Scripter](#tags-krs) to see how to use it.
 
 ## `zoom`, `rotate`, And Additional `pos` Via Transform Mask<a id="zoom-rotate-pos"></a>
 Krita's non-destructive editing feature, [transform masks](https://docs.krita.org/en/reference_manual/layers_and_masks/transformation_masks.html), can be used to declare ATL statements for `zoom` and `rotate`. You can also move an image through the transform mask to override the `xpos` and `ypos` coordinates used for scripting.
