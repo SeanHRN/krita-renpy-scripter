@@ -106,7 +106,7 @@ The display scripting would have:
 The image definition scripting would have:
 `image chrisr angry = "chrisr/expression/angry.png"`
 
-If you meant to use `expression`as a layer group just for organization in Krita, and you don't want it to be in your directory definition. Exclude it by using the tag: `expression c=f`
+If you meant to use `expression`as a layer group just for organization in Krita, and you don't want it to be in your directory definition, exclude it by using the tag: `expression c=f`
 Now the image definition scripting would be:
 `image chrisr angry = "chrisr/angry.png"`
 
