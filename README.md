@@ -168,6 +168,7 @@ These may be added to the Krita layer names.
 | `[p=path/to/custom/export/directory]` or `[p="path with spaces"]` | Custom output path.                                                                                                                                          | Unused.                                                                                       |
 | `t=false` or `t=no`                                               | Disable trimming the exported layer to the bounding box of the content.                                                                                      | Sets the output coordinates to 0 because the entire canvas size is used for the image output. |
 | `i=false` or `i=no`                                               | Disable parent metadata inheritance for a layer.                                                                                                             | Compatible.                                                                                   |
+| `c=sheet`                                                         | Marks a group layer containing individual frames as a group to make into a sprite sheet for COA Tools.                                                       | The c tag is used but not in the same way. See the [note](#note-c-tag).                       |
 
 ### Additional Tags For Krita Ren'Py Scripter<a id="tags-krs"></a>
 Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so KRS uses a thesaurus system to accept numerous names for the same tasks. This allows you to choose your preferred balance between clarity and compactness. All of these take `true`/`false` values.
@@ -179,7 +180,7 @@ Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/la
 | `rplial, ral, rpalways, al` | Layered Image - always                                                                                                                       |
 | `rpliatt, rpliat, rat, rt`  | Layered Image - attribute                                                                                                                    |
 | `rpligroup, rplig, rig, gr` | Layered Image - group                                                                                                                        |
-| `chain, ch, c, at, attr`    | Marks the layer's name for the attribute chain name system                                                                                   |
+| `chain, ch, c, at, attr`    | Marks the layer's name for the attribute chain name system.<br>See the [note](#note-c-tag) on the `c` tag.                                   |
 | `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `attr/chain` tag. `exclude=true`$\equiv$`chain=false`. |
 
 Internally, any of these tags you use would be converted to the leftmost tag on the list.
@@ -195,6 +196,9 @@ These layer names
 `Johnny e=png rli=y`
 `Johnny e=png li=t`
 are functionally identical.
+
+#### Note On The `c` Tag<a id="note-c-tag"></a>
+Krita Batch Exporter has the tag `c=sheet` for COA Tools, and Krita Ren'Py Scripter has the tags `c=true` and `c=false` for the attribute chain name system. KRS simply ignores `c=sheet`, since it's highly unlikely that a single layer group would be used for both a COA Tools spritesheet and a Ren'Py attribute name simultaneously.
 
 ## Scale Calculator<a id="scale-calculator"></a>
 Since images as game/novel assets are often drawn at resolutions greater than the target resolution of the project, KRS has a scale calculator to check the pixel dimensions of the canvas at different scales.
