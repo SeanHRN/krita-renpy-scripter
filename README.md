@@ -122,7 +122,7 @@ File Format Priority System: If more than one file format is requested, scriptin
 
 `webp` > `png` > `jpg/jpeg`
 
-However, `webp` (a popular pick for Ren'Py projects) is exported by Krita but not by KBE; I'll see if I can contribute `webp` support.
+However, `webp` (a popular pick for Ren'Py projects) exports as lossy by KBE and isn't mentioned in the manual; I'll see if I can contribute a fix.
 
 ## Settings<a id="settings"></a>
 Access to the settings file `configs.json` is provided in the Scripter window. The button will open it in your default editor. Aside from the script output template settings, changes will first be applied when you open a new window scripting.
@@ -246,7 +246,7 @@ to make sure the KRS appears on your docker.
 
 Tested and developed on Krita version 5.2.3 and 5.2.4.
 ## Features To Consider / Were Considered<a id="features-considered"></a>
-- Add webp support to KBE.
+- Add lossless webp export to KBE.
 - Search the layer stack for scales to add as buttons for the Renamer
 - Ability to modify a Krita document so that a corresponding Ren'Py file is automatically updated, or can be updated at a button press
 	- That would be even quicker than the current copy/paste method, and it seems plausible with something like the configs file to hold the file paths, but I think the copy/paste method is a lot safer since it's intrinsically a verification system. On top of that, I think it's likely that most users would have their whole project's images spread across many Krita documents, all to be defined in a single or few Ren'Py file(s).
