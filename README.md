@@ -122,7 +122,7 @@ File Format Priority System: If more than one file format is requested, scriptin
 
 `webp` > `png` > `jpg/jpeg`
 
-However, `webp` (a popular pick for Ren'Py projects) exports as lossy by KBE and isn't mentioned in the manual; I'll see if I can contribute a fix.
+However, `webp` (a popular pick for Ren'Py projects) isn't correctly exported by KBE (exports but is lossy, probably because Krita's Document::exportImage() doesn't support WEBP either); I'll see if I can contribute a fix.
 
 ## Settings<a id="settings"></a>
 Access to the settings file `configs.json` is provided in the Scripter window. The button will open it in your default editor. Aside from the script output template settings, changes will first be applied when you open a new window scripting.
