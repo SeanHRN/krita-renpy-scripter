@@ -73,6 +73,8 @@ default_configs_dict = {
         "{FOUR_SPACE_INDENT}show {image}:\n{EIGHT_SPACE_INDENT}xalign {xcoord} yalign {ycoord}\n",
     "string_normalimagedef" : "image {image} = \"{path_to_image}.{file_extension}\"\n",
     "string_layeredimagedef" : "Value not used, but key is.",
+    "string_animatedimagedefstart" : "image {image}:\n",
+    "string_animatedimagedefframes" : "{FOUR_SPACE_INDENT}{path_to_image}",
     "align_decimal_places" : "3",
     "atl_zoom_decimal_places" : "3",
     "atl_rotate_decimal_places" : "3",
@@ -87,7 +89,9 @@ default_configs_dict = {
     "script_window_w_size_multiplier" : "1.1",
     "script_window_h_size_multiplier" : "0.8",
     "script_font_size" : "10",
-    "script_preferred_font" : "Monospace"
+    "script_preferred_font" : "Monospace",
+    "animation_digit_count" : "2",
+    "animation_zero_based_indexing" : "true"
 }
 
 button_display_set = {"string_posxy", "string_xposxyposy", \
@@ -105,19 +109,25 @@ rplidef_set    = {"rplidef", "rid", "rlid", "df"}    # default
 rplialways_set = {"rplial", "ral", "rpalways", "al"} # always
 rpliattrib_set = {"rpliatt", "rpliat", "rat", "rt"}  # attribute
 rpligroup_set  = {"rpligroup", "rplig", "rig", "gr"} # group
-RPLI_LIST = [rpli_set, rplidef_set, rplialways_set, rpliattrib_set, rpligroup_set]
+rpanim_set     = {"rpanim", "rpan", "rpa", "ranim", "anim", "ani"} # is animation
+rpframe_set    = {"rpframe", "rpfr", "rframe", "rfr", "fc"} # animation frame count
+RPLI_LIST = [rpli_set, rplidef_set, rplialways_set, \
+rpliattrib_set, rpligroup_set, rpanim_set, rpframe_set]
 RPLI_MAIN_TAG = "rpli"
 RPLIDEF_MAIN_TAG = "rplidef"
 RPLIALWAYS_MAIN_TAG = "rplial"
 RPLIATTRIB_MAIN_TAG = "rpliatt"
 RPLIGROUP_MAIN_TAG = "rpligroup"
+RPANIM_MAIN_TAG = "rpanim"
+RPFRAME_MAIN_TAG = "rpframe"
 RPLI_MAIN_TAG_LIST = [RPLI_MAIN_TAG, RPLIDEF_MAIN_TAG, \
-RPLIALWAYS_MAIN_TAG, RPLIATTRIB_MAIN_TAG, RPLIGROUP_MAIN_TAG]
+RPLIALWAYS_MAIN_TAG, RPLIATTRIB_MAIN_TAG, RPLIGROUP_MAIN_TAG, \
+RPANIM_MAIN_TAG, RPFRAME_MAIN_TAG]
 # Additionally, rpligroupchild is a special tag to be used
-# for catching when an rpliatt should be INDENTed in the scripting.
+# for catching when an rpliatt should be indented in the scripting.
 
 
-# Synonyms for true and false for rpli tags
+# Synonyms for true and false for tags
 value_true_set = {"true", "t", "yes", "y", "1"}
 value_false_set = {"false", "f", "no", "n", "0"}
 VALUE_TRUE_MAIN_TAG = "true"
@@ -659,12 +669,12 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             curr_node = curr_doc.rootNode()
         #self.DEBUG_MESSAGE += "path pieces: \n"
         #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
-        if self.config_data["directory_starter"]:
-            #self.DEBUG_MESSAGE += str(path_pieces[1:]) + "\n"
-            self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
-        else:
-            #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
-            self.getMaskPropertiesRecursion(path_pieces, tag_dict, curr_node)           
+            if self.config_data["directory_starter"]:
+                #self.DEBUG_MESSAGE += str(path_pieces[1:]) + "\n"
+                self.getMaskPropertiesRecursion(path_pieces[1:], tag_dict, curr_node)
+            else:
+                #self.DEBUG_MESSAGE += str(path_pieces) + "\n"
+                self.getMaskPropertiesRecursion(path_pieces, tag_dict, curr_node)
 
         return tag_dict
 
@@ -901,56 +911,97 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         New concept: Record an additional list for the Ren'Py layered image tags
         since the required behavior for layered images isn't the same when it comes to
         inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
+
+        TODO: Fix issue where layer not in a group is not correctly placed in path_list. -> Seemingly fixed.
+
+        TODO: Rework the layered image tag acquisition system for the above fix.
         """
         if len(path) > path_len:
             path[path_len] = node.name().lower()
         else:
             path.append(node.name().lower())
-        recordable_child_nodes = 0
         for c in node.childNodes():
             if c.type() == "grouplayer" or c.type() == "paintlayer":
-                recordable_child_nodes += 1
-                if c.type() == "grouplayer":   # Case: The tagged image is a group.
-                    for f in format_tag_set:   # Get coords from the group's content
-                        if f in c.name().lower():
-                            self.storePath(path + [c.name().lower()], path_list)
+                for f in format_tag_set:
+                    if f in c.name().lower():
+                        self.storePath(path + [c.name().lower()], path_list)
+                        if c.type() == "grouplayer":
+                            #self.DEBUG_MESSAGE += "STORED GROUP LAYER: " + c.name().lower()+"\n"
                             new_coords = self.findGroupPositionStart(c)
                             if not new_coords:
                                 self.DEBUG_MESSAGE += \
                             "Error: Cannot get the coordinates for group layer [" + c.name() + "]\n"
                             else:
                                 coords_list.append([new_coords[0],new_coords[1],new_coords[2]])
+                        else:
+                            #self.DEBUG_MESSAGE += "STORED SINGLE LAYER: " + c.name().lower() + "\n"
+                            coords_list.append([c.bounds().topLeft().x(), \
+                                        c.bounds().topLeft().y(), \
+                                            c.bounds().center()])
+                        break
+
+            #if c.type() == "grouplayer" or c.type() == "paintlayer":
+            #    #recordable_child_nodes += 1
+            #    if c.type() == "grouplayer":   # Case: The tagged image is a group.
+            #        for f in format_tag_set:   # Get coords from the group's content
+            #            if f in c.name().lower():
+            #                self.storePath(path + [c.name().lower()], path_list)
+            #                self.DEBUG_MESSAGE += "STORING GROUP LAYER: " + c.name().lower()+"\n" #EXPERIMENTAL
+            #                new_coords = self.findGroupPositionStart(c)
+            #                if not new_coords:
+            #                    self.DEBUG_MESSAGE += \
+            #                "Error: Cannot get the coordinates for group layer [" + c.name() + "]\n"
+            #                else:
+            #                    coords_list.append([new_coords[0],new_coords[1],new_coords[2]])
+            #                break
+            #    else:                          # Case: The tagged image is an individual layer.
+            #        for f in format_tag_set:
+            #            if f in c.name().lower():
+            #                self.DEBUG_MESSAGE += "INDIVIDUAL LAYER LOCATED: " + c.name().lower()+"\n"
+            #                self.storePath(path + [c.name().lower()], path_list)
+            #                self.DEBUG_MESSAGE += "STORING SINGLE LAYER: " + c.name().lower() + "\n" #EXPERIMENTAL
+            #                coords_list.append([c.bounds().topLeft().x(), \
+            #                            c.bounds().topLeft().y(), \
+            #                                c.bounds().center()])
+
+
+
+        #            break
+        #if recordable_child_nodes == 0: # Case: End of path reached
+        #    for f in format_tag_set:
+        #        if f in node.name().lower():
+        #            self.storePath(path, path_list)
+        #            coords_list.append([node.bounds().topLeft().x(), \
+        #                        node.bounds().topLeft().y(), \
+        #                            node.bounds().center()])
+        #            break
+###        if (2 > 3):
+###            self.DEBUG_MESSAGE += "EXPERIMENTAL THING\n"
+###        else: #JOJO
+
+### Part to fix: The rpli system
+### TODO: TEST THIS!!!
+        path_len += 1
+        for i in node.childNodes(): # Case: Send the child nodes through the recursion.
+            tag_data = i.name().lower().split(' ')[1:]
+            letter_data = []
+            value_data = []
+            for tag in tag_data:
+                try:
+                    letter, value = tag.split('=', 1)
+                    letter_data.append(letter)
+                    value_data.append(value)
+                except ValueError:
+                    continue
+            if i.type() == "grouplayer" or i.type() == "paintlayer":
+                self.pathRecord(i, (path+[i.name().lower()]), \
+                                path_list, path_len, coords_list, rpli_path_list)
+                for rl in RPLI_LIST:
+                    for tag in rl:
+                        if tag in letter_data and \
+                                value_data[letter_data.index(tag)] in value_true_set:
+                            self.storePath((path+[i.name().lower()]),rpli_path_list)
                             break
-        if recordable_child_nodes == 0: # Case: End of path reached
-            for f in format_tag_set:
-                if f in node.name().lower():
-                    self.storePath(path, path_list)
-                    coords_list.append([node.bounds().topLeft().x(), \
-                                node.bounds().topLeft().y(), \
-                                    node.bounds().center()])
-                    break
-        else:
-            path_len += 1
-            for i in node.childNodes(): # Case: Send the child nodes through the recursion.
-                tag_data = i.name().lower().split(' ')[1:]
-                letter_data = []
-                value_data = []
-                for tag in tag_data:
-                    try:
-                        letter, value = tag.split('=', 1)
-                        letter_data.append(letter)
-                        value_data.append(value)
-                    except ValueError:
-                        continue
-                if i.type() == "grouplayer" or i.type() == "paintlayer":
-                    self.pathRecord(i, (path+[i.name().lower()]), \
-                                    path_list, path_len, coords_list, rpli_path_list)
-                    for rl in RPLI_LIST:
-                        for tag in rl:
-                            if tag in letter_data and \
-                                    value_data[letter_data.index(tag)] in value_true_set:
-                                self.storePath((path+[i.name().lower()]),rpli_path_list)
-                                break
 
     def checkTransformMask(self, c):
         """
@@ -1171,6 +1222,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         There is an additional configs load for align_decimal_places here
         because self.config_data fails out here.
 
+        TODO: Fix issue where tagged layer not in folder is not correctly placed in the stack.
+        It would be in data_list << export_layer_list.
         """
         data_list =  []
         rpli_data_list = []
@@ -1180,48 +1233,48 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_path_list = []
         tag_dict_list = []
         coords_list = []
+        path = []
+        path_list_with_tags = []
         curr_doc = KI.activeDocument()
         if curr_doc is not None:
             root_node = curr_doc.rootNode()
-        path = []
-        path_list_with_tags = []
-        self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
-        tag_dict_list = self.getTags(path_list, False)
-        rpli_tag_dict_list = self.getTags(rpli_path_list, True)
-        path_list, coords_list, tag_dict_list = \
-            self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
-        path_list_with_tags = path_list
-        rpli_path_list_with_tags = rpli_path_list
-        path_list = self.removeTagsFromPaths(path_list)
-        rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
-        tag_dict_list = list(filter(None, tag_dict_list))
-        rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
-        coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
-        export_layer_list = self.getExportLayerList(path_list)
-        rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
+            self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
+            tag_dict_list = self.getTags(path_list, False)
+            rpli_tag_dict_list = self.getTags(rpli_path_list, True)
+            path_list, coords_list, tag_dict_list = \
+                self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
+            path_list_with_tags = path_list
+            rpli_path_list_with_tags = rpli_path_list
+            path_list = self.removeTagsFromPaths(path_list)
+            rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
+            tag_dict_list = list(filter(None, tag_dict_list))
+            rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
+            coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
+            export_layer_list = self.getExportLayerList(path_list)
+            rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
 
-        for i,layer in enumerate(export_layer_list):
-            data_list.append(tuple([layer.lower(), path_list[i].lower(), \
-                                    tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
+            for i,layer in enumerate(export_layer_list):
+                data_list.append(tuple([layer.lower(), path_list[i].lower(), \
+                                        tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
-        for i,layer in enumerate(rpli_export_layer_list):
-            rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
-                                         rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
+            for i,layer in enumerate(rpli_export_layer_list):
+                rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
+                                            rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
 
-        if rpli_data_list:
-            self.sortRpliData(rpli_data_list)
+            if rpli_data_list:
+                self.sortRpliData(rpli_data_list)
 
-        if button_chosen in button_display_align_set:
-            align_decimal_places = OUTER_DEFAULT_ALIGN_DECIMAL_PLACES
-            try:
-                configs_file = open(\
-                    os.path.join(os.path.dirname(\
-                        os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
-                imported_configs = json.load(configs_file)
-                align_decimal_places = int(imported_configs["align_decimal_places"])
-            except KeyError:
-                align_decimal_places = int(default_configs_dict["align_decimal_places"])
-            data_list = calculateAlign(data_list, spacing_num, align_decimal_places)
+            if button_chosen in button_display_align_set:
+                align_decimal_places = OUTER_DEFAULT_ALIGN_DECIMAL_PLACES
+                try:
+                    configs_file = open(\
+                        os.path.join(os.path.dirname(\
+                            os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
+                    imported_configs = json.load(configs_file)
+                    align_decimal_places = int(imported_configs["align_decimal_places"])
+                except KeyError:
+                    align_decimal_places = int(default_configs_dict["align_decimal_places"])
+                data_list = calculateAlign(data_list, spacing_num, align_decimal_places)
 
         return data_list, rpli_data_list
 
