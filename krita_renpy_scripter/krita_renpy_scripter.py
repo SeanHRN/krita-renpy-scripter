@@ -940,45 +940,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                             c.bounds().center()])
                         break
 
-            #if c.type() == "grouplayer" or c.type() == "paintlayer":
-            #    #recordable_child_nodes += 1
-            #    if c.type() == "grouplayer":   # Case: The tagged image is a group.
-            #        for f in format_tag_set:   # Get coords from the group's content
-            #            if f in c.name().lower():
-            #                self.storePath(path + [c.name().lower()], path_list)
-            #                self.DEBUG_MESSAGE += "STORING GROUP LAYER: " + c.name().lower()+"\n" #EXPERIMENTAL
-            #                new_coords = self.findGroupPositionStart(c)
-            #                if not new_coords:
-            #                    self.DEBUG_MESSAGE += \
-            #                "Error: Cannot get the coordinates for group layer [" + c.name() + "]\n"
-            #                else:
-            #                    coords_list.append([new_coords[0],new_coords[1],new_coords[2]])
-            #                break
-            #    else:                          # Case: The tagged image is an individual layer.
-            #        for f in format_tag_set:
-            #            if f in c.name().lower():
-            #                self.DEBUG_MESSAGE += "INDIVIDUAL LAYER LOCATED: " + c.name().lower()+"\n"
-            #                self.storePath(path + [c.name().lower()], path_list)
-            #                self.DEBUG_MESSAGE += "STORING SINGLE LAYER: " + c.name().lower() + "\n" #EXPERIMENTAL
-            #                coords_list.append([c.bounds().topLeft().x(), \
-            #                            c.bounds().topLeft().y(), \
-            #                                c.bounds().center()])
-
-
-
-        #            break
-        #if recordable_child_nodes == 0: # Case: End of path reached
-        #    for f in format_tag_set:
-        #        if f in node.name().lower():
-        #            self.storePath(path, path_list)
-        #            coords_list.append([node.bounds().topLeft().x(), \
-        #                        node.bounds().topLeft().y(), \
-        #                            node.bounds().center()])
-        #            break
-###        if (2 > 3):
-###            self.DEBUG_MESSAGE += "EXPERIMENTAL THING\n"
-###        else: #JOJO
-
 ### Part to fix: The rpli system
 ### TODO: TEST THIS!!!
         path_len += 1
@@ -1162,35 +1123,29 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         drawing programs do the opposite, though it wouldn't matter for a layered image
         declaration block.
         """
-        #self.DEBUG_MESSAGE += "list before sorting:\n"
-        #for d in rpli_data_list:
-        #    self.DEBUG_MESSAGE += str(d[1]) + "\n"
+        #self.DEBUG_MESSAGE += "Activating sortRpliData()\n"
+
         s_list = rpli_data_list
         list_sorted = False
         swap_occurred = False
         c = len(s_list)-1
-        while not list_sorted:
-            curr_line = s_list[c][3]
-            comp_line = s_list[c-1][3]
-            #self.DEBUG_MESSAGE += "Comparing " + curr_line + " with " + comp_line  + "\n"
-            if curr_line in comp_line and curr_line < comp_line:
-                s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
-                #self.DEBUG_MESSAGE += "SWAP!\n"
-                swap_occurred = True
-            else:
-                #self.DEBUG_MESSAGE += "no swap\n"
-                swap_occurred = False
-            c = c - 1
-            if c == 0:
-                if swap_occurred:
-                    c = len(s_list)-1
+        if c != 0:
+            while not list_sorted:
+                curr_line = s_list[c][3]
+                comp_line = s_list[c-1][3]
+                if curr_line in comp_line and curr_line < comp_line:
+                    s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
+                    swap_occurred = True
                 else:
-                    list_sorted = True
-
-        #self.DEBUG_MESSAGE += "sorted list:\n"
-        #for l in s_list:
-        #    self.DEBUG_MESSAGE += str(l[1]) + "\n"
-        #return s_list
+                    swap_occurred = False
+                c = c - 1
+                if c == 0:
+                    if swap_occurred:
+                        c = len(s_list)-1
+                    else:
+                        list_sorted = True
+        else:
+            self.DEBUG_MESSAGE += "No components for Layered Image found!\n"
 
     def getDataList(self, button_chosen, spacing_num):
         """
@@ -1222,8 +1177,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         There is an additional configs load for align_decimal_places here
         because self.config_data fails out here.
 
-        TODO: Fix issue where tagged layer not in folder is not correctly placed in the stack.
-        It would be in data_list << export_layer_list.
         """
         data_list =  []
         rpli_data_list = []
@@ -1244,13 +1197,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             path_list, coords_list, tag_dict_list = \
                 self.removeUnusedPaths(path_list, coords_list, tag_dict_list)
             path_list_with_tags = path_list
-            rpli_path_list_with_tags = rpli_path_list
             path_list = self.removeTagsFromPaths(path_list)
-            rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
             tag_dict_list = list(filter(None, tag_dict_list))
-            rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
             coords_list = self.modifyCoordinates(coords_list, tag_dict_list)
             export_layer_list = self.getExportLayerList(path_list)
+            rpli_path_list_with_tags = rpli_path_list
+            rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
+            rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
             rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
 
             for i,layer in enumerate(export_layer_list):
