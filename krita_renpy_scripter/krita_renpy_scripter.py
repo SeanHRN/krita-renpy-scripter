@@ -1,5 +1,5 @@
 """
-Krita Ren'Py Scripter V2
+Krita Ren'Py Scripter V2.5
 
 @author Sean Castillo
 
@@ -104,34 +104,38 @@ button_define_set = {"string_normalimagedef", "string_layeredimagedef"}
 button_settings_set = {"default", "customize"}
 
 # Sets to serve as a tag thesaurus
-rpli_set       = {"rpli", "rli", "li"}               # layeredimage (the start)
-rplidef_set    = {"rplidef", "rid", "rlid", "df"}    # default
-rplialways_set = {"rplial", "ral", "rpalways", "al"} # always
-rpliattrib_set = {"rpliatt", "rpliat", "rat", "rt"}  # attribute
-rpligroup_set  = {"rpligroup", "rplig", "rig", "gr"} # group
+rpli_set       = {"rpli", "rli", "li"}                       # layeredimage (the start)
+rplidef_set    = {"rplidef", "rdef", "rid", "rlid", "df"}    # default
+rplialways_set = {"rplial", "ral", "rpalways", "al"}         # always
+rpliattrib_set = {"rpliatt", "rpliat", "rat", "rt"}          # attribute
+rpligroup_set  = {"rpligroup", "rplig", "rig", "gr"}         # group
+rplivar_set    = {"rplivar", "rpliv", "var"}                 # variant
 rpanim_set     = {"rpanim", "rpan", "rpa", "ranim", "anim", "ani"} # is animation
 rpframe_set    = {"rpframe", "rpfr", "rframe", "rfr", "fc"} # animation frame count
 RPLI_LIST = [rpli_set, rplidef_set, rplialways_set, \
-rpliattrib_set, rpligroup_set, rpanim_set, rpframe_set]
+rpliattrib_set, rpligroup_set, rplivar_set, rpanim_set, rpframe_set]
 RPLI_MAIN_TAG = "rpli"
 RPLIDEF_MAIN_TAG = "rplidef"
 RPLIALWAYS_MAIN_TAG = "rplial"
 RPLIATTRIB_MAIN_TAG = "rpliatt"
 RPLIGROUP_MAIN_TAG = "rpligroup"
+RPLIVAR_MAIN_TAG = "rplivar"
 RPANIM_MAIN_TAG = "rpanim"
 RPFRAME_MAIN_TAG = "rpframe"
 RPLI_MAIN_TAG_LIST = [RPLI_MAIN_TAG, RPLIDEF_MAIN_TAG, \
 RPLIALWAYS_MAIN_TAG, RPLIATTRIB_MAIN_TAG, RPLIGROUP_MAIN_TAG, \
-RPANIM_MAIN_TAG, RPFRAME_MAIN_TAG]
+RPLIVAR_MAIN_TAG, RPANIM_MAIN_TAG, RPFRAME_MAIN_TAG]
 # Additionally, rpligroupchild is a special tag to be used
 # for catching when an rpliatt should be indented in the scripting.
 
 
 # Synonyms for true and false for tags
-value_true_set = {"true", "t", "yes", "y", "1"}
-value_false_set = {"false", "f", "no", "n", "0"}
+VALUE_TRUE_SET = {"true", "t", "yes", "y", "1"}
+VALUE_FALSE_SET = {"false", "f", "no", "n", "0"}
 VALUE_TRUE_MAIN_TAG = "true"
 VALUE_FALSE_MAIN_TAG = "false"
+
+remove_char_set = {"\"",  "\'", "[", "]"}
 
 attribute_chain_set = {"chain", "ch", "c", "at", "attr"}
 layer_exclude_set = {"exclude", "ex", "x",}
@@ -144,6 +148,21 @@ INDENT = 4
 MSG_TIME = 8000
 OUTER_DEFAULT_ALIGN_DECIMAL_PLACES = 3
 
+
+def truFalCheck(value):
+    if value in VALUE_TRUE_SET:
+        return VALUE_TRUE_MAIN_TAG
+    else:
+        return VALUE_FALSE_MAIN_TAG
+
+def cleanedValue(value):
+    """
+    Function for whenever a string may come with characters to remove.
+    See remove_char_set.
+    """
+    for char in remove_char_set:
+        value = value.replace(char, '')
+    return value
 
 def sortListByPriority(values: Iterable[T], priority: List[T]) -> List[T]:
     """
@@ -294,9 +313,9 @@ class FormatMenu(QWidget):
             for key, value in default_configs_dict.items():
                 if not key in self.config_data:
                     self.config_data[key] = value
-                elif value in value_true_set or value in value_false_set:
-                    if not self.config_data[key].lower() in value_true_set \
-                        and not self.config_data[key].lower() in value_true_set:
+                elif value in VALUE_TRUE_SET or value in VALUE_FALSE_SET:
+                    if not self.config_data[key].lower() in VALUE_TRUE_SET \
+                        and not self.config_data[key].lower() in VALUE_TRUE_SET:
                         self.config_data[key] = value
                 elif value.isnumeric():
                     if not self.config_data[key].isnumeric():
@@ -493,12 +512,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
     def writeLayeredImage(self, rpli_data_list):
         """
-        Pre-requisite: rpli_data_list is sorted.
-        Ignore duplicate lines.
         """
         script = ""
         if len(rpli_data_list) == 0:
             script += "No Ren'Py Layered Image elements found!\nCheck your tags!\n"
+
+        #script += "Checking contents of rpli_data_list:\n"
+        #for r in rpli_data_list:
+        #    script += r[0] + "\n"
+            #for key, value in r[2].items():
+            #    script += key + " : " + str(value) + "\n"
+        #    script += r[3] + "\n"
+            #script += r[2] + "\n" #SWITCH
+        #    script += "\n"
+        #script += "END CONTENTS\n"
+
+
         was_written = set()
         for r in rpli_data_list:
             #script += "r[0]: " + str(r[0]) + "\n"
@@ -513,7 +542,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 was_written.add(r[1])
             else: # ignore duplicate lines
                 continue
-            def_add_on = ""
             image_add_on_list = []
             if "e" in r[2]:
                 r[2]["e"] = sortListByPriority(\
@@ -532,27 +560,27 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     if f != chosen_format:
                         pound = "#"
                     image_add_on_list.append(pound + "\"" + to_add + "." + f + "\"")
-            if RPLI_MAIN_TAG in r[2] and r[2][RPLI_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
+
+            if RPLI_MAIN_TAG in r[2] and truFalCheck(r[2][RPLI_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                 script += "layeredimage " + r[0] + ":\n"
-            elif RPLIALWAYS_MAIN_TAG in r[2] and r[2][RPLIALWAYS_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += \
-                    (" " * INDENT * 2) + "always:\n" + \
-                        (" " * INDENT * 3) + r[0] + ":\n"
+            elif RPLIGROUP_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIGROUP_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+                var_add = ""
+                if RPLIVAR_MAIN_TAG in r[2]:
+                    var_add = " variant \"" + str(r[2][RPLIVAR_MAIN_TAG]) + "\""
+                script += (" " * INDENT * r[4]) + "group " + r[0] + var_add + ":\n"
+            elif RPLIALWAYS_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIALWAYS_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+                script += (" " * INDENT * r[4]) + "always:\n"
                 for i in image_add_on_list:
-                    script += (" " * INDENT * 4) + i + "\n"
-            elif RPLIGROUP_MAIN_TAG in r[2] and r[2][RPLIGROUP_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                script += (" " * INDENT * 2) + "group " + r[0] + ":\n"
-            elif RPLIATTRIB_MAIN_TAG in r[2] and r[2][RPLIATTRIB_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                if RPLIDEF_MAIN_TAG in r[2] and r[2][RPLIDEF_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
-                    def_add_on = " default"
-                if "rpligroupchild" in r[2] and r[2]["rpligroupchild"] == VALUE_TRUE_MAIN_TAG:
-                    script += (" " * INDENT)
-                script += \
-                    (" " * INDENT * 2) + "attribute " + r[0] + def_add_on + ":\n"
+                    i = i.replace("/.", ".", 1)
+                    script += (" " * INDENT * (r[4] + 1)) + i + "\n"
+            elif RPLIATTRIB_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIATTRIB_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+                def_add = ""
+                if RPLIDEF_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIDEF_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+                    def_add = " default"
+                script += (" " * INDENT * r[4]) + "attribute " + r[0] + def_add + ":\n"
                 for i in image_add_on_list:
                     i = i.replace("/.", ".", 1) # To handle edge case: The leaf node is excluded.
-                    script += (" " * INDENT * 4) + i + "\n"
-
+                    script += (" " * INDENT * (r[4]+1)) + i + "\n"
         return script
 
     def storePath(self, direc, path_list):
@@ -723,15 +751,19 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         continue
                 tag_data = usable_tag_data
 
-                # Experimental pass: remove rpli tags so they wouldn't be inherited.
-                 # HIGHLY EXPERIMENTAL FOR ATTRIBUTE INDENTATION
+                # Experimental pass: Remove rpli tags so they wouldn't be inherited.
                 if rpli_mode:
                     if "rpligroupchild" in tag_dict:
                         tag_dict.pop("rpligroupchild")
                     for main_tag in RPLI_MAIN_TAG_LIST:
                         if main_tag in tag_dict.keys():
                             if main_tag == RPLIGROUP_MAIN_TAG:
-                                tag_dict["rpligroupchild"] = VALUE_TRUE_MAIN_TAG
+                                tag_dict["rpligroupchild"] = truFalCheck(tag_dict[main_tag].lower())
+                                #
+                                #if tag_dict[main_tag].lower() in VALUE_TRUE_SET:
+                                #    tag_dict["rpligroupchild"] = VALUE_TRUE_MAIN_TAG
+                                #else:
+                                #    tag_dict["rpligroupchild"] = VALUE_FALSE_MAIN_TAG
                             tag_dict.pop(main_tag)
 
                 # Second pass: See if inheritance disabling is present.
@@ -746,7 +778,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             self.DEBUG_MESSAGE += "Error: letter,value parse failed in getTags()."
                             continue
                         if letter == "i":
-                            if value in value_false_set:
+                            if value in VALUE_FALSE_SET:
                                 tag_dict.clear()
                                 break
 
@@ -757,9 +789,9 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     letter, value = tag.split('=', 1)
                     #self.DEBUG_MESSAGE += "letter/value is: " + letter + " : " + value + "\n"
 
-                    if value.lower() in value_true_set:
+                    if value.lower() in VALUE_TRUE_SET:
                         value = VALUE_TRUE_MAIN_TAG
-                    elif value.lower() in value_false_set:
+                    elif value.lower() in VALUE_FALSE_SET:
                         value = VALUE_FALSE_MAIN_TAG
 
                     if not rpli_mode:
@@ -801,13 +833,13 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                         elif letter == 'i': # Prevent the i=false tag from leaking down
                             continue        # the path after it's been used to block
                                             # the parents' tags.
-                        elif letter in attribute_chain_set and value in value_true_set:
+                        elif letter in attribute_chain_set and value in VALUE_TRUE_SET:
                             if "attribute_chain_name" not in tag_dict:
                                 tag_dict["attribute_chain_name"] = individual_layer_name
                             else:
                                 tag_dict["attribute_chain_name"] += (" " + individual_layer_name)
-                        elif (letter in attribute_chain_set and value in value_false_set) \
-                            or (letter in layer_exclude_set and value in value_true_set):
+                        elif (letter in attribute_chain_set and value in VALUE_FALSE_SET) \
+                            or (letter in layer_exclude_set and value in VALUE_TRUE_SET):
                             if "layers_to_exclude_dir" not in tag_dict:
                                 tag_dict["layers_to_exclude_dir"] = [individual_layer_name]
                             else:
@@ -817,7 +849,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 tag_dict[letter] = value
                     elif rpli_mode:
                         if letter in rpli_set:
-                            if value in value_true_set:
+                            if value in VALUE_TRUE_SET: #spark
                                 tag_dict[RPLI_MAIN_TAG] = VALUE_TRUE_MAIN_TAG
                             else:
                                 tag_dict[RPLI_MAIN_TAG] = VALUE_FALSE_MAIN_TAG
@@ -827,6 +859,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                             tag_dict[RPLIALWAYS_MAIN_TAG] = value
                         elif letter in rpliattrib_set:
                             tag_dict[RPLIATTRIB_MAIN_TAG] = value
+                        elif letter in rplivar_set:
+                            tag_dict[RPLIVAR_MAIN_TAG] = cleanedValue(value)
                         elif letter in rpligroup_set:
                             tag_dict[RPLIGROUP_MAIN_TAG] = value
                         elif letter == 'e':
@@ -838,8 +872,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                 tag_dict['e'] = list(set(tag_dict['e']))
                             else:
                                 tag_dict['e'] = format_list
-                        elif (letter in layer_exclude_set and value in value_true_set) \
-                            or (letter in attribute_chain_set and value in value_false_set):
+                        elif (letter in layer_exclude_set and value in VALUE_TRUE_SET) \
+                            or (letter in attribute_chain_set and value in VALUE_FALSE_SET):
                             if "layers_to_exclude_dir" not in tag_dict:
                                 tag_dict["layers_to_exclude_dir"] = [individual_layer_name]
                             else:
@@ -912,9 +946,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         since the required behavior for layered images isn't the same when it comes to
         inheritance. There needs to be dictionaries for non-leaf layers (i.e. groups).
 
-        TODO: Fix issue where layer not in a group is not correctly placed in path_list. -> Seemingly fixed.
-
-        TODO: Rework the layered image tag acquisition system for the above fix.
         """
         if len(path) > path_len:
             path[path_len] = node.name().lower()
@@ -940,8 +971,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                             c.bounds().center()])
                         break
 
-### Part to fix: The rpli system
-### TODO: TEST THIS!!!
         path_len += 1
         for i in node.childNodes(): # Case: Send the child nodes through the recursion.
             tag_data = i.name().lower().split(' ')[1:]
@@ -960,7 +989,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 for rl in RPLI_LIST:
                     for tag in rl:
                         if tag in letter_data and \
-                                value_data[letter_data.index(tag)] in value_true_set:
+                                value_data[letter_data.index(tag)] in VALUE_TRUE_SET:
                             self.storePath((path+[i.name().lower()]),rpli_path_list)
                             break
 
@@ -1053,7 +1082,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 coords[2].setX(coords[2].x() + diff_x)
                 coords[2].setY(coords[2].y() + diff_y)
 
-            if "t" in tag_dict_list[i] and tag_dict_list[i]["t"] in value_false_set:
+            if "t" in tag_dict_list[i] and tag_dict_list[i]["t"] in VALUE_FALSE_SET:
                 coords[0] = 0
                 coords[1] = 0
                 coords[2] = QPoint(0,0)
@@ -1113,39 +1142,27 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
         return modifier_block
 
-    def sortRpliData(self, rpli_data_list):
+    def processRpliData(self, rpli_data_list):
         """
-        This is an unusual sorting algorithm that positions data lines such that parent
-        layers would come sooner than their child layers, AND would not be swapped
-        with layers of different paths. It's meant to get the order of the list
-        to be the same as the Krita layer stack (though in reverse order since
-        Ren'Py displays the bottommost image declarations at the front, and
-        drawing programs do the opposite, though it wouldn't matter for a layered image
-        declaration block.
+        Reverse the list and then update the number of indents required.
         """
-        #self.DEBUG_MESSAGE += "Activating sortRpliData()\n"
-
-        s_list = rpli_data_list
-        list_sorted = False
-        swap_occurred = False
-        c = len(s_list)-1
-        if c != 0:
-            while not list_sorted:
-                curr_line = s_list[c][3]
-                comp_line = s_list[c-1][3]
-                if curr_line in comp_line and curr_line < comp_line:
-                    s_list[c], s_list[c-1] = s_list[c-1], s_list[c]
-                    swap_occurred = True
-                else:
-                    swap_occurred = False
-                c = c - 1
-                if c == 0:
-                    if swap_occurred:
-                        c = len(s_list)-1
-                    else:
-                        list_sorted = True
-        else:
-            self.DEBUG_MESSAGE += "No components for Layered Image found!\n"
+        rpli_data_list.reverse()
+        updated_rpli_data_list = []
+        for d in rpli_data_list:
+            additional_indents = 0
+            if RPLIGROUP_MAIN_TAG in d[2]:
+                if "rpligroupchild" in d[2] and truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
+                    self.DEBUG_MESSAGE += "# Warning: Group within group detected: "\
+                      + d[0] + "\nRen'Py won't accept it.\n"
+                    additional_indents += 1
+            if RPLIATTRIB_MAIN_TAG in d[2]:
+                if "rpligroupchild" in d[2] and truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
+                    additional_indents += 1
+            t0, t1, t2, t3, t4 = d
+            total_add = t4 + additional_indents
+            new_d = (t0, t1, t2, t3, total_add)
+            updated_rpli_data_list.append(new_d)
+        return updated_rpli_data_list
 
     def getDataList(self, button_chosen, spacing_num):
         """
@@ -1157,7 +1174,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                  6) Modify the coordinates for margins and scale.
                  7) If 'align' type output is selected, swap out the xy pixel coordinates with align coordinates.
 
-        data_list: #TODO: This information seems to be outdated.
+        data_list: #TODO: This information might be outdated.
             [0] name of layer
             [1] directory
             [2] tag_dict_list        (List where each index corresponds to the index of its path,
@@ -1173,6 +1190,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             [1] directory
             [2] rpli_tag_dict_list
             [3] rpli_path_list_with_tags
+            [4] number of indents to append (started with 1 indent)
 
         There is an additional configs load for align_decimal_places here
         because self.config_data fails out here.
@@ -1212,10 +1230,11 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
             for i,layer in enumerate(rpli_export_layer_list):
                 rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
-                                            rpli_tag_dict_list[i], rpli_path_list_with_tags[i]]))
+                                            rpli_tag_dict_list[i], \
+                                                rpli_path_list_with_tags[i], 1]))
 
             if rpli_data_list:
-                self.sortRpliData(rpli_data_list)
+                rpli_data_list = self.processRpliData(rpli_data_list)
 
             if button_chosen in button_display_align_set:
                 align_decimal_places = OUTER_DEFAULT_ALIGN_DECIMAL_PLACES
@@ -1303,7 +1322,7 @@ class ScriptBox(QWidget):
             self.config_data = imported_configs
         except IOError:
             pass
-        if self.config_data["lock_windows_to_front"] in value_true_set:
+        if self.config_data["lock_windows_to_front"] in VALUE_TRUE_SET:
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.format_menu = None
         self.output_window = None
@@ -1432,7 +1451,7 @@ class ScaleCalculateBox(QWidget):
             self.config_data = imported_configs
         except IOError:
             pass
-        if self.config_data["lock_windows_to_front"] in value_true_set:
+        if self.config_data["lock_windows_to_front"] in VALUE_TRUE_SET:
             self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.createScaleCalculateBox()
         close_notifier.viewClosed.connect(self.close)
