@@ -528,20 +528,26 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         #script += "END CONTENTS\n"
 
 
-        was_written = set()
+        #was_written = set()
         for r in rpli_data_list:
             #script += "r[0]: " + str(r[0]) + "\n"
             #script += "r[1]: " + str(r[1]) + "\n"
+            #script += "r[3]: " + str(r[3]) + "\n\n"
             dir_to_print = r[1]
             if "layers_to_exclude_dir" in r[2]:
                 for layer in r[2]["layers_to_exclude_dir"]:
                     if layer in r[1]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
-            if not r[1] in was_written:
-                was_written.add(r[1])
-            else: # ignore duplicate lines
-                continue
+            # Problem: Removing this allows sibling groups of the same name
+            # (important for variants), but also allows duplicates within the same group to exist.
+            #if not r[1] in was_written:
+            #    was_written.add(r[1])
+            #else: # ignore duplicate lines
+            #    continue
+            #was_written.add(r[1])
+
+
             image_add_on_list = []
             if "e" in r[2]:
                 r[2]["e"] = sortListByPriority(\
@@ -1164,6 +1170,35 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             updated_rpli_data_list.append(new_d)
         return updated_rpli_data_list
 
+    def removeDuplicateData(self, path_list):
+        """
+        For filtering out duplicate lines found by pathRecord().
+        Currently only for rpli_path_list, but it can be adjusted
+        for the regular path_list if needed.
+
+        Check: The data have the same name and same directory,
+               and the input data is an attribute
+               (as opposed to a group, which is allowed to have
+               "duplicate lines" for variants)
+        """
+
+        smaller_list = []
+        seen = set()
+        for p in path_list:
+            add_it = False
+            if p[1] not in seen:
+                add_it = True
+            elif RPLIGROUP_MAIN_TAG in p[2].keys():
+                if p[2][RPLIGROUP_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
+                    add_it = True
+            elif RPLIATTRIB_MAIN_TAG in p[2].keys():
+                if p[2][RPLIATTRIB_MAIN_TAG] == VALUE_TRUE_MAIN_TAG:
+                    continue
+            if add_it:
+                smaller_list.append(p)
+                seen.add(p[1])
+        return smaller_list
+
     def getDataList(self, button_chosen, spacing_num):
         """
         Concept: 1) Get all the paths.
@@ -1172,7 +1207,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                  4) Get the names of the layers.
                  5) Put the data into the list.
                  6) Modify the coordinates for margins and scale.
-                 7) If 'align' type output is selected, swap out the xy pixel coordinates with align coordinates.
+                 7) If 'align' type output is selected,
+                    swap out the xy pixel coordinates with align coordinates.
 
         data_list: #TODO: This information might be outdated.
             [0] name of layer
@@ -1208,6 +1244,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         path_list_with_tags = []
         curr_doc = KI.activeDocument()
         if curr_doc is not None:
+            #TODO: Find out why layers are sometimes duplicated.
             root_node = curr_doc.rootNode()
             self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
             tag_dict_list = self.getTags(path_list, False)
@@ -1222,7 +1259,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             rpli_path_list_with_tags = rpli_path_list
             rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
             rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
+
+            # issue: this already gets duplicates
             rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
+
+
+            # DEBUGGING
+            #self.DEBUG_MESSAGE += "AAAY\n"
+            #for r in rpli_path_list:
+            #    self.DEBUG_MESSAGE += r + "\n"
 
             for i,layer in enumerate(export_layer_list):
                 data_list.append(tuple([layer.lower(), path_list[i].lower(), \
@@ -1234,6 +1279,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                                                 rpli_path_list_with_tags[i], 1]))
 
             if rpli_data_list:
+                rpli_data_list = self.removeDuplicateData(rpli_data_list)
                 rpli_data_list = self.processRpliData(rpli_data_list)
 
             if button_chosen in button_display_align_set:
