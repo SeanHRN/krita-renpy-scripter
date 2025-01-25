@@ -442,7 +442,7 @@ This will overwrite your customizations.")
                       - Any unrecognized format get a commented out line.
         """
         script = ""
-
+        self.DEBUG_MESSAGE = ""
         data_list = []
         rpli_data_list = []
         data_list, rpli_data_list = self.getDataList(button_chosen, spacing_num)
@@ -528,7 +528,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         #script += "END CONTENTS\n"
 
 
-        #was_written = set()
         for r in rpli_data_list:
             #script += "r[0]: " + str(r[0]) + "\n"
             #script += "r[1]: " + str(r[1]) + "\n"
@@ -539,14 +538,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                     if layer in r[1]:
                         dir_to_print = dir_to_print.replace(layer, "", 1)
                         dir_to_print = dir_to_print.replace("//", "/", 1)
-            # Problem: Removing this allows sibling groups of the same name
-            # (important for variants), but also allows duplicates within the same group to exist.
-            #if not r[1] in was_written:
-            #    was_written.add(r[1])
-            #else: # ignore duplicate lines
-            #    continue
-            #was_written.add(r[1])
-
 
             image_add_on_list = []
             if "e" in r[2]:
@@ -573,6 +564,8 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 var_add = ""
                 if RPLIVAR_MAIN_TAG in r[2]:
                     var_add = " variant \"" + str(r[2][RPLIVAR_MAIN_TAG]) + "\""
+                if r[5]: # if the group is to be commented out
+                    script += "#"
                 script += (" " * INDENT * r[4]) + "group " + r[0] + var_add + ":\n"
             elif RPLIALWAYS_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIALWAYS_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                 script += (" " * INDENT * r[4]) + "always:\n"
@@ -1155,18 +1148,22 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         rpli_data_list.reverse()
         updated_rpli_data_list = []
         for d in rpli_data_list:
+            comment_out = False
             additional_indents = 0
             if RPLIGROUP_MAIN_TAG in d[2]:
                 if "rpligroupchild" in d[2] and truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
-                    self.DEBUG_MESSAGE += "# Warning: Group within group detected: "\
-                      + d[0] + "\nRen'Py won't accept it.\n"
+                    self.DEBUG_MESSAGE += "# The Warning: Group within group detected: "\
+                      + d[0] + "\n# Ren'Py won't accept it.\n"
+                    comment_out = True
                     additional_indents += 1
             if RPLIATTRIB_MAIN_TAG in d[2]:
                 if "rpligroupchild" in d[2] and truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
                     additional_indents += 1
-            t0, t1, t2, t3, t4 = d
+            t0, t1, t2, t3, t4, t5 = d
+            if comment_out:
+                t5 = True
             total_add = t4 + additional_indents
-            new_d = (t0, t1, t2, t3, total_add)
+            new_d = (t0, t1, t2, t3, total_add, t5)
             updated_rpli_data_list.append(new_d)
         return updated_rpli_data_list
 
@@ -1227,6 +1224,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             [2] rpli_tag_dict_list
             [3] rpli_path_list_with_tags
             [4] number of indents to append (started with 1 indent)
+            [5] whether to comment out this line (starts as False)
 
         There is an additional configs load for align_decimal_places here
         because self.config_data fails out here.
@@ -1259,8 +1257,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             rpli_path_list_with_tags = rpli_path_list
             rpli_path_list = self.removeTagsFromPaths(rpli_path_list)
             rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
-
-            # issue: this already gets duplicates
             rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
 
 
@@ -1276,7 +1272,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             for i,layer in enumerate(rpli_export_layer_list):
                 rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
                                             rpli_tag_dict_list[i], \
-                                                rpli_path_list_with_tags[i], 1]))
+                                                rpli_path_list_with_tags[i], 1, False]))
 
             if rpli_data_list:
                 rpli_data_list = self.removeDuplicateData(rpli_data_list)
