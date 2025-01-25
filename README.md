@@ -122,7 +122,7 @@ File Format Priority System: If more than one file format is requested, scriptin
 
 `webp` > `png` > `jpg/jpeg`
 
-However, `webp` (a popular pick for Ren'Py projects) isn't correctly exported by KBE (exports but is lossy, probably because Krita's Document::exportImage() doesn't support WEBP either); I'll see if I can contribute a fix.
+However, `webp` (a popular pick for Ren'Py projects) is exported by Krita but not by KBE; I'll see if I can contribute `webp` support.
 
 ## Settings<a id="settings"></a>
 Access to the settings file `configs.json` is provided in the Scripter window. The button will open it in your default editor. Aside from the script output template settings, changes will first be applied when you open a new window scripting.
@@ -171,17 +171,18 @@ These may be added to the Krita layer names.
 | `c=sheet`                                                         | Marks a group layer containing individual frames as a group to make into a sprite sheet for COA Tools.                                                       | The c tag is used but not in the same way. See the [note](#note-c-tag).                       |
 
 ### Additional Tags For Krita Ren'Py Scripter<a id="tags-krs"></a>
-Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so KRS uses a thesaurus system to accept numerous names for the same tasks. This allows you to choose your preferred balance between clarity and compactness. All of these take `true`/`false` values.
+Most of these are for Ren'Py's [Layered Image](https://www.renpy.org/doc/html/layeredimage.html) feature. Layer names can get too long, and too much writing would defeat the purpose of having automation, so KRS uses a thesaurus system to accept numerous names for the same tasks. This allows you to choose your preferred balance between clarity and compactness. All of these take `true`/`false` values, except for `variant` (which instead takes the name for the variant).
 
-| **Tags**                    | **Krita Ren'Py Scripter Application**                                                                                                        |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rpli`, `rli`, `li`         | Layered Image (this layer group is the start of the definition)                                                                              |
-| `rplidef, rid, rlid, df`    | Layered Image - default                                                                                                                      |
-| `rplial, ral, rpalways, al` | Layered Image - always                                                                                                                       |
-| `rpliatt, rpliat, rat, rt`  | Layered Image - attribute                                                                                                                    |
-| `rpligroup, rplig, rig, gr` | Layered Image - group                                                                                                                        |
-| `chain, ch, c, at, attr`    | Marks the layer's name for the attribute chain name system.<br>See the [note](#note-c-tag) on the `c` tag.                                   |
-| `exclude, ex, x`            | Marks the layer's name to be excluded from output. This has the inverse effect of the `attr/chain` tag. `exclude=true`$\equiv$`chain=false`. |
+| **Tags**                               | **Krita Ren'Py Scripter Application**                                                                                                                                                                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rpli`, `rli`, `li`                    | Layered Image (this layer group is the start of the definition)                                                                                                                                                                                                        |
+| `rplidef`, `rdef`, `rid`, `rlid`, `df` | Layered Image - default                                                                                                                                                                                                                                                |
+| `rplial, ral, rpalways, al`            | Layered Image - always                                                                                                                                                                                                                                                 |
+| `rpliatt, rpliat, rat, rt`             | Layered Image - attribute                                                                                                                                                                                                                                              |
+| `rpligroup, rplig, rig, gr`            | Layered Image - group                                                                                                                                                                                                                                                  |
+| `rplivar`, `rpliv`, `var`              | Layered Image - variant (for group).<br>The name of the variant can be written on its own, with quotation marks, or with square brackets; all are accepted and scripted the same.<br>Examples:<br>rplivar=type<br>rplivar="type"<br>rplivar='type'<br>rplivar=\[type\] |
+| `chain, ch, c, at, attr`               | Marks the layer's name for the attribute chain name system.<br>See the [note](#note-c-tag) on the `c` tag.                                                                                                                                                             |
+| `exclude, ex, x`                       | Marks the layer's name to be excluded from output. This has the inverse effect of the `attr/chain` tag. `exclude=true`$\equiv$`chain=false`.                                                                                                                           |
 
 Internally, any of these tags you use would be converted to the leftmost tag on the list.
 This feature has also been used for the `true`/`false` values themselves:
@@ -246,7 +247,7 @@ to make sure the KRS appears on your docker.
 
 Tested and developed on Krita version 5.2.3 and 5.2.4.
 ## Features To Consider / Were Considered<a id="features-considered"></a>
-- Add lossless webp export to KBE.
+- Add webp support to KBE.
 - Search the layer stack for scales to add as buttons for the Renamer
 - Ability to modify a Krita document so that a corresponding Ren'Py file is automatically updated, or can be updated at a button press
 	- That would be even quicker than the current copy/paste method, and it seems plausible with something like the configs file to hold the file paths, but I think the copy/paste method is a lot safer since it's intrinsically a verification system. On top of that, I think it's likely that most users would have their whole project's images spread across many Krita documents, all to be defined in a single or few Ren'Py file(s).
