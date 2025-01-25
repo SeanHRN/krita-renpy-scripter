@@ -560,21 +560,25 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
 
             if RPLI_MAIN_TAG in r[2] and truFalCheck(r[2][RPLI_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                 script += "layeredimage " + r[0] + ":\n"
-            elif RPLIGROUP_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIGROUP_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+            elif RPLIGROUP_MAIN_TAG in r[2] and \
+                truFalCheck(r[2][RPLIGROUP_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                 var_add = ""
                 if RPLIVAR_MAIN_TAG in r[2]:
                     var_add = " variant \"" + str(r[2][RPLIVAR_MAIN_TAG]) + "\""
                 if r[5]: # if the group is to be commented out
                     script += "#"
                 script += (" " * INDENT * r[4]) + "group " + r[0] + var_add + ":\n"
-            elif RPLIALWAYS_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIALWAYS_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+            elif RPLIALWAYS_MAIN_TAG in r[2] and \
+                truFalCheck(r[2][RPLIALWAYS_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                 script += (" " * INDENT * r[4]) + "always:\n"
                 for i in image_add_on_list:
                     i = i.replace("/.", ".", 1)
                     script += (" " * INDENT * (r[4] + 1)) + i + "\n"
-            elif RPLIATTRIB_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIATTRIB_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+            elif RPLIATTRIB_MAIN_TAG in r[2] and \
+                truFalCheck(r[2][RPLIATTRIB_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                 def_add = ""
-                if RPLIDEF_MAIN_TAG in r[2] and truFalCheck(r[2][RPLIDEF_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
+                if RPLIDEF_MAIN_TAG in r[2] and \
+                    truFalCheck(r[2][RPLIDEF_MAIN_TAG]) == VALUE_TRUE_MAIN_TAG:
                     def_add = " default"
                 script += (" " * INDENT * r[4]) + "attribute " + r[0] + def_add + ":\n"
                 for i in image_add_on_list:
@@ -1116,7 +1120,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         #for key,value in line[2].items():
         #    modifier_block += key + " : " + str(value) + "\n"
         #modifier_block += "~ ~ ~"
-    
+
         # Zoom
         if "scaleX" in line[2] or "scaleY" in line[2]:
             xzoom = 1.0
@@ -1151,13 +1155,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             comment_out = False
             additional_indents = 0
             if RPLIGROUP_MAIN_TAG in d[2]:
-                if "rpligroupchild" in d[2] and truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
-                    self.DEBUG_MESSAGE += "# The Warning: Group within group detected: "\
+                if "rpligroupchild" in d[2] and \
+                    truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
+                    self.DEBUG_MESSAGE += "# Warning: Group within group detected: "\
                       + d[0] + "\n# Ren'Py won't accept it.\n"
                     comment_out = True
                     additional_indents += 1
             if RPLIATTRIB_MAIN_TAG in d[2]:
-                if "rpligroupchild" in d[2] and truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
+                if "rpligroupchild" in d[2] and \
+                    truFalCheck(d[2]["rpligroupchild"]) == VALUE_TRUE_MAIN_TAG:
                     additional_indents += 1
             t0, t1, t2, t3, t4, t5 = d
             if comment_out:
@@ -1207,14 +1213,15 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                  7) If 'align' type output is selected,
                     swap out the xy pixel coordinates with align coordinates.
 
-        data_list: #TODO: This information might be outdated.
+        data_list:
             [0] name of layer
             [1] directory
             [2] tag_dict_list        (List where each index corresponds to the index of its path,
                                       and the content is a dictionary with the tags applicable to
                                       the final layer of that path, adjusted for Batch Exporter
                                       inheritance.)
-            [3] coords_list          (For each layer: x position, y position, and center point as a QPoint.
+            [3] coords_list          (For each layer: x position, y position,
+                                      and center point as a QPoint.
                                       Values are modified for the scale given by tag.)
             [4] path_list_with_tags  (Unused paths are filtered out,
                                       but tags (at the layers they are declared) are not.)
@@ -1242,7 +1249,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         path_list_with_tags = []
         curr_doc = KI.activeDocument()
         if curr_doc is not None:
-            #TODO: Find out why layers are sometimes duplicated.
             root_node = curr_doc.rootNode()
             self.pathRecord(root_node, path, path_list, 0, coords_list, rpli_path_list)
             tag_dict_list = self.getTags(path_list, False)
@@ -1259,24 +1265,18 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
             rpli_tag_dict_list = list(filter(None, rpli_tag_dict_list))
             rpli_export_layer_list = self.getExportLayerList(rpli_path_list)
 
-
-            # DEBUGGING
-            #self.DEBUG_MESSAGE += "AAAY\n"
-            #for r in rpli_path_list:
-            #    self.DEBUG_MESSAGE += r + "\n"
-
             for i,layer in enumerate(export_layer_list):
                 data_list.append(tuple([layer.lower(), path_list[i].lower(), \
                                         tag_dict_list[i], coords_list[i], path_list_with_tags[i]]))
 
-            for i,layer in enumerate(rpli_export_layer_list):
-                rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
-                                            rpli_tag_dict_list[i], \
-                                                rpli_path_list_with_tags[i], 1, False]))
-
-            if rpli_data_list:
-                rpli_data_list = self.removeDuplicateData(rpli_data_list)
-                rpli_data_list = self.processRpliData(rpli_data_list)
+            if button_chosen == "string_layeredimagedef":
+                for i,layer in enumerate(rpli_export_layer_list):
+                    rpli_data_list.append(tuple([layer.lower(), rpli_path_list[i].lower(), \
+                                                rpli_tag_dict_list[i], \
+                                                    rpli_path_list_with_tags[i], 1, False]))
+                if rpli_data_list:
+                    rpli_data_list = self.removeDuplicateData(rpli_data_list)
+                    rpli_data_list = self.processRpliData(rpli_data_list)
 
             if button_chosen in button_display_align_set:
                 align_decimal_places = OUTER_DEFAULT_ALIGN_DECIMAL_PLACES
@@ -1334,7 +1334,7 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
         Idea: Update the buttons with the customized template text.
         """
         webbrowser.open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs.json"))
-    
+
     def refreshConfigData(self):
         """
         Function to reload the config dict after it has been customized.
@@ -1344,7 +1344,6 @@ xcoord=str(line[3][0]),ycoord=str(line[3][1]))
                 os.path.realpath(__file__)), "configs.json"), encoding="utf-8")
             imported_configs = json.load(configs_file)
             self.config_data = imported_configs
-            #TODO: refresh buttons
             self.update()
         except IOError:
             pass
