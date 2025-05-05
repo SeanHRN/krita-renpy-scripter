@@ -1,5 +1,5 @@
 """
-Krita Ren'Py Scripter V2.5
+Krita Ren'Py Scripter V3dev (for Krita 6)
 
 @author Sean Castillo
 
@@ -9,7 +9,7 @@ Delena Malan website: Function to sort a list with a sublist given priority.
 
 from krita import DockWidget, DockWidgetFactory, DockWidgetFactoryBase, Krita
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QPushButton,
     QLabel,
     QLineEdit,
@@ -29,11 +29,11 @@ from PyQt5.QtWidgets import (
     QStatusBar
 )
 
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
-from PyQt5.QtGui import *
+from PyQt6.QtGui import *
 
-from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject, QThread
+from PyQt6.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject, QThread
 
 import xml.etree.ElementTree as ET
 
@@ -343,7 +343,7 @@ class FormatMenu(QWidget):
         atsetposxy_button = QPushButton(self.config_data["atsetposxy_button_text"],self)
         atsetposxy_button.clicked.connect(lambda: self.process("string_atsetposxy"))
         align_label = QLabel("align")
-        self.spacing_slider = QSlider(Qt.Horizontal, self)
+        self.spacing_slider = QSlider(Qt.Orientation.Horizontal, self)
         self.spacing_slider.setGeometry(30, 40, 200, 30)
         self.spacing_slider.setRange(2, 9)
         self.spacing_slider.setValue(9)
@@ -1690,7 +1690,7 @@ class KritaRenpyScripter(DockWidget):
     def showErrorMessage(self, to_print):
         msg = QMessageBox()
         msg.setText(to_print)
-        msg.exec_()
+        msg.exec()
 
     def createInterface(self):
         scripter_button = QPushButton("Scripter")
